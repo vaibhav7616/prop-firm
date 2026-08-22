@@ -20,232 +20,35 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { TOP_20_PROFITABLE_TRADERS, TopTrader } from '@/data/top-traders';
 import { cn } from '@/lib/utils';
-
-export interface LeaderboardTrader {
-  rank: number;
-  traderName: string;
-  country: string;
-  flag: string;
-  avatar: string;
-  accountSize: string;
-  accountTier: number;
-  totalPayouts: number;
-  payoutCount: number;
-  winRate: number;
-  profitFactor: number;
-  topSymbol: string;
-  streakMonths: number;
-  consistencyScore: number;
-  badge?: string;
-  period: 'all-time' | 'monthly' | 'weekly';
-}
-
-export const LEADERBOARD_TOP_TRADERS: LeaderboardTrader[] = [
-  {
-    rank: 1,
-    traderName: 'Marcus Vance',
-    country: 'United Kingdom',
-    flag: '🇬🇧',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$200,000',
-    accountTier: 200000,
-    totalPayouts: 94820.00,
-    payoutCount: 8,
-    winRate: 74.2,
-    profitFactor: 3.42,
-    topSymbol: 'US30',
-    streakMonths: 8,
-    consistencyScore: 98,
-    badge: '🏆 #1 All-Time Legend',
-    period: 'all-time',
-  },
-  {
-    rank: 2,
-    traderName: 'Sneha Kulkarni',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$200,000',
-    accountTier: 200000,
-    totalPayouts: 82450.00,
-    payoutCount: 7,
-    winRate: 78.9,
-    profitFactor: 3.89,
-    topSymbol: 'XAUUSD',
-    streakMonths: 7,
-    consistencyScore: 97,
-    badge: '👑 Gold Specialist',
-    period: 'all-time',
-  },
-  {
-    rank: 3,
-    traderName: 'Rajesh Sharma',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$200,000',
-    accountTier: 200000,
-    totalPayouts: 71320.00,
-    payoutCount: 6,
-    winRate: 72.4,
-    profitFactor: 2.95,
-    topSymbol: 'XAUUSD',
-    streakMonths: 6,
-    consistencyScore: 95,
-    badge: '⭐ Consistent Master',
-    period: 'all-time',
-  },
-  {
-    rank: 4,
-    traderName: 'Sofia Martinez',
-    country: 'Spain',
-    flag: '🇪🇸',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$100,000',
-    accountTier: 100000,
-    totalPayouts: 58900.00,
-    payoutCount: 5,
-    winRate: 76.3,
-    profitFactor: 3.12,
-    topSymbol: 'XAUUSD',
-    streakMonths: 5,
-    consistencyScore: 94,
-    badge: '💎 Scalping Queen',
-    period: 'all-time',
-  },
-  {
-    rank: 5,
-    traderName: 'Lucas Schneider',
-    country: 'Germany',
-    flag: '🇩🇪',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$100,000',
-    accountTier: 100000,
-    totalPayouts: 49200.00,
-    payoutCount: 5,
-    winRate: 71.0,
-    profitFactor: 2.84,
-    topSymbol: 'GER40',
-    streakMonths: 5,
-    consistencyScore: 92,
-    badge: '🎯 DAX Specialist',
-    period: 'all-time',
-  },
-  {
-    rank: 6,
-    traderName: 'Alexandre Dubois',
-    country: 'France',
-    flag: '🇫🇷',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$100,000',
-    accountTier: 100000,
-    totalPayouts: 42150.00,
-    payoutCount: 4,
-    winRate: 68.1,
-    profitFactor: 2.65,
-    topSymbol: 'EURUSD',
-    streakMonths: 4,
-    consistencyScore: 91,
-    period: 'all-time',
-  },
-  {
-    rank: 7,
-    traderName: 'Rohan Verma',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$100,000',
-    accountTier: 100000,
-    totalPayouts: 36700.00,
-    payoutCount: 4,
-    winRate: 67.8,
-    profitFactor: 2.51,
-    topSymbol: 'NAS100',
-    streakMonths: 4,
-    consistencyScore: 90,
-    period: 'all-time',
-  },
-  {
-    rank: 8,
-    traderName: 'Vikram Mehta',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$50,000',
-    accountTier: 50000,
-    totalPayouts: 28400.00,
-    payoutCount: 4,
-    winRate: 64.8,
-    profitFactor: 2.38,
-    topSymbol: 'XAUUSD',
-    streakMonths: 3,
-    consistencyScore: 89,
-    period: 'all-time',
-  },
-  {
-    rank: 9,
-    traderName: 'Ananya Roy',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$50,000',
-    accountTier: 50000,
-    totalPayouts: 23150.00,
-    payoutCount: 3,
-    winRate: 69.5,
-    profitFactor: 2.45,
-    topSymbol: 'GBPUSD',
-    streakMonths: 3,
-    consistencyScore: 88,
-    period: 'all-time',
-  },
-  {
-    rank: 10,
-    traderName: 'Aarav Patel',
-    country: 'India',
-    flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    accountSize: '$10,000',
-    accountTier: 10000,
-    totalPayouts: 9400.00,
-    payoutCount: 3,
-    winRate: 65.0,
-    profitFactor: 2.18,
-    topSymbol: 'BTCUSD',
-    streakMonths: 2,
-    consistencyScore: 87,
-    period: 'all-time',
-  },
-];
 
 export function LeaderboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState<'all-time' | 'monthly' | 'weekly'>('all-time');
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedAsset, setSelectedAsset] = useState<string>('ALL');
 
-  // Filtered Leaderboard
+  // Filtered Leaderboard for Top 20
   const filteredTraders = useMemo(() => {
-    return LEADERBOARD_TOP_TRADERS.filter((t) => {
+    return TOP_20_PROFITABLE_TRADERS.filter((t) => {
       const matchSearch =
         t.traderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.topSymbol.toLowerCase().includes(searchQuery.toLowerCase());
+        t.topSymbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.accountSize.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchTier =
         selectedTier === 'ALL' ||
         (selectedTier === '200k' && t.accountTier === 200000) ||
         (selectedTier === '100k' && t.accountTier === 100000) ||
         (selectedTier === '50k' && t.accountTier === 50000) ||
-        (selectedTier === '25k' && t.accountTier === 25000) ||
-        (selectedTier === '10k' && t.accountTier === 10000);
+        (selectedTier === '25k' && t.accountTier <= 25000);
 
       const matchAsset =
         selectedAsset === 'ALL' ||
         (selectedAsset === 'GOLD' && t.topSymbol === 'XAUUSD') ||
         (selectedAsset === 'INDICES' && (t.topSymbol === 'US30' || t.topSymbol === 'NAS100' || t.topSymbol === 'GER40')) ||
-        (selectedAsset === 'FX' && (t.topSymbol === 'EURUSD' || t.topSymbol === 'GBPUSD')) ||
+        (selectedAsset === 'FX' && (t.topSymbol.includes('USD') || t.topSymbol.includes('EUR') || t.topSymbol.includes('GBP') || t.topSymbol.includes('JPY')) && t.topSymbol !== 'XAUUSD' && t.topSymbol !== 'BTCUSD') ||
         (selectedAsset === 'CRYPTO' && t.topSymbol === 'BTCUSD');
 
       return matchSearch && matchTier && matchAsset;
@@ -261,13 +64,13 @@ export function LeaderboardPage() {
           <div className="max-w-3xl mx-auto text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold uppercase tracking-wider">
               <Trophy className="h-4 w-4 text-amber-500" />
-              Global Funded Trader Standings & Hall of Fame
+              Global Funded Trader Standings & Top 20 Hall of Fame
             </div>
             <h1 className="text-3xl sm:text-5xl font-black font-display tracking-tight text-slate-900 leading-tight">
-              Top Trader <span className="text-amber-500">Leaderboard</span>
+              Top 20 Most Profitable <span className="text-amber-500">Traders</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
-              Recognizing our most disciplined, consistent, and profitable funded traders worldwide. Rankings are automatically audited from verified MT5 & cTrader account records.
+              Official rankings of the top 20 funded traders worldwide across all FundedShift prop firm challenges. Rankings are automatically audited from verified MT5 & cTrader account records.
             </p>
           </div>
 
@@ -281,7 +84,7 @@ export function LeaderboardPage() {
                 <Trophy className="h-5 w-5" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">$94,820</p>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">Top Single Trader Total Gain</p>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">#1 Trader Total Profit</p>
             </motion.div>
 
             <motion.div
@@ -314,7 +117,7 @@ export function LeaderboardPage() {
                 <Award className="h-5 w-5" />
               </div>
               <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">3.14</p>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">Average Top Profit Factor</p>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">Top 20 Avg Profit Factor</p>
             </motion.div>
           </div>
         </div>
@@ -327,7 +130,7 @@ export function LeaderboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 flex items-center gap-2">
-                <Flame className="h-6 w-6 text-amber-500" /> All-Time Hall of Fame Podium
+                <Flame className="h-6 w-6 text-amber-500" /> Top 3 Champions Podium
               </h2>
               <p className="text-xs sm:text-sm text-slate-500">The highest ranked institutional funded traders on the platform.</p>
             </div>
@@ -340,7 +143,7 @@ export function LeaderboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {LEADERBOARD_TOP_TRADERS.slice(0, 3).map((trader, idx) => {
+            {TOP_20_PROFITABLE_TRADERS.slice(0, 3).map((trader, idx) => {
               const isGold = idx === 0;
               const isSilver = idx === 1;
               const isBronze = idx === 2;
@@ -399,16 +202,16 @@ export function LeaderboardPage() {
                     </div>
                   </div>
 
-                  {/* Big Payout Metric */}
+                  {/* Big Profit Metric */}
                   <div className="bg-white/90 rounded-2xl p-4 border border-slate-200/80 text-center mb-4">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      TOTAL VERIFIED WITHDRAWALS
+                      TOTAL VERIFIED PROFIT
                     </span>
                     <span className="text-2xl font-black font-mono text-emerald-600">
-                      ${trader.totalPayouts.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                     <span className="text-[11px] text-slate-500 block mt-0.5 font-medium">
-                      {trader.payoutCount} Successful Payouts · Consistency: {trader.consistencyScore}/100
+                      {trader.payoutCount} Successful Payout Cycles · Score: {trader.consistencyScore}/100
                     </span>
                   </div>
 
@@ -437,7 +240,7 @@ export function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Filter & Search Bar for Full Table */}
+        {/* Filter & Search Bar for Full Top 20 Table */}
         <div className="bg-card border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Search */}
@@ -457,7 +260,7 @@ export function LeaderboardPage() {
               {/* Account Size filter */}
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
                 <span className="text-slate-500 px-2">Account:</span>
-                {['ALL', '200k', '100k', '50k', '25k', '10k'].map((tier) => (
+                {['ALL', '200k', '100k', '50k', '25k'].map((tier) => (
                   <button
                     key={tier}
                     onClick={() => setSelectedTier(tier)}
@@ -501,12 +304,17 @@ export function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Comprehensive Leaderboard Table */}
+        {/* Comprehensive Top 20 Table */}
         <div className="bg-card border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="font-bold text-lg text-slate-900">Official Prop Firm Trader Rankings</h3>
-              <p className="text-xs text-slate-500">Live rankings computed from audited broker statements and verified trade logs.</p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-lg text-slate-900">FundedShift Top 20 Most Profitable Traders</h3>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono">
+                  TOP 20 ALL TRADERS
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">Live rankings computed from audited broker statements and verified trade logs across all accounts.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
@@ -522,7 +330,7 @@ export function LeaderboardPage() {
                   <th className="p-4">Rank</th>
                   <th className="p-4">Trader</th>
                   <th className="p-4">Funded Capital</th>
-                  <th className="p-4">Total Paid Out</th>
+                  <th className="p-4">Total Net Profit</th>
                   <th className="p-4">Payouts</th>
                   <th className="p-4">Win Rate</th>
                   <th className="p-4">Profit Factor</th>
@@ -558,13 +366,13 @@ export function LeaderboardPage() {
                             <span className="font-bold text-slate-900">{trader.traderName}</span>
                             <span>{trader.flag}</span>
                           </div>
-                          <span className="text-[11px] text-slate-400 font-normal">{trader.country}</span>
+                          <span className="text-[11px] text-slate-400 font-normal">{trader.challengeType}</span>
                         </div>
                       </div>
                     </td>
                     <td className="p-4 font-mono font-semibold text-slate-800">{trader.accountSize}</td>
                     <td className="p-4 font-mono font-bold text-emerald-600 text-sm sm:text-base">
-                      ${trader.totalPayouts.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      ${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 font-mono text-slate-600">{trader.payoutCount} cycles</td>
                     <td className="p-4 font-mono font-bold text-emerald-600">{trader.winRate}%</td>
@@ -582,7 +390,7 @@ export function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Hall of Fame Milestones */}
+        {/* Milestone Achievements */}
         <div className="space-y-6 pt-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 flex items-center gap-2">
@@ -658,10 +466,10 @@ export function LeaderboardPage() {
         <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white p-8 sm:p-12 relative overflow-hidden border border-slate-800">
           <div className="max-w-3xl space-y-4 relative z-10">
             <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
-              Join the Elite Leaderboard
+              Join the Top 20 Elite
             </span>
             <h3 className="text-2xl sm:text-4xl font-black font-display text-white">
-              Want your name at the top of the global standings?
+              Want your name in the Top 20 Global Standings?
             </h3>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               Start your evaluation challenge today, get funded with up to $200,000 capital, and build your track record alongside the world's best traders.
