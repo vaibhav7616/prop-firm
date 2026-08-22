@@ -20,6 +20,7 @@ import { ContactPage } from '@/pages/contact';
 import { BlogPage } from '@/pages/blog';
 import { BlogPostPage } from '@/pages/blog-post';
 import { LeaderboardPage } from '@/pages/leaderboard';
+import { ProofOfPayoutPage } from '@/pages/proof-of-payout';
 
 // Auth pages
 import { LoginPage } from '@/pages/auth/login';
@@ -95,7 +96,7 @@ function AppRoutes() {
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/proof-of-payout" element={<LeaderboardPage />} />
+        <Route path="/proof-of-payout" element={<ProofOfPayoutPage />} />
       </Route>
 
       {/* Auth */}

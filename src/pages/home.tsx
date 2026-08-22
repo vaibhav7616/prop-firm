@@ -594,12 +594,20 @@ export function HomePage() {
                 Every payout is publicly registered, verified with cryptographic broker receipts, and instantly claimable.
               </p>
             </div>
-            <Link
-              to="/leaderboard"
-              className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center gap-2 w-fit shadow-md"
-            >
-              Explore Full Leaderboard & Proofs <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/leaderboard"
+                className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center gap-2 w-fit shadow-md"
+              >
+                Top Leaderboard <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                to="/proof-of-payout"
+                className="px-4 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs sm:text-sm border border-emerald-200 transition-colors flex items-center gap-1.5"
+              >
+                Proof of Payout Feed <ShieldCheck className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Top 3 Live Showcase */}

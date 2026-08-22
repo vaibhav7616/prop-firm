@@ -33,7 +33,7 @@ const TRADER_NAV = [
   { label: 'Trading Accounts', to: '/dashboard/accounts', icon: Wallet },
   { label: 'Challenge Progress', to: '/dashboard/progress', icon: Target },
   { label: 'Trading Objectives', to: '/dashboard/objectives', icon: Target },
-  { label: 'Leaderboard & Proofs', to: '/dashboard/leaderboard', icon: Trophy },
+  { label: 'Trader Leaderboard', to: '/dashboard/leaderboard', icon: Trophy },
   { label: 'Orders', to: '/dashboard/orders', icon: ShoppingCart },
   { label: 'Invoices', to: '/dashboard/invoices', icon: FileText },
   { label: 'Payouts', to: '/dashboard/payouts', icon: Award },

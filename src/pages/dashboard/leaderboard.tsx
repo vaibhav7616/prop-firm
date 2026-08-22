@@ -53,13 +53,13 @@ export function DashboardLeaderboard() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 text-xs font-bold uppercase tracking-wider mb-2">
             <Trophy className="h-3.5 w-3.5 text-amber-500" />
-            Prop Firm Community Leaderboard
+            Prop Firm Community Standings
           </div>
           <h1 className="text-2xl sm:text-3xl font-black font-display text-slate-900">
-            Trader Rankings & Proof of Payout
+            Trader Leaderboard & Performance
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Compare your consistency score, track top performing funded peers, and verify public payout receipts.
+            Compare your consistency score, track top performing funded peers, and benchmark your win rate.
           </p>
         </div>
 
