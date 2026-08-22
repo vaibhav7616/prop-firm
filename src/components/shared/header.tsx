@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { label: 'Challenges', to: '/challenges' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'Trading Rules', to: '/rules' },
-  { label: 'Leaderboard & Proofs', to: '/leaderboard' },
+  { label: 'Platforms', to: '/challenges' },
   { label: 'Affiliates', to: '/affiliates' },
   { label: 'FAQ', to: '/faq' },
   { label: 'Blog', to: '/blog' },
