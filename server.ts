@@ -753,7 +753,7 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     plan_id: plan ? plan.id : 'plan-2step-100k',
     plan_name: plan ? plan.name : `FundedShift $${Number(account_size).toLocaleString()} Account`,
     account_size: Number(account_size),
-    platform: platform || 'mt5',
+    platform: platform || 'fundedshift_terminal',
     addons: [],
     discount_amount: plan ? plan.price : 499,
     total_amount: 0,

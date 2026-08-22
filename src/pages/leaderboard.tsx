@@ -18,19 +18,40 @@ import {
   ArrowRight,
   Medal,
   CheckCircle2,
+  Calendar,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { TOP_20_PROFITABLE_TRADERS, TopTrader } from '@/data/top-traders';
+import {
+  TOP_20_ALL_TIME_TRADERS,
+  TOP_20_WEEKLY_TRADERS,
+  TOP_20_MONTHLY_TRADERS,
+  TopTrader,
+  TimeframePeriod,
+} from '@/data/top-traders';
 import { cn } from '@/lib/utils';
 
 export function LeaderboardPage() {
+  const [timeframe, setTimeframe] = useState<TimeframePeriod>('allTime');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedAsset, setSelectedAsset] = useState<string>('ALL');
 
+  // Select the appropriate dataset based on timeframe
+  const currentDataset = useMemo(() => {
+    switch (timeframe) {
+      case 'weekly':
+        return TOP_20_WEEKLY_TRADERS;
+      case 'monthly':
+        return TOP_20_MONTHLY_TRADERS;
+      case 'allTime':
+      default:
+        return TOP_20_ALL_TIME_TRADERS;
+    }
+  }, [timeframe]);
+
   // Filtered Leaderboard for Top 20
   const filteredTraders = useMemo(() => {
-    return TOP_20_PROFITABLE_TRADERS.filter((t) => {
+    return currentDataset.filter((t) => {
       const matchSearch =
         t.traderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -53,7 +74,37 @@ export function LeaderboardPage() {
 
       return matchSearch && matchTier && matchAsset;
     });
-  }, [searchQuery, selectedTier, selectedAsset]);
+  }, [currentDataset, searchQuery, selectedTier, selectedAsset]);
+
+  // Dynamic metrics per timeframe
+  const topTraderProfit = currentDataset[0]?.totalProfit || 0;
+  const avgWinRate = (
+    currentDataset.reduce((acc, t) => acc + t.winRate, 0) / currentDataset.length
+  ).toFixed(1);
+  const avgProfitFactor = (
+    currentDataset.reduce((acc, t) => acc + t.profitFactor, 0) / currentDataset.length
+  ).toFixed(2);
+
+  const timeframeLabels = {
+    allTime: {
+      title: 'All-Time Hall of Fame',
+      profitLabel: 'All-Time Profit',
+      subtitle: 'Rankings calculated across lifetime verified trade history on our proprietary trading platform.',
+      badgeText: '🏆 Top 20 All-Time Legends',
+    },
+    monthly: {
+      title: 'This Month’s Leaderboard',
+      profitLabel: 'Monthly Gain',
+      subtitle: 'Rankings computed from trading activity during the current calendar month.',
+      badgeText: '📅 Top 20 Monthly Leaders',
+    },
+    weekly: {
+      title: 'This Week’s Leaderboard',
+      profitLabel: 'Weekly Gain',
+      subtitle: 'Rankings computed from trading activity during the active trading week (Mon - Fri).',
+      badgeText: '⚡ Top 20 Weekly Sprint Leaders',
+    },
+  };
 
   return (
     <div className="pt-24 pb-20 bg-background min-h-screen">
@@ -70,31 +121,84 @@ export function LeaderboardPage() {
               Top 20 Most Profitable <span className="text-amber-500">Traders</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
-              Official rankings of the top 20 funded traders worldwide across all FundedShift prop firm challenges. Rankings are computed in real time directly from our proprietary FundedShift Web Trading Platform accounts and verified order execution logs.
+              Official rankings of the top 20 funded traders worldwide. Computed in real time directly from our proprietary FundedShift Web Trading Platform accounts and verified order execution logs.
             </p>
+
+            {/* Timeframe Selector Pill Tabs (Weekly / Monthly / All-Time) */}
+            <div className="pt-4 flex items-center justify-center">
+              <div className="inline-flex items-center p-1.5 rounded-2xl bg-slate-200/80 border border-slate-300/80 shadow-inner gap-1">
+                <button
+                  id="tab-timeframe-weekly"
+                  onClick={() => setTimeframe('weekly')}
+                  className={cn(
+                    'flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
+                    timeframe === 'weekly'
+                      ? 'bg-white text-slate-900 shadow-md font-extrabold ring-1 ring-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  Weekly Top 20
+                </button>
+                <button
+                  id="tab-timeframe-monthly"
+                  onClick={() => setTimeframe('monthly')}
+                  className={cn(
+                    'flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
+                    timeframe === 'monthly'
+                      ? 'bg-white text-slate-900 shadow-md font-extrabold ring-1 ring-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  <Calendar className="h-4 w-4 text-brand-500" />
+                  Monthly Top 20
+                </button>
+                <button
+                  id="tab-timeframe-alltime"
+                  onClick={() => setTimeframe('allTime')}
+                  className={cn(
+                    'flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all',
+                    timeframe === 'allTime'
+                      ? 'bg-white text-slate-900 shadow-md font-extrabold ring-1 ring-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  )}
+                >
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  All-Time Top 20
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Key Metrics Grid */}
+          {/* Key Metrics Grid (Dynamic based on selected timeframe) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-10">
             <motion.div
+              key={`metric-top-${timeframe}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               whileHover={{ y: -3 }}
               className="bg-card border border-slate-200 rounded-2xl p-5 shadow-sm text-center"
             >
               <div className="h-10 w-10 mx-auto rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 mb-2">
                 <Trophy className="h-5 w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">$94,820</p>
-              <p className="text-xs text-slate-500 mt-0.5 font-medium">#1 Trader Total Profit</p>
+              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900 font-mono">
+                ${topTraderProfit.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">#1 Trader {timeframeLabels[timeframe].profitLabel}</p>
             </motion.div>
 
             <motion.div
+              key={`metric-winrate-${timeframe}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               whileHover={{ y: -3 }}
               className="bg-card border border-slate-200 rounded-2xl p-5 shadow-sm text-center"
             >
               <div className="h-10 w-10 mx-auto rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-2">
                 <TrendingUp className="h-5 w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">71.8%</p>
+              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900 font-mono">{avgWinRate}%</p>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Top 20 Average Win Rate</p>
             </motion.div>
 
@@ -110,13 +214,16 @@ export function LeaderboardPage() {
             </motion.div>
 
             <motion.div
+              key={`metric-pf-${timeframe}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               whileHover={{ y: -3 }}
               className="bg-card border border-slate-200 rounded-2xl p-5 shadow-sm text-center"
             >
               <div className="h-10 w-10 mx-auto rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 mb-2">
                 <Award className="h-5 w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">3.14</p>
+              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900 font-mono">{avgProfitFactor}</p>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Top 20 Avg Profit Factor</p>
             </motion.div>
           </div>
@@ -130,9 +237,12 @@ export function LeaderboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 flex items-center gap-2">
-                <Flame className="h-6 w-6 text-amber-500" /> Top 3 Champions Podium
+                <Flame className="h-6 w-6 text-amber-500" />
+                {timeframe === 'weekly' && 'Weekly Top 3 Champions'}
+                {timeframe === 'monthly' && 'Monthly Top 3 Champions'}
+                {timeframe === 'allTime' && 'All-Time Top 3 Legends'}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500">The highest ranked institutional funded traders on the platform.</p>
+              <p className="text-xs sm:text-sm text-slate-500">{timeframeLabels[timeframe].subtitle}</p>
             </div>
             <Link
               to="/proof-of-payout"
@@ -143,14 +253,16 @@ export function LeaderboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TOP_20_PROFITABLE_TRADERS.slice(0, 3).map((trader, idx) => {
+            {currentDataset.slice(0, 3).map((trader, idx) => {
               const isGold = idx === 0;
               const isSilver = idx === 1;
               const isBronze = idx === 2;
 
               return (
                 <motion.div
-                  key={trader.rank}
+                  key={`${timeframe}-${trader.rank}-${trader.traderName}`}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ y: -6 }}
                   className={cn(
                     'rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between border shadow-sm transition-all',
@@ -205,7 +317,7 @@ export function LeaderboardPage() {
                   {/* Big Profit Metric */}
                   <div className="bg-white/90 rounded-2xl p-4 border border-slate-200/80 text-center mb-4">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      TOTAL VERIFIED PROFIT
+                      {timeframeLabels[timeframe].profitLabel.toUpperCase()}
                     </span>
                     <span className="text-2xl font-black font-mono text-emerald-600">
                       ${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -311,14 +423,14 @@ export function LeaderboardPage() {
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-lg text-slate-900">FundedShift Top 20 Most Profitable Traders</h3>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono">
-                  TOP 20 ALL TRADERS
+                  {timeframeLabels[timeframe].badgeText}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Live rankings computed from our proprietary trading engine and verified execution logs across all funded accounts.</p>
+              <p className="text-xs text-slate-500">{timeframeLabels[timeframe].subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Broker Audited
+                <CheckCircle2 className="h-3.5 w-3.5" /> Engine Audited
               </span>
             </div>
           </div>
@@ -330,7 +442,7 @@ export function LeaderboardPage() {
                   <th className="p-4">Rank</th>
                   <th className="p-4">Trader</th>
                   <th className="p-4">Funded Capital</th>
-                  <th className="p-4">Total Net Profit</th>
+                  <th className="p-4">{timeframeLabels[timeframe].profitLabel}</th>
                   <th className="p-4">Payouts</th>
                   <th className="p-4">Win Rate</th>
                   <th className="p-4">Profit Factor</th>
@@ -340,7 +452,7 @@ export function LeaderboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredTraders.map((trader) => (
-                  <tr key={trader.rank} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={`${timeframe}-${trader.rank}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-4 font-bold font-mono">
                       <span
                         className={cn(
@@ -370,19 +482,35 @@ export function LeaderboardPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 font-mono font-semibold text-slate-800">{trader.accountSize}</td>
-                    <td className="p-4 font-mono font-bold text-emerald-600 text-sm sm:text-base">
-                      ${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-4 font-mono text-slate-600">{trader.payoutCount} cycles</td>
-                    <td className="p-4 font-mono font-bold text-emerald-600">{trader.winRate}%</td>
-                    <td className="p-4 font-mono font-bold text-brand-600">{trader.profitFactor}</td>
+                    <td className="p-4 font-mono font-bold text-slate-800">{trader.accountSize}</td>
                     <td className="p-4">
-                      <span className="font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 font-mono text-xs">
-                        {trader.consistencyScore}/100
+                      <span className="font-mono font-bold text-emerald-600 text-sm">
+                        +${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </span>
                     </td>
-                    <td className="p-4 font-mono font-bold text-slate-800">{trader.topSymbol}</td>
+                    <td className="p-4 font-bold text-slate-700">{trader.payoutCount} Payouts</td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-mono font-bold text-xs">
+                        {trader.winRate}%
+                      </span>
+                    </td>
+                    <td className="p-4 font-mono font-bold text-brand-600">{trader.profitFactor}</td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-emerald-500 h-1.5 rounded-full"
+                            style={{ width: `${trader.consistencyScore}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-600">{trader.consistencyScore}%</span>
+                      </div>
+                    </td>
+                    <td className="p-4 font-mono font-bold text-slate-900">
+                      <span className="px-2 py-1 rounded-md bg-slate-100 border border-slate-200 text-xs">
+                        {trader.topSymbol}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -390,105 +518,22 @@ export function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Milestone Achievements */}
-        <div className="space-y-6 pt-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black font-display text-slate-900 flex items-center gap-2">
-              <Star className="h-6 w-6 text-purple-600" /> Milestone Achievements & Badges
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500">Hall of fame badges earned by elite traders across evaluation and funded phases.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-white border border-amber-200 rounded-3xl p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white mb-4 shadow-md shadow-amber-500/30">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">$100,000+ Payout Legend</h3>
-              <p className="text-xs text-slate-600 mt-1 mb-4">
-                Traders with near or over $100,000 in accumulated verified payouts from FundedShift.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Marcus Vance 🇬🇧</span>
-                  <span className="font-mono font-bold text-amber-600">$94,820 (95% to $100k)</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Sneha Kulkarni 🇮🇳</span>
-                  <span className="font-mono font-bold text-amber-600">$82,450 (82% to $100k)</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-white border border-purple-200 rounded-3xl p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white mb-4 shadow-md shadow-purple-600/30">
-                <ShieldCheck className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Zero Drawdown Master</h3>
-              <p className="text-xs text-slate-600 mt-1 mb-4">
-                Passed evaluations without ever exceeding 1.0% maximum peak-to-valley drawdown.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-purple-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Rajesh Sharma 🇮🇳</span>
-                  <span className="font-mono font-bold text-purple-600">Max DD: 0.62%</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-purple-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Lucas Schneider 🇩🇪</span>
-                  <span className="font-mono font-bold text-purple-600">Max DD: 0.81%</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white border border-emerald-200 rounded-3xl p-6 shadow-sm">
-              <div className="h-12 w-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white mb-4 shadow-md shadow-emerald-600/30">
-                <Zap className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">Fast-Track Funded Pro</h3>
-              <p className="text-xs text-slate-600 mt-1 mb-4">
-                Completed challenges in under 7 trading days while maintaining flawless risk compliance.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-emerald-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Aarav Patel 🇮🇳</span>
-                  <span className="font-mono font-bold text-emerald-600">Passed in 5 Days</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-emerald-200/60 text-xs shadow-xs">
-                  <span className="font-bold text-slate-800">Alexandre Dubois 🇫🇷</span>
-                  <span className="font-mono font-bold text-emerald-600">Passed in 6 Days</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA Banner */}
-        <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white p-8 sm:p-12 relative overflow-hidden border border-slate-800">
-          <div className="max-w-3xl space-y-4 relative z-10">
-            <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold uppercase tracking-wider">
-              Join the Top 20 Elite
-            </span>
-            <h3 className="text-2xl sm:text-4xl font-black font-display text-white">
-              Want your name in the Top 20 Global Standings?
+        {/* FAQ & Transparency Footer Callout */}
+        <div className="bg-gradient-to-r from-slate-900 to-brand-950 rounded-3xl p-8 text-white text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="space-y-2">
+            <h3 className="text-xl sm:text-2xl font-bold font-display text-white">
+              Ready to claim your spot on the Top 20 Leaderboard?
             </h3>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Start your evaluation challenge today, get funded with up to $200,000 capital, and build your track record alongside the world's best traders.
+            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
+              Choose an evaluation or instant funding tier, trade directly on our ultra-fast web trading platform, and withdraw up to 90% profit splits every 14 days.
             </p>
-            <div className="pt-2 flex flex-wrap gap-4">
-              <Link
-                to="/challenges"
-                className="btn-primary px-6 py-3 text-sm font-bold shadow-lg"
-              >
-                Start Evaluation Challenge
-              </Link>
-              <Link
-                to="/proof-of-payout"
-                className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold border border-white/15 transition-all"
-              >
-                Inspect Public Proof of Payout Feed
-              </Link>
-            </div>
           </div>
+          <Link
+            to="/challenges"
+            className="px-6 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-sm shadow-lg whitespace-nowrap transition-all"
+          >
+            Start Trading Challenge
+          </Link>
         </div>
       </div>
     </div>
