@@ -334,7 +334,7 @@ export function DashboardLeaderboard() {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Live standings computed from verified MT5 & cTrader accounts across all funded tiers.
+              Live standings computed directly from our proprietary FundedShift Web Trading Platform accounts across all funded tiers.
             </p>
           </div>
           <div className="flex items-center gap-2">

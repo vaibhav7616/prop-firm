@@ -70,7 +70,7 @@ export function LeaderboardPage() {
               Top 20 Most Profitable <span className="text-amber-500">Traders</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
-              Official rankings of the top 20 funded traders worldwide across all FundedShift prop firm challenges. Rankings are automatically audited from verified MT5 & cTrader account records.
+              Official rankings of the top 20 funded traders worldwide across all FundedShift prop firm challenges. Rankings are computed in real time directly from our proprietary FundedShift Web Trading Platform accounts and verified order execution logs.
             </p>
           </div>
 
@@ -314,7 +314,7 @@ export function LeaderboardPage() {
                   TOP 20 ALL TRADERS
                 </span>
               </div>
-              <p className="text-xs text-slate-500">Live rankings computed from audited broker statements and verified trade logs across all accounts.</p>
+              <p className="text-xs text-slate-500">Live rankings computed from our proprietary trading engine and verified execution logs across all funded accounts.</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">

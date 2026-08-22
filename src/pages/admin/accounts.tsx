@@ -357,10 +357,8 @@ export function AdminAccounts() {
                   onChange={(e) => setIssuePlatform(e.target.value)}
                   className="w-full p-2.5 rounded-xl bg-background border border-border text-xs"
                 >
-                  <option value="mt5">MetaTrader 5 (MT5)</option>
-                  <option value="mt4">MetaTrader 4 (MT4)</option>
-                  <option value="ctrader">cTrader</option>
-                  <option value="fundedshift_terminal">FundedShift Web Terminal</option>
+                  <option value="fundedshift_terminal">FundedShift Web Trading Platform (Proprietary)</option>
+                  <option value="fundedshift_pro">FundedShift Pro Desktop Engine</option>
                 </select>
               </div>
 

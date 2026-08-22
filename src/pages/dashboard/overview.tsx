@@ -762,7 +762,7 @@ export function DashboardOverview() {
                   <ShieldCheck className="h-4 w-4 text-brand-500" /> Platform Account Credentials
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Use these credentials to connect via MetaTrader 5 or our direct Web Terminal
+                  Use these credentials to trade directly inside the FundedShift Web Trading Platform
                 </p>
               </div>
               <span className="text-xs font-mono text-slate-700 font-semibold px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300">

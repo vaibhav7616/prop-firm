@@ -133,32 +133,32 @@ export function AdminSettings() {
           </CardContent>
         </Card>
 
-        {/* Broker Bridge & Admin Controls */}
+        {/* Proprietary Trading Engine Controls */}
         <Card className="glass border-border/50 md:col-span-2">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Cpu className="h-5 w-5 text-gold-400" />
-              MetaTrader & cTrader Server Bridge
+              FundedShift Proprietary Trading Engine Infrastructure
             </CardTitle>
-            <CardDescription>Server endpoints and auto-provisioning API credentials</CardDescription>
+            <CardDescription>Internal high-speed matching engine, pricing feeds, and live execution pipelines</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
             <div className="p-4 rounded-xl bg-secondary/30 border border-border/40 space-y-1">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase block">MT5 Server IP</span>
-              <p className="font-mono font-bold text-foreground">live.fundedshift.com:443</p>
-              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">CONNECTED</span>
+              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Matching Engine Cluster</span>
+              <p className="font-mono font-bold text-foreground">engine-primary.fundedshift.com</p>
+              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">LATENCY &lt; 8ms</span>
             </div>
 
             <div className="p-4 rounded-xl bg-secondary/30 border border-border/40 space-y-1">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase block">MT4 Server IP</span>
-              <p className="font-mono font-bold text-foreground">mt4.fundedshift.com:443</p>
-              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">CONNECTED</span>
+              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Real-time SSE Price Feeder</span>
+              <p className="font-mono font-bold text-foreground">stream.fundedshift.com:443</p>
+              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">STREAMING</span>
             </div>
 
             <div className="p-4 rounded-xl bg-secondary/30 border border-border/40 space-y-1">
-              <span className="text-[10px] text-muted-foreground font-bold uppercase block">cTrader OpenAPI Host</span>
-              <p className="font-mono font-bold text-foreground">openapi.ctrader.com</p>
-              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">ACTIVE</span>
+              <span className="text-[10px] text-muted-foreground font-bold uppercase block">Automated Rule Engine</span>
+              <p className="font-mono font-bold text-foreground">rules.fundedshift.com</p>
+              <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold mt-1">ACTIVE AUDIT</span>
             </div>
           </CardContent>
         </Card>
