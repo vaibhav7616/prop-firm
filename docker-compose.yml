@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fundedshift-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fundedshift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fundedshift_secret_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-fundedshift_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fundedshift} -d ${POSTGRES_DB:-fundedshift_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fundedshift-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fundedshift}:${POSTGRES_PASSWORD:-fundedshift_secret_2026}@postgres:5432/${POSTGRES_DB:-fundedshift_db}
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_random_32_character_secret_in_prod}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminSecurePass123!}
+      BROKER_SIMULATOR_ENABLED: "true"
+      FINNHUB_API_KEY: ${FINNHUB_API_KEY:-}
+    volumes:
+      - app_data:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  app_data:

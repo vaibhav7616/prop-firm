@@ -1,0 +1,6 @@
+{
+  "name": "Prop Trading Platform",
+  "description": "Proprietary trading firm platform with funded account challenges, real-time trading dashboards, analytics, account management, and affiliate features.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
