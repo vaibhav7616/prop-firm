@@ -19,6 +19,7 @@ import { AboutPage } from '@/pages/about';
 import { ContactPage } from '@/pages/contact';
 import { BlogPage } from '@/pages/blog';
 import { BlogPostPage } from '@/pages/blog-post';
+import { LeaderboardPage } from '@/pages/leaderboard';
 
 // Auth pages
 import { LoginPage } from '@/pages/auth/login';
@@ -38,6 +39,7 @@ import { DashboardOrders } from '@/pages/dashboard/orders';
 import { DashboardInvoices } from '@/pages/dashboard/invoices';
 import { DashboardPayouts } from '@/pages/dashboard/payouts';
 import { DashboardCertificates } from '@/pages/dashboard/certificates';
+import { DashboardLeaderboard } from '@/pages/dashboard/leaderboard';
 import { DashboardAffiliate } from '@/pages/dashboard/affiliate';
 import { DashboardSupport } from '@/pages/dashboard/support';
 import { DashboardNotifications } from '@/pages/dashboard/notifications';
@@ -92,6 +94,8 @@ function AppRoutes() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<BlogPostPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/proof-of-payout" element={<LeaderboardPage />} />
       </Route>
 
       {/* Auth */}
@@ -115,6 +119,7 @@ function AppRoutes() {
         <Route path="invoices" element={<DashboardInvoices />} />
         <Route path="payouts" element={<DashboardPayouts />} />
         <Route path="certificates" element={<DashboardCertificates />} />
+        <Route path="leaderboard" element={<DashboardLeaderboard />} />
         <Route path="affiliate" element={<DashboardAffiliate />} />
         <Route path="support" element={<DashboardSupport />} />
         <Route path="notifications" element={<DashboardNotifications />} />

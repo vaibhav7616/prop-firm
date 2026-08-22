@@ -16,6 +16,7 @@ const FOOTER_LINKS = {
     { label: 'Challenges', to: '/challenges' },
     { label: 'Pricing', to: '/pricing' },
     { label: 'Trading Rules', to: '/rules' },
+    { label: 'Leaderboard & Proofs', to: '/leaderboard' },
     { label: 'Affiliates', to: '/affiliates' },
   ],
   Resources: [
