@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { supabase } from '@/lib/supabase';
 import {
@@ -12,6 +12,8 @@ import {
 } from '@/lib/constants';
 import type { Challenge, ChallengeType } from '@/types';
 import { cn } from '@/lib/utils';
+import { TiltCard, TiltDepthLayer } from '@/components/motion/tilt-card';
+import { StaggerContainer, StaggerItem } from '@/components/motion/stagger';
 
 import { DEFAULT_CHALLENGES } from '@/lib/default-data';
 import { fetchChallengesApi } from '@/lib/api-client';
@@ -79,13 +81,20 @@ export function ChallengesPage() {
                   key={type}
                   onClick={() => handleTypeSelect(type)}
                   className={cn(
-                    'relative rounded-2xl p-6 text-left transition-all duration-150 cursor-pointer select-none',
+                    'relative rounded-2xl p-6 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden',
                     active
-                      ? 'border-2 border-brand-500 bg-brand-50/80 shadow-soft-md scale-[1.01]'
-                      : 'border border-border bg-card shadow-soft hover:shadow-soft-md hover:border-brand-200'
+                      ? 'border-2 border-brand-500 bg-brand-50/80 shadow-md'
+                      : 'border border-border bg-card shadow-sm hover:border-brand-300'
                   )}
                 >
-                  <h3 className="font-display text-lg font-bold mb-1">{CHALLENGE_TYPE_LABELS[type]}</h3>
+                  {active && (
+                    <motion.div
+                      layoutId="activeChallengePill"
+                      className="absolute inset-0 bg-brand-500/5 -z-10"
+                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                    />
+                  )}
+                  <h3 className="font-display text-lg font-bold mb-1 text-foreground">{CHALLENGE_TYPE_LABELS[type]}</h3>
                   <p className="text-sm text-muted-foreground">{CHALLENGE_TYPE_DESCRIPTIONS[type]}</p>
                 </button>
               );
@@ -96,45 +105,67 @@ export function ChallengesPage() {
 
       <section className="pb-24">
         <div className="container-page">
-          <div
-            key={activeType}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 transition-opacity duration-150"
-          >
-            {filtered.map((challenge) => {
-              const rules = challenge.rules;
-              return (
-                <div
-                  key={challenge.id}
-                  className="card-elevated p-6 flex flex-col hover:-translate-y-1 transition-transform duration-200"
-                >
-                  <div className="flex items-baseline justify-between mb-1">
-                    <h3 className="font-display text-2xl font-bold">{formatAccountSize(challenge.account_size)}</h3>
-                    <span className="text-sm text-muted-foreground">{CHALLENGE_TYPE_LABELS[challenge.type]}</span>
-                  </div>
-                  <p className="font-display text-3xl font-bold text-brand-600 mb-6">{formatCurrency(challenge.price)}</p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeType}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {filtered.map((challenge) => {
+                const rules = challenge.rules;
+                return (
+                  <TiltCard
+                    key={challenge.id}
+                    maxTilt={4}
+                    className="card-elevated p-6 flex flex-col h-full border border-slate-200/90 shadow-sm"
+                  >
+                    <div className="flex items-baseline justify-between mb-1">
+                      <h3 className="font-display text-2xl font-bold text-foreground">
+                        {formatAccountSize(challenge.account_size)}
+                      </h3>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                        {CHALLENGE_TYPE_LABELS[challenge.type]}
+                      </span>
+                    </div>
 
-                  <div className="space-y-2.5 mb-6 flex-1">
-                    <RuleRow label="Profit Target" value={`${rules.profit_target}%`} />
-                    <RuleRow label="Daily Drawdown" value={`${rules.daily_drawdown}%`} />
-                    <RuleRow label="Max Drawdown" value={`${rules.max_drawdown}%`} />
-                    <RuleRow label="Min Trading Days" value={`${rules.min_trading_days}`} />
-                    <RuleRow label="Max Trading Days" value={rules.max_trading_days ? `${rules.max_trading_days}` : 'None'} />
-                    <RuleRow label="Leverage" value={`1:${rules.leverage}`} />
-                    <RuleRow label="Profit Split" value={`Up to ${rules.profit_split}%`} />
-                    <RuleRow label="News Trading" value={rules.news_trading ? 'Allowed' : 'Not Allowed'} />
-                    <RuleRow label="Weekend Holding" value={rules.weekend_holding ? 'Allowed' : 'Not Allowed'} />
-                  </div>
+                    <TiltDepthLayer z={15}>
+                      <p className="font-display text-3xl font-bold text-brand-600 mb-6">
+                        {formatCurrency(challenge.price)}
+                      </p>
+                    </TiltDepthLayer>
 
-                  <Link to={`/checkout?challenge=${challenge.id}`}>
-                    <button className="btn-primary w-full flex items-center justify-center gap-2">
-                      Get Started
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
+                    <div className="space-y-2.5 mb-6 flex-1">
+                      <RuleRow label="Profit Target" value={`${rules.profit_target}%`} />
+                      <RuleRow label="Daily Drawdown" value={`${rules.daily_drawdown}%`} />
+                      <RuleRow label="Max Drawdown" value={`${rules.max_drawdown}%`} />
+                      <RuleRow label="Min Trading Days" value={`${rules.min_trading_days}`} />
+                      <RuleRow label="Max Trading Days" value={rules.max_trading_days ? `${rules.max_trading_days}` : 'None'} />
+                      <RuleRow label="Leverage" value={`1:${rules.leverage}`} />
+                      <RuleRow label="Profit Split" value={`Up to ${rules.profit_split}%`} />
+                      <RuleRow label="News Trading" value={rules.news_trading ? 'Allowed' : 'Not Allowed'} />
+                      <RuleRow label="Weekend Holding" value={rules.weekend_holding ? 'Allowed' : 'Not Allowed'} />
+                    </div>
+
+                    <TiltDepthLayer z={20}>
+                      <Link to={`/checkout?challenge=${challenge.id}`}>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="btn-primary w-full flex items-center justify-center gap-2"
+                        >
+                          Get Started
+                          <ArrowRight className="h-4 w-4" />
+                        </motion.button>
+                      </Link>
+                    </TiltDepthLayer>
+                  </TiltCard>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </section>
     </div>

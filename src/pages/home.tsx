@@ -18,7 +18,7 @@ import {
   Wallet,
   Target,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,10 @@ import { PayoutCalculator } from '@/components/home/payout-calculator';
 import { ScalingRoadmap } from '@/components/home/scaling-roadmap';
 import { InstrumentsPreview } from '@/components/home/instruments-preview';
 import { CertificateModal } from '@/components/home/certificate-modal';
+import { Hero3DPreview } from '@/components/home/hero-3d';
+import { RevealOnScroll } from '@/components/motion/reveal-on-scroll';
+import { TiltCard, TiltDepthLayer } from '@/components/motion/tilt-card';
+import { AnimatedButton } from '@/components/motion/animated-button';
 
 /* ---------- Hero Dashboard Preview ---------- */
 function HeroDashboard() {
@@ -316,9 +320,9 @@ export function HomePage() {
                 <span className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-500" /> Fee refunded</span>
               </div>
             </motion.div>
-            {/* Right - Dashboard preview */}
+            {/* Right - 3D Dashboard preview with mouse parallax & floating depth */}
             <div>
-              <HeroDashboard />
+              <Hero3DPreview />
             </div>
           </div>
         </div>
@@ -365,50 +369,51 @@ export function HomePage() {
           />
           <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
             {PROGRAMS.map((program, idx) => (
-              <motion.div
-                key={program.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                whileHover={{ y: -6 }}
-                className={cn(
-                  'card-elevated p-7 flex flex-col',
-                  program.highlight && 'ring-2 ring-brand-500 shadow-soft-lg'
-                )}
-              >
-                {program.highlight && (
-                  <div className="mb-4">
-                    <span className="badge-brand">Most Popular</span>
-                  </div>
-                )}
-                <h3 className="font-display text-xl font-bold">{program.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1 mb-4">{program.tagline}</p>
-                <p className="font-display text-3xl font-bold mb-6">
-                  {program.price}
-                  <span className="text-sm font-normal text-muted-foreground"> / starting</span>
-                </p>
-                <ul className="space-y-3 mb-8 flex-1">
-                  {program.features.map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-sm">
-                      <div className="h-5 w-5 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
-                        <Check className="h-3 w-3 text-brand-600" />
-                      </div>
-                      <span className="text-foreground/80">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link to={`/challenges${program.highlight ? '?type=two_step' : `?type=${program.name.toLowerCase().replace(' ', '_')}`}`}>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={cn('w-full', program.highlight ? 'btn-primary' : 'btn-secondary')}
-                  >
-                    Get Started
-                    <ArrowRight className="h-4 w-4" />
-                  </motion.button>
-                </Link>
-              </motion.div>
+              <RevealOnScroll key={program.name} delay={idx * 0.08} variant="fadeUp">
+                <TiltCard
+                  maxTilt={4}
+                  className={cn(
+                    'card-elevated p-7 flex flex-col h-full',
+                    program.highlight && 'ring-2 ring-brand-500 shadow-soft-lg'
+                  )}
+                >
+                  {program.highlight && (
+                    <div className="mb-4">
+                      <span className="badge-brand">Most Popular</span>
+                    </div>
+                  )}
+                  <h3 className="font-display text-xl font-bold">{program.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">{program.tagline}</p>
+                  <TiltDepthLayer z={20}>
+                    <p className="font-display text-3xl font-bold text-brand-600 mb-6">
+                      {program.price}
+                      <span className="text-sm font-normal text-muted-foreground"> / starting</span>
+                    </p>
+                  </TiltDepthLayer>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {program.features.map((f) => (
+                      <li key={f} className="flex items-center gap-3 text-sm">
+                        <div className="h-5 w-5 rounded-full bg-brand-50 flex items-center justify-center shrink-0">
+                          <Check className="h-3 w-3 text-brand-600" />
+                        </div>
+                        <span className="text-foreground/80">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <TiltDepthLayer z={25}>
+                    <Link to={`/challenges${program.highlight ? '?type=two_step' : `?type=${program.name.toLowerCase().replace(' ', '_')}`}`}>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={cn('w-full', program.highlight ? 'btn-primary' : 'btn-secondary')}
+                      >
+                        Get Started
+                        <ArrowRight className="h-4 w-4" />
+                      </motion.button>
+                    </Link>
+                  </TiltDepthLayer>
+                </TiltCard>
+              </RevealOnScroll>
             ))}
           </div>
         </div>

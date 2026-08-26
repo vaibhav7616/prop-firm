@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Award, CheckCircle2, Shield, X, Search, Trophy, Sparkles } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 

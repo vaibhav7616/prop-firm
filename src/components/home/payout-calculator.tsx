@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import {
   DollarSign,
   ArrowRight,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { formatCurrency } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/motion/animated-number';
 
 const ACCOUNT_SIZES = [
   { value: 5000, label: '$5,000' },

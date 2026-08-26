@@ -43,6 +43,8 @@ import {
 import { useAuth } from '@/context/auth-context';
 import type { TradingAccount, Order, Notification } from '@/types';
 import { Button } from '@/components/ui/button';
+import { AnimatedNumber } from '@/components/motion/animated-number';
+import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
 import { toast } from 'sonner';
 
 import { DEFAULT_ACCOUNTS, DEFAULT_ORDERS, DEFAULT_NOTIFICATIONS } from '@/lib/default-data';
@@ -244,17 +246,11 @@ export function DashboardOverview() {
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-start sm:justify-between lg:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 lg:border-none">
           {accounts.length > 1 && (
-            <select
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 max-w-full sm:max-w-none truncate"
-            >
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  #{acc.account_number} (${acc.account_size?.toLocaleString()})
-                </option>
-              ))}
-            </select>
+            <AnimatedAccountSelector
+              accounts={accounts}
+              selectedAccount={selectedAccount}
+              onSelect={(acc) => setSelectedAccountId(acc.id)}
+            />
           )}
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
@@ -281,7 +277,8 @@ export function DashboardOverview() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
+              whileHover={{ y: -3, transition: { duration: 0.18, ease: 'easeOut' } }}
+              transition={{ duration: 0.3 }}
               className="bg-white border border-slate-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
             >
               <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -289,7 +286,7 @@ export function DashboardOverview() {
                 <Wallet className="h-4 w-4 text-brand-500" />
               </div>
               <h2 className="text-2xl font-extrabold font-display text-slate-900 mt-1">
-                ${currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <AnimatedNumber value={currentBalance} prefix="$" decimals={2} />
               </h2>
               <p className="text-xs text-slate-500 mt-2 font-medium">
                 Starting: <span className="text-slate-800 font-semibold">${startingBalance.toLocaleString()}</span>
@@ -300,7 +297,8 @@ export function DashboardOverview() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05, duration: 0.2 }}
+              whileHover={{ y: -3, transition: { duration: 0.18, ease: 'easeOut' } }}
+              transition={{ delay: 0.05, duration: 0.3 }}
               className="bg-white border border-slate-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
             >
               <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -308,7 +306,7 @@ export function DashboardOverview() {
                 <Activity className="h-4 w-4 text-emerald-500" />
               </div>
               <h2 className={`text-2xl font-extrabold font-display mt-1 ${totalProfit >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
-                ${currentEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <AnimatedNumber value={currentEquity} prefix="$" decimals={2} />
               </h2>
               <div className="flex items-center gap-1.5 mt-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -322,7 +320,8 @@ export function DashboardOverview() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
+              whileHover={{ y: -3, transition: { duration: 0.18, ease: 'easeOut' } }}
+              transition={{ delay: 0.1, duration: 0.3 }}
               className="bg-white border border-slate-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
             >
               <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -330,7 +329,8 @@ export function DashboardOverview() {
                 <TrendingUp className={`h-4 w-4 ${todaysPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`} />
               </div>
               <h2 className={`text-2xl font-extrabold font-display mt-1 ${todaysPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {todaysPnl >= 0 ? '+' : ''}${todaysPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {todaysPnl >= 0 ? '+' : ''}
+                <AnimatedNumber value={todaysPnl} prefix="$" decimals={2} />
               </h2>
               <p className={`text-xs mt-2 font-bold font-mono ${todaysPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {todaysPnlPercent >= 0 ? '+' : ''}{todaysPnlPercent.toFixed(2)}% today
@@ -341,7 +341,8 @@ export function DashboardOverview() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.2 }}
+              whileHover={{ y: -3, transition: { duration: 0.18, ease: 'easeOut' } }}
+              transition={{ delay: 0.15, duration: 0.3 }}
               className="bg-white border border-slate-300 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden"
             >
               <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -349,7 +350,7 @@ export function DashboardOverview() {
                 <ShieldCheck className="h-4 w-4 text-sky-500" />
               </div>
               <h2 className="text-2xl font-extrabold font-display text-slate-900 mt-1">
-                ${dailyLossRemaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <AnimatedNumber value={dailyLossRemaining} prefix="$" decimals={2} />
               </h2>
               <p className="text-xs text-emerald-600 font-bold font-mono mt-2 flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" /> SAFE • {((dailyLossUsed / dailyLossLimitAmount) * 100).toFixed(1)}% used

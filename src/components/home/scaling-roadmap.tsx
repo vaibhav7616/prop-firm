@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { TrendingUp, ShieldCheck, Zap, DollarSign, Award, ArrowUpRight } from 'lucide-react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { formatCurrency } from '@/lib/utils';
