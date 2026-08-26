@@ -313,9 +313,9 @@
       "type": "two_step",
       "account_size": 100000,
       "starting_balance": 100000,
-      "current_balance": 106420,
-      "current_equity": 123048,
-      "highest_balance": 106420,
+      "current_balance": 123018,
+      "current_equity": 123018,
+      "highest_balance": 123018,
       "highest_equity": 123408,
       "start_of_day_balance": 100000,
       "start_of_day_equity": 100000,
@@ -436,11 +436,15 @@
       "lot_size": 2,
       "open_price": 1.082,
       "margin": 2164,
-      "floating_pnl": 16628,
+      "floating_pnl": 0,
       "swap": 0,
       "commission": 12,
-      "status": "OPEN",
-      "opened_at": "2026-08-07T17:01:26.961Z"
+      "status": "CLOSED",
+      "opened_at": "2026-08-07T17:01:26.961Z",
+      "close_price": 1.16505,
+      "closed_at": "2026-08-26T17:50:25.916Z",
+      "close_reason": "MANUAL",
+      "realized_pnl": 16598
     }
   ],
   "trade_orders": [

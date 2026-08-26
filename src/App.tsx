@@ -153,9 +153,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <BrowserRouter>
-          <AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <ThemeProvider>
             <ScrollToTop />
             <AppRoutes />
             <Toaster
@@ -168,9 +168,9 @@ export default function App() {
                 },
               }}
             />
-          </AuthProvider>
-        </BrowserRouter>
-      </ThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }

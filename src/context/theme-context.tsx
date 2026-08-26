@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/auth-context';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -7,6 +9,7 @@ interface ThemeContextType {
   resolvedTheme: 'light' | 'dark';
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  isDashboardArea: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -14,6 +17,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'fundedshift_theme';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const { user } = useAuth();
+
+  // Check if current route is in authenticated dashboard/admin area
+  const isDashboardArea =
+    location.pathname.startsWith('/dashboard') ||
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/checkout');
+
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
@@ -21,7 +33,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         return stored;
       }
     }
-    return 'system';
+    return 'light';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
@@ -30,12 +42,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = window.document.documentElement;
     
     const applyTheme = () => {
+      // Rule: Frontend marketing / public pages MUST ALWAYS remain in light (white) mode.
+      // Dark mode is only activated for logged-in users inside the dashboard/admin areas.
       let current: 'light' | 'dark' = 'light';
-      if (theme === 'system') {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        current = systemDark ? 'dark' : 'light';
+
+      if (isDashboardArea && user) {
+        if (theme === 'system') {
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          current = systemDark ? 'dark' : 'light';
+        } else {
+          current = theme;
+        }
       } else {
-        current = theme;
+        // Frontend / public / logged out state is strictly forced to light
+        current = 'light';
       }
 
       setResolvedTheme(current);
@@ -53,14 +73,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = () => {
-      if (theme === 'system') {
+      if (theme === 'system' && isDashboardArea && user) {
         applyTheme();
       }
     };
 
     mediaQuery.addEventListener('change', handleMediaChange);
     return () => mediaQuery.removeEventListener('change', handleMediaChange);
-  }, [theme]);
+  }, [theme, isDashboardArea, user, location.pathname]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -80,7 +100,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme, isDashboardArea }}>
       {children}
     </ThemeContext.Provider>
   );

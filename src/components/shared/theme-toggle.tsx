@@ -11,7 +11,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ className, variant = 'button', showLabel = false }: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme, toggleTheme, isDashboardArea } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,6 +26,11 @@ export function ThemeToggle({ className, variant = 'button', showLabel = false }
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
+
+  // If outside authenticated dashboard area, keep UI clean without theme toggle
+  if (!isDashboardArea) {
+    return null;
+  }
 
   if (variant === 'segmented') {
     return (
