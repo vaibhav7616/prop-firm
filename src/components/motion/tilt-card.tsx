@@ -38,7 +38,13 @@ export function TiltCard({
   const springConfig = { damping: 22, stiffness: 280, mass: 0.6 };
   const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [maxTilt, -maxTilt]), springConfig);
   const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-maxTilt, maxTilt]), springConfig);
-  const translateY = useSpring(isHovered && enableElevation ? -5 : 0, springConfig);
+
+  // Unconditionally declare radial glow transform at top level
+  const glowBackground = useTransform(
+    [glowX, glowY],
+    ([x, y]) =>
+      `radial-gradient(400px circle at ${x}px ${y}px, ${glowColor}, transparent 70%)`
+  );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -79,10 +85,10 @@ export function TiltCard({
         onMouseMove={handleMouseMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        whileHover={enableElevation ? { y: -5, transition: { duration: 0.2 } } : undefined}
         style={{
           rotateX,
           rotateY,
-          y: translateY,
           transformStyle: 'preserve-3d',
         }}
         className={cn(
@@ -101,11 +107,7 @@ export function TiltCard({
             transition={{ duration: 0.2 }}
             className="pointer-events-none absolute -inset-px rounded-2xl transition-opacity duration-300 z-30"
             style={{
-              background: useTransform(
-                [glowX, glowY],
-                ([x, y]) =>
-                  `radial-gradient(400px circle at ${x}px ${y}px, ${glowColor}, transparent 70%)`
-              ),
+              background: glowBackground,
             }}
           />
         )}
