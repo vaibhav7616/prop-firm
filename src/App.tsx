@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@/context/theme-context';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { MarketingLayout } from '@/components/layouts/marketing-layout';
 import { AuthLayout } from '@/components/layouts/auth-layout';
@@ -34,7 +35,6 @@ import { CheckoutPage } from '@/pages/checkout';
 import { DashboardOverview } from '@/pages/dashboard/overview';
 import { DashboardTrading } from '@/pages/dashboard/trading';
 import { DashboardAccounts } from '@/pages/dashboard/accounts';
-import { DashboardProgress } from '@/pages/dashboard/progress';
 import { DashboardObjectives } from '@/pages/dashboard/objectives';
 import { DashboardOrders } from '@/pages/dashboard/orders';
 import { DashboardInvoices } from '@/pages/dashboard/invoices';
@@ -114,7 +114,7 @@ function AppRoutes() {
         <Route index element={<DashboardOverview />} />
         <Route path="trading" element={<DashboardTrading />} />
         <Route path="accounts" element={<DashboardAccounts />} />
-        <Route path="progress" element={<DashboardProgress />} />
+        <Route path="progress" element={<Navigate to="/dashboard/objectives" replace />} />
         <Route path="objectives" element={<DashboardObjectives />} />
         <Route path="orders" element={<DashboardOrders />} />
         <Route path="invoices" element={<DashboardInvoices />} />
@@ -153,22 +153,24 @@ function AppRoutes() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <ScrollToTop />
-          <AppRoutes />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: 'hsl(0 0% 5.5%)',
-                border: '1px solid hsl(0 0% 14%)',
-                color: 'hsl(0 0% 98%)',
-              },
-            }}
-          />
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <ScrollToTop />
+            <AppRoutes />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: 'hsl(0 0% 5.5%)',
+                  border: '1px solid hsl(0 0% 14%)',
+                  color: 'hsl(0 0% 98%)',
+                },
+              }}
+            />
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -85,6 +85,37 @@
     --chart-5: 0 72% 51%;
     --radius: 0.75rem;
   }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 14%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 16%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 5%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 211 100% 50%;
+    --chart-1: 211 100% 55%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 0 72% 55%;
+  }
 }
 
 @layer base {
@@ -265,4 +296,40 @@
       0 8px 16px -4px rgba(0,0,0,0.05),
       0 20px 40px -8px rgba(0,0,0,0.08);
   }
+
+  /* Dark mode compatibility helpers for dashboard UI elements */
+  .dark .bg-white {
+    background-color: hsl(var(--card));
+  }
+  .dark .bg-slate-50 {
+    background-color: hsl(var(--secondary) / 0.7);
+  }
+  .dark .bg-slate-100 {
+    background-color: hsl(var(--secondary));
+  }
+  .dark .text-slate-900 {
+    color: hsl(var(--foreground));
+  }
+  .dark .text-slate-800 {
+    color: hsl(var(--foreground));
+  }
+  .dark .text-slate-700 {
+    color: hsl(210 20% 88%);
+  }
+  .dark .text-slate-600 {
+    color: hsl(215 20% 70%);
+  }
+  .dark .text-slate-500 {
+    color: hsl(var(--muted-foreground));
+  }
+  .dark .border-slate-300 {
+    border-color: hsl(var(--border));
+  }
+  .dark .border-slate-200 {
+    border-color: hsl(var(--border) / 0.8);
+  }
+  .dark .border-slate-100 {
+    border-color: hsl(var(--border) / 0.5);
+  }
 }
+

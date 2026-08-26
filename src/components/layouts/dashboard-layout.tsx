@@ -24,6 +24,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +32,6 @@ const TRADER_NAV = [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Web Terminal', to: '/dashboard/trading', icon: LineChart },
   { label: 'Trading Accounts', to: '/dashboard/accounts', icon: Wallet },
-  { label: 'Challenge Progress', to: '/dashboard/progress', icon: Target },
   { label: 'Trading Objectives', to: '/dashboard/objectives', icon: Target },
   { label: 'Trader Leaderboard', to: '/dashboard/leaderboard', icon: Trophy },
   { label: 'Orders', to: '/dashboard/orders', icon: ShoppingCart },
@@ -179,8 +179,10 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
             </h1>
           </div>
 
-          {/* Trigger Motion Buy Challenge / Get Funded Button */}
-          <Link to={variant === 'admin' ? '/dashboard' : '/challenges'}>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle />
+            {/* Trigger Motion Buy Challenge / Get Funded Button */}
+            <Link to={variant === 'admin' ? '/dashboard' : '/challenges'}>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -208,7 +210,8 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
               <Sparkles className="h-3.5 w-3.5 text-emerald-100" />
             </motion.button>
           </Link>
-        </header>
+        </div>
+      </header>
 
         <main className="p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait">
