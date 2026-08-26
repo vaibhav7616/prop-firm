@@ -166,52 +166,60 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-slate-300 px-4 py-3 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <button className="lg:hidden text-muted-foreground hover:text-foreground shrink-0" onClick={() => setSidebarOpen(true)}>
+        <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-slate-300 px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shadow-sm gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <button
+              className="lg:hidden p-1.5 -ml-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
               <Menu className="h-5 w-5" />
             </button>
-            <Link to={variant === 'admin' ? '/admin' : '/dashboard'} className="lg:hidden shrink-0">
-              <ChevronLeft className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-            </Link>
-            <h1 className="font-display font-bold text-sm sm:text-lg text-slate-900 truncate max-w-[120px] sm:max-w-none">
+            <h1 className="font-display font-bold text-sm sm:text-base md:text-lg text-slate-900 dark:text-white truncate">
               {nav.find((n) => isActive(n.to))?.label ?? 'Dashboard'}
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <ThemeToggle />
             {/* Trigger Motion Buy Challenge / Get Funded Button */}
-            <Link to={variant === 'admin' ? '/dashboard' : '/challenges'}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              animate={{
-                boxShadow: [
-                  '0 0 0px rgba(16, 185, 129, 0)',
-                  '0 0 20px rgba(16, 185, 129, 0.45)',
-                  '0 0 0px rgba(16, 185, 129, 0)',
-                ],
-              }}
-              transition={{
-                boxShadow: {
-                  duration: 2.2,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                },
-              }}
-              className="relative group overflow-hidden px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 flex items-center gap-2 border border-emerald-400/30"
-            >
-              <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
-              <Zap className="h-4 w-4 text-emerald-200 fill-emerald-200 animate-pulse" />
-              <span className="relative z-10 font-bold tracking-wide">
-                {variant === 'admin' ? 'View Site' : 'Get Funded · Buy Challenge'}
-              </span>
-              <Sparkles className="h-3.5 w-3.5 text-emerald-100" />
-            </motion.button>
-          </Link>
-        </div>
-      </header>
+            <Link to={variant === 'admin' ? '/dashboard' : '/challenges'} className="shrink-0">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                animate={{
+                  boxShadow: [
+                    '0 0 0px rgba(16, 185, 129, 0)',
+                    '0 0 16px rgba(16, 185, 129, 0.4)',
+                    '0 0 0px rgba(16, 185, 129, 0)',
+                  ],
+                }}
+                transition={{
+                  boxShadow: {
+                    duration: 2.2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  },
+                }}
+                className="relative group overflow-hidden px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-white font-semibold text-xs sm:text-sm shadow-md shadow-emerald-500/20 flex items-center gap-1.5 sm:gap-2 border border-emerald-400/30 whitespace-nowrap"
+              >
+                <span className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out" />
+                <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-200 fill-emerald-200 animate-pulse shrink-0" />
+                <span className="relative z-10 font-bold tracking-wide">
+                  {variant === 'admin' ? (
+                    'View Site'
+                  ) : (
+                    <>
+                      <span>Get Funded</span>
+                      <span className="hidden sm:inline"> · Buy Challenge</span>
+                    </>
+                  )}
+                </span>
+                <Sparkles className="h-3.5 w-3.5 text-emerald-100 hidden md:inline shrink-0" />
+              </motion.button>
+            </Link>
+          </div>
+        </header>
 
         <main className="p-4 sm:p-6 lg:p-8">
           <AnimatePresence mode="wait">

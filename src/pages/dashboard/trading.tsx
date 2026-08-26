@@ -329,40 +329,44 @@ export function DashboardTrading() {
   return (
     <div className="space-y-6">
       {/* Top Header & Account Switcher */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card border border-slate-300 p-4 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 font-bold shrink-0">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card border border-slate-300 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 font-bold shrink-0 mt-0.5 sm:mt-0">
             <Zap className="h-5 w-5" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold font-display flex items-center gap-2">
-              Funded Shift Terminal
-              <span className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-bold font-display leading-tight">
+                Funded Shift Terminal
+              </h2>
+              <span className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
                 ECN Matcher Active
               </span>
-            </h2>
-            <p className="text-xs text-muted-foreground">
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Institutional execution with sub-millisecond price ticks & instant rule monitoring
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-border">
           <label className="text-xs font-semibold text-muted-foreground shrink-0">Account:</label>
-          <select
-            value={selectedAccount?.id || ''}
-            onChange={(e) => {
-              const acc = accounts.find((a) => a.id === e.target.value);
-              if (acc) setSelectedAccount(acc);
-            }}
-            className="w-full sm:w-72 bg-background border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-          >
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                #{acc.account_number} ({acc.plan_name || `$${acc.account_size.toLocaleString()}`}) - {acc.status}
-              </option>
-            ))}
-          </select>
+          <div className="relative flex-1 md:w-80 min-w-0">
+            <select
+              value={selectedAccount?.id || ''}
+              onChange={(e) => {
+                const acc = accounts.find((a) => a.id === e.target.value);
+                if (acc) setSelectedAccount(acc);
+              }}
+              className="w-full bg-background border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/50 truncate cursor-pointer shadow-sm"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  #{acc.account_number} ({acc.plan_name || `$${acc.account_size.toLocaleString()}`}) - {acc.status}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
