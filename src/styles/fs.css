@@ -1,0 +1,143 @@
+/* ============================================================================
+   FUNDED SHIFT — AUTHENTICATED "TRADER OPERATING SYSTEM"
+   Isolated design tokens + utilities.
+
+   IMPORTANT: Everything here is scoped under `.fs-shell`. The public /
+   pre-login frontend never renders inside `.fs-shell`, so these tokens and
+   helpers can never affect it. Semantic CSS variables cascade, which lets the
+   shared shadcn/ui primitives (card, input, select, dialog, table, ...) pick
+   up this palette inside the authenticated app without touching the public UI.
+   ========================================================================== */
+
+.fs-shell {
+  /* Canvas + surfaces */
+  --background: 226 23% 6%;
+  --foreground: 214 20% 95%;
+  --card: 226 22% 8%;
+  --card-foreground: 214 20% 95%;
+  --popover: 226 24% 7%;
+  --popover-foreground: 214 20% 95%;
+  --secondary: 226 18% 13%;
+  --secondary-foreground: 214 16% 88%;
+  --muted: 226 17% 13%;
+  --muted-foreground: 216 13% 60%;
+  --accent: 226 20% 13%;
+  --accent-foreground: 214 20% 93%;
+
+  /* Electric indigo primary */
+  --primary: 243 66% 63%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 243 66% 63%;
+  --input: 226 18% 16%;
+  --border: 226 18% 16%;
+
+  /* Semantic status */
+  --destructive: 351 90% 63%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 160 84% 45%;
+  --success-foreground: 160 40% 8%;
+  --warning: 38 92% 56%;
+  --warning-foreground: 20 60% 6%;
+
+  /* Charts */
+  --chart-1: 243 66% 63%;
+  --chart-2: 160 84% 45%;
+  --chart-3: 351 90% 63%;
+  --chart-4: 268 84% 68%;
+  --chart-5: 38 92% 56%;
+
+  --radius: 0.5rem;
+
+  color-scheme: dark;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Hairline border color used by fs-frame */
+.fs-frame {
+  border-color: hsl(var(--border));
+}
+.fs-frame-strong {
+  border-color: hsl(226 20% 22%);
+}
+
+/* Panel */
+.fs-panel {
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) + 2px);
+}
+
+/* Subtle fine grid backdrop for the whole terminal canvas */
+.fs-canvas {
+  background-color: hsl(var(--background));
+  background-image:
+    linear-gradient(to right, hsl(226 25% 12% / 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(226 25% 12% / 0.55) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-attachment: fixed;
+}
+
+/* Numeric / mono figure style */
+.fs-num {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Micro label (uppercase tracking) */
+.fs-label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+}
+
+/* Status text helpers */
+.fs-up { color: hsl(var(--success)); }
+.fs-down { color: hsl(var(--destructive)); }
+
+/* Indigo accent text */
+.fs-accent { color: hsl(243 66% 66%); }
+
+/* ==== Animation primitives (fast, precise) ==== */
+
+@keyframes fs-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fs-anim-fade-up { animation: fs-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes fs-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.fs-grow-x { transform-origin: left; animation: fs-grow-x 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes fs-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.fs-live-dot { animation: fs-blink 1.6s ease-in-out infinite; }
+
+@keyframes fs-pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(243 66% 63% / 0); }
+  50% { box-shadow: 0 0 0 3px hsl(243 66% 63% / 0.18); }
+}
+.fs-pulse-soft { animation: fs-pulse-soft 2.4s ease-in-out infinite; }
+
+/* Thin scrollbars inside terminal areas */
+.fs-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.fs-scroll::-webkit-scrollbar-track { background: transparent; }
+.fs-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(226 18% 22%);
+  border-radius: 999px;
+}
+.fs-scroll::-webkit-scrollbar-thumb:hover { background-color: hsl(226 18% 30%); }
+
+/* Row hover for tables */
+.fs-row-hover:hover { background-color: hsl(226 22% 12% / 0.6); }
+
+/* Inset "risk dial" ring */
+.fs-ring-track { stroke: hsl(226 20% 18%); }

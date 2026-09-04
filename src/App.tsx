@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from '@/context/auth-context';
 import { MarketingLayout } from '@/components/layouts/marketing-layout';
 import { AuthLayout } from '@/components/layouts/auth-layout';
 import { DashboardLayout } from '@/components/layouts/dashboard-layout';
+import { FsDashboardLayout } from '@/components/fs/fs-dashboard-layout';
+import { FsAccountProvider } from '@/context/account-context';
 import { ScrollToTop } from '@/components/shared/scroll-to-top';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -109,8 +111,17 @@ function AppRoutes() {
       {/* Checkout */}
       <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
 
-      {/* Trader Dashboard */}
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout variant="trader" /></ProtectedRoute>}>
+      {/* Trader Dashboard — Funded Shift Trader OS (authenticated redesign) */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <FsAccountProvider>
+              <FsDashboardLayout />
+            </FsAccountProvider>
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<DashboardOverview />} />
         <Route path="trading" element={<DashboardTrading />} />
         <Route path="accounts" element={<DashboardAccounts />} />

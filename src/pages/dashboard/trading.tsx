@@ -1,36 +1,32 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import {
+  Activity,
+  Clock,
+  Search,
+  RefreshCw,
   TrendingUp,
   TrendingDown,
-  DollarSign,
-  Activity,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Play,
-  Search,
-  ShieldAlert,
-  History,
   Briefcase,
-  Crosshair,
-  Zap,
-  Clock,
+  History,
+  ShieldAlert,
+  CandlestickChart,
+  CircleDot,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { useFsAccount } from '@/context/account-context';
 import {
-  fetchUserAccounts,
   executeOrderApi,
   closePositionApi,
   fetchAccountPositionsApi,
 } from '@/lib/api-client';
-import type { TradingAccount, OrderType } from '@/types';
+import type { TradingAccount } from '@/types';
+import { fsMetrics, fsRisk, fsTradingDays } from '@/lib/fs-risk';
+import { formatCurrency, ACCOUNT_STATUS_LABELS } from '@/lib/constants';
 import { toast } from 'sonner';
 import { calculateMT5PnL } from '@/utils/mt5';
+import { FsPanel, FsLabel, StatusPill, FsProgress } from '@/components/fs/fs-ui';
+import { cn } from '@/lib/utils';
 
 interface MarketQuote {
   symbol: string;
@@ -42,251 +38,164 @@ interface MarketQuote {
   low: number;
   change24h: number;
   prevBid?: number;
+  isMarketOpen?: boolean;
 }
+
+const CATS = ['ALL', 'FOREX', 'COMMODITIES', 'INDICES', 'CRYPTO'] as const;
+const FOREX = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'EURJPY', 'GBPJPY'];
+const METALS = ['XAUUSD', 'XAGUSD', 'USOIL'];
+const INDICES = ['NAS100', 'US30', 'SPX500', 'GER40'];
+const CRYPTO = ['BTCUSD', 'ETHUSD', 'SOLUSD'];
 
 export function DashboardTrading() {
   const { user } = useAuth();
-  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<TradingAccount | null>(null);
+  const { selected, accounts, selectAccount, loading: accLoading } = useFsAccount();
+
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
   const [quoteHistory, setQuoteHistory] = useState<Record<string, 'UP' | 'DOWN' | 'SAME'>>({});
   const [selectedSymbol, setSelectedSymbol] = useState<string>('XAUUSD');
-  const [assetCategory, setAssetCategory] = useState<'ALL' | 'FOREX' | 'COMMODITIES' | 'INDICES' | 'CRYPTO'>('ALL');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [cat, setCat] = useState<(typeof CATS)[number]>('ALL');
+  const [search, setSearch] = useState('');
 
-  const [orderType, setOrderType] = useState<'BUY' | 'SELL'>('BUY');
   const [lotSize, setLotSize] = useState<number>(1.0);
   const [stopLoss, setStopLoss] = useState<string>('');
   const [takeProfit, setTakeProfit] = useState<string>('');
-  
+
   const [positions, setPositions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'POSITIONS' | 'HISTORY' | 'RULES'>('POSITIONS');
-  const [submitting, setSubmitting] = useState<boolean>(false);
-  const [closingAll, setClosingAll] = useState<boolean>(false);
-  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [closingAll, setClosingAll] = useState(false);
 
-  // Load Accounts
+  // positions poll for the selected account
   useEffect(() => {
-    async function loadData() {
-      if (!user) return;
-      setLoadingAccounts(true);
-      const accs = await fetchUserAccounts(user.id);
-      setAccounts(accs);
-      if (accs.length > 0) {
-        setSelectedAccount(accs[0]);
-      }
-      setLoadingAccounts(false);
-    }
-    loadData();
-  }, [user]);
+    if (!selected) return;
+    let stop = false;
+    const load = async () => {
+      const p = await fetchAccountPositionsApi(selected.id);
+      if (!stop && Array.isArray(p)) setPositions(p);
+    };
+    load();
+    const id = setInterval(load, 1500);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [selected?.id]);
 
-  // Load Positions when account changes
-  useEffect(() => {
-    async function loadPositions() {
-      if (!selectedAccount) return;
-      const pos = await fetchAccountPositionsApi(selectedAccount.id);
-      setPositions(pos);
-    }
-    loadPositions();
-    const interval = setInterval(loadPositions, 1000);
-    return () => clearInterval(interval);
-  }, [selectedAccount]);
-
-  // Initial Market Quotes Load & Live Stream
+  // market data stream
   useEffect(() => {
     fetch('/api/market/quotes')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setQuotes(data);
-        }
-      })
+      .then((r) => r.json())
+      .then((d) => d && Array.isArray(d) && d.length > 0 && setQuotes(d))
       .catch(() => {});
-
-    const eventSource = new EventSource('/api/market/ticks/stream');
-    eventSource.onmessage = (event) => {
+    const es = new EventSource('/api/market/ticks/stream');
+    es.onmessage = (e) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(e.data);
         if (Array.isArray(data)) {
-          setQuotes((prevQuotes) => {
-            const historyUpdate: Record<string, 'UP' | 'DOWN' | 'SAME'> = {};
-            data.forEach((newQ) => {
-              const oldQ = prevQuotes.find((p) => p.symbol === newQ.symbol);
-              if (oldQ) {
-                if (newQ.bid > oldQ.bid) historyUpdate[newQ.symbol] = 'UP';
-                else if (newQ.bid < oldQ.bid) historyUpdate[newQ.symbol] = 'DOWN';
-                else historyUpdate[newQ.symbol] = 'SAME';
-              }
+          setQuotes((prev) => {
+            const hist: Record<string, 'UP' | 'DOWN' | 'SAME'> = {};
+            data.forEach((nq) => {
+              const old = prev.find((p) => p.symbol === nq.symbol);
+              if (old) hist[nq.symbol] = nq.bid > old.bid ? 'UP' : nq.bid < old.bid ? 'DOWN' : 'SAME';
             });
-            setQuoteHistory((prev) => ({ ...prev, ...historyUpdate }));
+            setQuoteHistory((p) => ({ ...p, ...hist }));
             return data;
           });
         }
-      } catch (err) {
-        console.error('Error parsing quote stream:', err);
+      } catch {
+        /* ignore */
       }
     };
-
-    return () => {
-      eventSource.close();
-    };
+    return () => es.close();
   }, []);
 
-  const formatPrice = (val: number, symbol: string) => {
+  const fmt = (val: number | undefined, sym: string) => {
     if (val === undefined || val === null || isNaN(val)) return '0.00';
-    if (['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'].includes(symbol)) {
-      return val.toFixed(5);
-    }
-    if (['USDJPY', 'EURJPY', 'GBPJPY', 'XAGUSD'].includes(symbol)) {
-      return val.toFixed(3);
-    }
-    if (['NAS100', 'US30', 'SPX500', 'GER40'].includes(symbol)) {
-      return val.toFixed(2);
-    }
+    if (['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'].includes(sym)) return val.toFixed(5);
+    if (['USDJPY', 'EURJPY', 'GBPJPY', 'XAGUSD'].includes(sym)) return val.toFixed(3);
     return val.toFixed(2);
   };
 
-  const activeQuote = quotes.find((q) => q.symbol === selectedSymbol) || {
-    symbol: selectedSymbol,
-    bid: 0,
-    ask: 0,
-    high: 0,
-    low: 0,
-    change24h: 0,
-    isMarketOpen: true,
-  };
+  const activeQuote: any =
+    quotes.find((q) => q.symbol === selectedSymbol) || { symbol: selectedSymbol, bid: 0, ask: 0, high: 0, low: 0, change24h: 0, isMarketOpen: true };
 
-  const filteredQuotes = quotes.filter((q) => {
-    if (searchQuery.trim()) {
-      return q.symbol.toLowerCase().includes(searchQuery.toLowerCase());
-    }
-    if (assetCategory === 'ALL') return true;
-    if (assetCategory === 'FOREX') {
-      return ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP', 'EURJPY', 'GBPJPY'].includes(q.symbol);
-    }
-    if (assetCategory === 'COMMODITIES') {
-      return ['XAUUSD', 'XAGUSD', 'USOIL'].includes(q.symbol);
-    }
-    if (assetCategory === 'INDICES') {
-      return ['NAS100', 'US30', 'SPX500', 'GER40'].includes(q.symbol);
-    }
-    if (assetCategory === 'CRYPTO') {
-      return ['BTCUSD', 'ETHUSD', 'SOLUSD'].includes(q.symbol);
-    }
+  const filtered = quotes.filter((q) => {
+    if (search.trim()) return q.symbol.toLowerCase().includes(search.toLowerCase());
+    if (cat === 'ALL') return true;
+    if (cat === 'FOREX') return FOREX.includes(q.symbol);
+    if (cat === 'COMMODITIES') return METALS.includes(q.symbol);
+    if (cat === 'INDICES') return INDICES.includes(q.symbol);
+    if (cat === 'CRYPTO') return CRYPTO.includes(q.symbol);
     return true;
   });
 
-  const handleExecuteOrder = async (sideOverride?: OrderType) => {
-    if (!selectedAccount || !user) {
-      toast.error('Please select an active trading account.');
-      return;
-    }
-
-    if (lotSize <= 0) {
-      toast.error('Lot size must be greater than 0.');
-      return;
-    }
-
-    if (activeQuote?.isMarketOpen === false) {
-      toast.error(`Market for ${selectedSymbol} is currently CLOSED (Weekend). Trading resumes Sunday 22:00 UTC.`);
-      return;
-    }
-
-    const sideToExecute = sideOverride || orderType;
-
+  const exec = async (side: 'BUY' | 'SELL') => {
+    if (!selected || !user) return toast.error('Select a trading account first.');
+    if (lotSize <= 0) return toast.error('Lot size must be greater than 0.');
+    if (activeQuote?.isMarketOpen === false) return toast.error('Market closed (weekend).');
     setSubmitting(true);
     const res = await executeOrderApi({
       userId: user.id,
-      accountId: selectedAccount.id,
+      accountId: selected.id,
       symbol: selectedSymbol,
-      type: sideToExecute,
+      type: side,
       lotSize,
       stopLoss: stopLoss ? parseFloat(stopLoss) : undefined,
       takeProfit: takeProfit ? parseFloat(takeProfit) : undefined,
     });
-
     setSubmitting(false);
-
     if (res.success) {
-      toast.success(`${sideToExecute} order executed for ${lotSize} lots on ${selectedSymbol}`);
-      const updatedPos = await fetchAccountPositionsApi(selectedAccount.id);
-      setPositions(updatedPos);
-      const updatedAccs = await fetchUserAccounts(user.id);
-      setAccounts(updatedAccs);
-      const current = updatedAccs.find((a) => a.id === selectedAccount.id);
-      if (current) setSelectedAccount(current);
+      toast.success(`${side} executed · ${lotSize} lots ${selectedSymbol}`);
+      const p = await fetchAccountPositionsApi(selected.id);
+      if (Array.isArray(p)) setPositions(p);
+      selectAccount(selected.id);
     } else {
-      toast.error(res.error || 'Failed to execute order.');
+      toast.error(res.error || 'Order failed');
     }
   };
 
-  const handleClosePosition = async (positionId: string) => {
-    if (!selectedAccount || !user) return;
-    const res = await closePositionApi({
-      userId: user.id,
-      accountId: selectedAccount.id,
-      positionId,
-    });
-
+  const closePos = async (posId: string) => {
+    if (!selected || !user) return;
+    const res = await closePositionApi({ userId: user.id, accountId: selected.id, positionId: posId });
     if (res.success) {
-      toast.success('Position closed successfully.');
-      const updatedPos = await fetchAccountPositionsApi(selectedAccount.id);
-      setPositions(updatedPos);
-      const updatedAccs = await fetchUserAccounts(user.id);
-      setAccounts(updatedAccs);
-      const current = updatedAccs.find((a) => a.id === selectedAccount.id);
-      if (current) setSelectedAccount(current);
-    } else {
-      toast.error(res.error || 'Failed to close position.');
-    }
+      toast.success('Position closed');
+      const p = await fetchAccountPositionsApi(selected.id);
+      if (Array.isArray(p)) setPositions(p);
+    } else toast.error(res.error || 'Close failed');
   };
 
-  const handleCloseAllPositions = async () => {
-    const openPos = positions.filter((p) => p.status === 'OPEN');
-    if (openPos.length === 0 || !selectedAccount || !user) return;
-
+  const closeAll = async () => {
+    const open = positions.filter((p) => p.status === 'OPEN');
+    if (!open.length || !selected || !user) return;
     setClosingAll(true);
-    let count = 0;
-    for (const pos of openPos) {
-      const res = await closePositionApi({
-        userId: user.id,
-        accountId: selectedAccount.id,
-        positionId: pos.id,
-      });
-      if (res.success) count++;
+    let c = 0;
+    for (const p of open) {
+      const r = await closePositionApi({ userId: user.id, accountId: selected.id, positionId: p.id });
+      if (r.success) c++;
     }
     setClosingAll(false);
-    toast.success(`Closed ${count} active positions.`);
-
-    const updatedPos = await fetchAccountPositionsApi(selectedAccount.id);
-    setPositions(updatedPos);
-    const updatedAccs = await fetchUserAccounts(user.id);
-    setAccounts(updatedAccs);
-    const current = updatedAccs.find((a) => a.id === selectedAccount.id);
-    if (current) setSelectedAccount(current);
+    toast.success(`Closed ${c} position(s)`);
+    const p = await fetchAccountPositionsApi(selected.id);
+    if (Array.isArray(p)) setPositions(p);
   };
 
-  if (loadingAccounts) {
+  if (accLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-        <RefreshCw className="h-8 w-8 text-brand-500 animate-spin" />
-        <p className="text-sm text-muted-foreground">Connecting to ECN Market Data & Matching Engine...</p>
+      <div className="flex min-h-[60vh] items-center justify-center gap-3 text-slate-400">
+        <RefreshCw className="h-5 w-5 animate-spin text-indigo-400" /> Loading terminal…
       </div>
     );
   }
 
-  // Live position floating PnL calculation based on real-time streaming quotes using official MT5 formula
-  const quoteMap = new Map<string, { bid: number; ask: number; price?: number }>();
-  for (const q of quotes) {
-    quoteMap.set(q.symbol, { bid: q.bid, ask: q.ask, price: q.price });
-  }
-
+  // live mark-to-market
+  const quoteMap = new Map<string, { bid: number; ask: number }>();
+  quotes.forEach((q) => quoteMap.set(q.symbol, { bid: q.bid, ask: q.ask }));
   const livePositions = positions.map((pos) => {
     if (pos.status !== 'OPEN') return pos;
-    const q = quotes.find((quote) => quote.symbol === pos.symbol);
+    const q = quotes.find((x) => x.symbol === pos.symbol);
     if (!q) return pos;
-
-    const pnlResult = calculateMT5PnL({
+    const pnl = calculateMT5PnL({
       symbol: pos.symbol,
       type: pos.type as 'BUY' | 'SELL',
       lotSize: pos.lot_size,
@@ -297,689 +206,477 @@ export function DashboardTrading() {
       swap: pos.swap || 0,
       quoteLookup: (sym) => quoteMap.get(sym),
     });
-
-    return {
-      ...pos,
-      current_price: pnlResult.currentPrice,
-      floating_pnl: pnlResult.netPnl,
-    };
+    return { ...pos, current_price: pnl.currentPrice, floating_pnl: pnl.netPnl };
   });
-
   const openPositions = livePositions.filter((p) => p.status === 'OPEN');
   const closedPositions = livePositions.filter((p) => p.status === 'CLOSED');
-  const totalFloatingPnl = openPositions.reduce((sum, p) => sum + (p.floating_pnl || 0), 0);
+  const floating = openPositions.reduce((s, p) => s + (p.floating_pnl || 0), 0);
 
-  // Live Account Financial Metrics
-  const startingBalance = selectedAccount?.starting_balance || selectedAccount?.account_size || 100000;
-  const currentBalance = selectedAccount?.current_balance ?? startingBalance;
-  const liveEquity = currentBalance + totalFloatingPnl;
-
-  const startOfDayBaseline = Math.max(
-    selectedAccount?.start_of_day_balance || startingBalance,
-    selectedAccount?.start_of_day_equity || startingBalance
-  );
-
-  const dailyLimitPercent = selectedAccount?.rules?.daily_loss_limit_percent ?? selectedAccount?.rules?.daily_drawdown ?? 5;
-  const maxDailyAllowedLoss = (dailyLimitPercent / 100) * startOfDayBaseline;
-  const currentDailyLoss = Math.max(0, startOfDayBaseline - liveEquity);
-  const dailyLossLeft = Math.max(0, maxDailyAllowedLoss - currentDailyLoss);
-
-  const openPositionsForSymbol = openPositions.filter((p) => p.symbol === selectedSymbol);
+  const balance = selected?.current_balance ?? selected?.starting_balance ?? 0;
+  const equity = balance + floating;
+  const metrics = selected ? fsMetrics(selected, equity) : null;
+  const risk = selected ? fsRisk(selected, equity) : null;
 
   return (
-    <div className="space-y-6">
-      {/* Top Header & Account Switcher */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card border border-slate-300 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm">
-        <div className="flex items-start sm:items-center gap-3 min-w-0">
-          <div className="h-10 w-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 font-bold shrink-0 mt-0.5 sm:mt-0">
-            <Zap className="h-5 w-5" />
+    <div className="space-y-4">
+      {/* Terminal top bar */}
+      <FsPanel className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/30">
+            <CandlestickChart className="h-5 w-5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg sm:text-xl font-bold font-display leading-tight">
-                Funded Shift Terminal
-              </h2>
-              <span className="text-[10px] uppercase font-mono tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
-                ECN Matcher Active
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-sm font-bold text-slate-50">Funded Shift Web Terminal</h2>
+              <span className="flex items-center gap-1 rounded-full border border-slate-700 px-2 py-px text-[10px] font-semibold text-slate-300">
+                <span className="fs-live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" /> ECN MATCHER
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Institutional execution with sub-millisecond price ticks & instant rule monitoring
-            </p>
+            <p className="text-xs text-slate-500">Streaming quotes · live rule monitoring · MT5-grade execution</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-border">
-          <label className="text-xs font-semibold text-muted-foreground shrink-0">Account:</label>
-          <div className="relative flex-1 md:w-80 min-w-0">
-            <select
-              value={selectedAccount?.id || ''}
-              onChange={(e) => {
-                const acc = accounts.find((a) => a.id === e.target.value);
-                if (acc) setSelectedAccount(acc);
-              }}
-              className="w-full bg-background border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/50 truncate cursor-pointer shadow-sm"
-            >
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  #{acc.account_number} ({acc.plan_name || `$${acc.account_size.toLocaleString()}`}) - {acc.status}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500">Account</span>
+          <select
+            value={selected?.id ?? ''}
+            onChange={(e) => selectAccount(e.target.value)}
+            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          >
+            {accounts.map((a: TradingAccount) => (
+              <option key={a.id} value={a.id}>
+                #{a.account_number ?? a.id} · {ACCOUNT_STATUS_LABELS[a.status] ?? a.status} · ${(a.account_size / 1000).toFixed(0)}K
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
+      </FsPanel>
 
-      {/* Account Metrics Ribbon */}
-      {selectedAccount && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="bg-card border border-slate-300 p-3.5 rounded-2xl shadow-sm">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Balance</p>
-            <p className="text-lg font-bold font-display text-foreground mt-0.5">
-              ${currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="bg-card border border-slate-300 p-3.5 rounded-2xl shadow-sm">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Equity</p>
-            <p className={`text-lg font-bold font-display mt-0.5 ${totalFloatingPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              ${liveEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="bg-card border border-slate-300 p-3.5 rounded-2xl shadow-sm">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Floating P/L</p>
-            <p className={`text-lg font-bold font-display mt-0.5 ${totalFloatingPnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-              {totalFloatingPnl >= 0 ? '+' : ''}${totalFloatingPnl.toFixed(2)}
-            </p>
-          </div>
-          <div className="bg-card border border-slate-300 p-3.5 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Daily Loss Left</p>
-              <span className="text-[10px] font-mono text-muted-foreground">({dailyLimitPercent}%)</span>
-            </div>
-            <p className="text-lg font-bold font-display text-amber-500 mt-0.5">
-              ${dailyLossLeft.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Loss: ${currentDailyLoss.toFixed(2)} / ${maxDailyAllowedLoss.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-            </p>
-          </div>
-          <div className="bg-card border border-slate-300 p-3.5 rounded-2xl shadow-sm col-span-2 md:col-span-1">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Status</p>
-            <div className="mt-1 flex items-center gap-2">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase ${
-                  selectedAccount.status === 'ACTIVE' || selectedAccount.status === 'FUNDED'
-                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                }`}
-              >
-                {selectedAccount.status}
-              </span>
-            </div>
-          </div>
+      {/* metrics ribbon */}
+      {selected && metrics && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+          <Metric label="Balance" value={formatCurrency(balance)} />
+          <Metric label="Equity" value={formatCurrency(equity)} tone={equity >= balance ? 'up' : 'down'} />
+          <Metric label="Floating P/L" value={`${floating >= 0 ? '+' : ''}${formatCurrency(floating)}`} tone={floating >= 0 ? 'up' : 'down'} />
+          <Metric label="Margin" value="—" />
+          <Metric
+            label={`Daily Loss (${metrics.dailyPct}%)`}
+            value={formatCurrency(risk?.dailyRemaining ?? 0)}
+            tone={risk && risk.dailyUsedPct > 0.75 ? 'down' : 'neutral'}
+          />
+          <Metric
+            label={`Max DD (${metrics.maxPct}%)`}
+            value={formatCurrency(risk?.maxRemaining ?? 0)}
+            tone={risk && risk.maxUsedPct > 0.75 ? 'down' : 'neutral'}
+          />
         </div>
       )}
 
-      {/* Main Terminal Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Market Watchlist Panel */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="bg-card border border-slate-300 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Activity className="h-4 w-4 text-brand-500" /> ECN Market Quotes
-              </h3>
-              {activeQuote?.isMarketOpen === false ? (
-                <span className="flex items-center gap-1.5 text-[10px] font-mono text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 font-bold">
-                  <Clock className="h-3 w-3" /> Market Closed (Weekend)
-                </span>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Watchlist */}
+        <div className="space-y-3 lg:col-span-3">
+          <FsPanel className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="fs-label flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Watchlist</p>
+              {activeQuote.isMarketOpen === false ? (
+                <StatusPill tone="amber"><Clock className="h-3 w-3" /> Closed</StatusPill>
               ) : (
-                <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> Live 200ms
-                </span>
+                <StatusPill tone="emerald"><CircleDot className="h-3 w-3" /> Live</StatusPill>
               )}
             </div>
-
-            {/* Asset Category Filters */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-xs">
-              {(['ALL', 'FOREX', 'COMMODITIES', 'INDICES', 'CRYPTO'] as const).map((cat) => (
+            <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
+              {CATS.map((c) => (
                 <button
-                  key={cat}
-                  onClick={() => setAssetCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-colors border ${
-                    assetCategory === cat
-                      ? 'bg-brand-500 text-white border-brand-600 shadow-sm'
-                      : 'bg-secondary/60 text-muted-foreground border-slate-300 hover:text-foreground'
-                  }`}
+                  key={c}
+                  onClick={() => setCat(c)}
+                  className={cn(
+                    'shrink-0 rounded-md px-2 py-1 text-[10px] font-bold transition-colors',
+                    cat === c ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                  )}
                 >
-                  {cat === 'COMMODITIES' ? 'METALS' : cat}
+                  {c === 'COMMODITIES' ? 'METALS' : c}
                 </button>
               ))}
             </div>
-
-            {/* Search Box */}
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <div className="relative mb-2">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
               <input
-                type="text"
-                placeholder="Search symbol (e.g. XAUUSD, EURUSD)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-background border border-slate-300 rounded-xl pl-8 pr-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search symbol…"
+                className="w-full rounded-md border border-slate-800 bg-slate-900 py-1.5 pl-8 pr-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-indigo-500 focus:outline-none"
               />
             </div>
-
-            {/* Symbols Watchlist List */}
-            <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
-              {filteredQuotes.map((q) => {
-                const isSelected = q.symbol === selectedSymbol;
-                const priceTrend = quoteHistory[q.symbol];
+            <div className="fs-scroll max-h-[440px] space-y-1 overflow-y-auto pr-1">
+              {filtered.map((q) => {
+                const sel = q.symbol === selectedSymbol;
+                const trend = quoteHistory[q.symbol];
+                const closed = q.isMarketOpen === false;
                 return (
                   <button
                     key={q.symbol}
                     onClick={() => setSelectedSymbol(q.symbol)}
-                    className={`w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-brand-500/10 border-brand-500/50 text-foreground font-bold shadow-sm'
-                        : 'bg-background/50 border-border/50 hover:bg-secondary/60 text-muted-foreground'
-                    }`}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-all',
+                      sel ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
+                    )}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-foreground font-display">{q.symbol}</span>
-                        {q.symbol === 'XAUUSD' && (
-                          <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-500 font-bold">
-                            Gold
-                          </span>
-                        )}
-                        {q.isMarketOpen === false && (
-                          <span className="text-[9px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-bold">
-                            Closed
-                          </span>
-                        )}
+                        <span className="fs-num text-xs font-bold text-slate-100">{q.symbol}</span>
+                        {closed && <span className="rounded bg-slate-800 px-1 text-[9px] font-semibold text-slate-500">closed</span>}
                       </div>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        Spr: {['NAS100', 'US30', 'SPX500', 'GER40'].includes(q.symbol)
-                          ? `${(q.ask - q.bid).toFixed(1)} pts`
-                          : ['BTCUSD', 'ETHUSD', 'SOLUSD'].includes(q.symbol)
-                          ? `$${(q.ask - q.bid).toFixed(1)}`
-                          : `${((q.ask - q.bid) * (q.symbol.includes('JPY') ? 100 : q.symbol.includes('XAU') ? 10 : 10000)).toFixed(1)} pips`}
-                      </p>
+                      <span className="text-[10px] text-slate-500">spread {((q.ask - q.bid) || 0).toFixed(4)}</span>
                     </div>
-
                     <div className="text-right">
-                      <div className="flex items-center justify-end gap-1 font-mono text-xs font-bold">
-                        <span
-                          className={`transition-colors duration-150 ${
-                            priceTrend === 'UP'
-                              ? 'text-emerald-500 bg-emerald-500/10 px-1 rounded'
-                              : priceTrend === 'DOWN'
-                              ? 'text-rose-500 bg-rose-500/10 px-1 rounded'
-                              : 'text-slate-900'
-                          }`}
-                        >
-                          {formatPrice(q.bid, q.symbol)}
-                        </span>
-                      </div>
                       <span
-                        className={`text-[10px] font-mono font-semibold ${
-                          q.change24h >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                        }`}
+                        className={cn(
+                          'fs-num text-xs font-semibold',
+                          trend === 'UP' ? 'text-emerald-400' : trend === 'DOWN' ? 'text-rose-400' : 'text-slate-200'
+                        )}
                       >
+                        {fmt(q.bid, q.symbol)}
+                      </span>
+                      <div className={cn('text-[10px] font-medium', (q.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
                         {q.change24h >= 0 ? '+' : ''}
                         {q.change24h}%
-                      </span>
+                      </div>
                     </div>
                   </button>
                 );
               })}
+              {filtered.length === 0 && <p className="py-6 text-center text-xs text-slate-500">No symbols. (Market feed offline in this build.)</p>}
             </div>
-          </div>
+          </FsPanel>
         </div>
 
-        {/* Live Chart & Quick Trade Bar */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-card border border-slate-300 rounded-2xl p-5 space-y-5">
-            {/* Symbol Title & Live BID / ASK Prices */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-300">
-              <div className="min-w-0 w-full sm:w-auto">
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                  <h3 className="text-base sm:text-lg font-bold font-display text-slate-900 leading-tight">
-                    {selectedSymbol} Interactive Chart
-                  </h3>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded bg-secondary text-muted-foreground border border-slate-300 whitespace-nowrap">
-                      1:100 ECN
-                    </span>
-                    {activeQuote.isMarketOpen === false ? (
-                      <span className="text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold flex items-center gap-1 whitespace-nowrap">
-                        <Clock className="h-3 w-3" /> MARKET CLOSED
-                      </span>
-                    ) : (
-                      <span className="text-[10px] sm:text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold flex items-center gap-1 whitespace-nowrap">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> LIVE MARKET
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1 sm:mt-0.5">Real-time TradingView technical candles & indicators</p>
+        {/* Chart + trade */}
+        <div className="space-y-4 lg:col-span-9">
+          {/* quote header + chart */}
+          <FsPanel className="p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="flex items-center gap-2 font-display text-base font-bold text-slate-50">
+                  {selectedSymbol}
+                  <span className="rounded border border-slate-800 bg-slate-900 px-1.5 py-px text-[10px] font-medium text-slate-400">1:{metrics?.leverage ?? 100} ECN</span>
+                </h3>
+                <p className="text-xs text-slate-500">Interactive chart · interval 15m</p>
               </div>
-
-              <div className="flex items-center gap-6 font-mono text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="fs-num flex items-center gap-6 text-sm">
                 <div>
-                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">BID PRICE</span>
-                  <span className="font-bold text-rose-500 text-sm sm:text-base">{formatPrice(activeQuote.bid, selectedSymbol)}</span>
+                  <p className="text-[10px] font-sans uppercase tracking-wider text-rose-400">Bid</p>
+                  <p className="font-bold text-slate-100">{fmt(activeQuote.bid, selectedSymbol)}</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">ASK PRICE</span>
-                  <span className="font-bold text-emerald-500 text-sm sm:text-base">{formatPrice(activeQuote.ask, selectedSymbol)}</span>
+                  <p className="text-[10px] font-sans uppercase tracking-wider text-emerald-400">Ask</p>
+                  <p className="font-bold text-slate-100">{fmt(activeQuote.ask, selectedSymbol)}</p>
                 </div>
               </div>
             </div>
 
-            {/* Compact Active Executions Banner for Selected Symbol */}
-            {openPositionsForSymbol.length > 0 && (
-              <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-white">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                    Active Executions ({openPositionsForSymbol.length})
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {openPositionsForSymbol.map((pos) => {
-                    const isProfit = (pos.floating_pnl || 0) >= 0;
-                    return (
-                      <div
-                        key={pos.id}
-                        className="bg-slate-800/90 border border-slate-700/80 px-3 py-1 rounded-lg flex items-center gap-2.5 text-xs font-mono"
-                      >
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${
-                            pos.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                          }`}
-                        >
-                          {pos.type} {pos.lot_size}L
-                        </span>
-                        <span className="text-slate-300">
-                          Entry: <span className="font-bold text-white">${pos.open_price}</span>
-                        </span>
-                        <span className={`font-bold ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {isProfit ? '+' : ''}${pos.floating_pnl?.toFixed(2)}
-                        </span>
-                        <button
-                          onClick={() => handleClosePosition(pos.id)}
-                          className="px-2 py-0.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-bold transition-all ml-1"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+            {/* Live active executions inline chips */}
+            {openPositions.filter((p) => p.symbol === selectedSymbol).length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Active {selectedSymbol} ({openPositions.filter((p) => p.symbol === selectedSymbol).length})
+                </span>
+                {openPositions
+                  .filter((p) => p.symbol === selectedSymbol)
+                  .map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-800/70 px-2 py-1 fs-num text-[11px]">
+                      <span className={cn('rounded px-1 font-black', p.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300')}>
+                        {p.type} {p.lot_size}L
+                      </span>
+                      <span className="text-slate-400">@{fmt(p.open_price, p.symbol)}</span>
+                      <span className={cn('font-bold', (p.floating_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                        {(p.floating_pnl || 0) >= 0 ? '+' : ''}
+                        {formatCurrency(p.floating_pnl || 0)}
+                      </span>
+                      <button onClick={() => closePos(p.id)} className="rounded bg-rose-500/80 px-1.5 py-px text-[10px] font-bold text-white hover:bg-rose-500">
+                        Close
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
 
-            {/* TradingView Widget Chart Container */}
-            <div className="w-full h-[450px] bg-background border border-slate-300 rounded-xl overflow-hidden relative shadow-sm">
+            <div className="relative h-[380px] overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
               <iframe
                 key={selectedSymbol}
                 src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${
-                  selectedSymbol === 'XAUUSD'
-                    ? 'OANDA%3AXAUUSD'
-                    : selectedSymbol === 'XAGUSD'
-                    ? 'TVC%3ASILVER'
-                    : selectedSymbol === 'EURUSD'
-                    ? 'OANDA%3AEURUSD'
-                    : selectedSymbol === 'GBPUSD'
-                    ? 'OANDA%3AGBPUSD'
-                    : selectedSymbol === 'USDJPY'
-                    ? 'OANDA%3AUSDJPY'
-                    : selectedSymbol === 'AUDUSD'
-                    ? 'OANDA%3AAUDUSD'
-                    : selectedSymbol === 'USDCAD'
-                    ? 'OANDA%3AUSDCAD'
-                    : selectedSymbol === 'USDCHF'
-                    ? 'OANDA%3AUSDCHF'
-                    : selectedSymbol === 'NZDUSD'
-                    ? 'OANDA%3ANZDUSD'
-                    : selectedSymbol === 'EURGBP'
-                    ? 'OANDA%3AEURGBP'
-                    : selectedSymbol === 'EURJPY'
-                    ? 'OANDA%3AEURJPY'
-                    : selectedSymbol === 'GBPJPY'
-                    ? 'OANDA%3AGBPJPY'
-                    : selectedSymbol === 'NAS100'
-                    ? 'NASDAQ%3ANDX'
-                    : selectedSymbol === 'US30'
-                    ? 'OANDA%3AUS30USD'
-                    : selectedSymbol === 'SPX500'
-                    ? 'SP%3ASPX'
-                    : selectedSymbol === 'GER40'
-                    ? 'OANDA%3ADE30EUR'
-                    : selectedSymbol === 'BTCUSD'
-                    ? 'BINANCE%3ABTCUSDT'
-                    : selectedSymbol === 'ETHUSD'
-                    ? 'BINANCE%3AETHUSDT'
-                    : selectedSymbol === 'SOLUSD'
-                    ? 'BINANCE%3ASOLUSDT'
-                    : selectedSymbol
-                }&interval=15&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=f1f3f6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=localhost`}
-                className="w-full h-full border-0"
+                  tvSymbol(selectedSymbol)
+                }&interval=15&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=0b0e15&theme=dark&style=1&timezone=Etc%2FUTC&studies=%5B%5D&locale=en`}
+                className="h-full w-full border-0"
                 title={`${selectedSymbol} Live Chart`}
               />
             </div>
+            {quotes.length === 0 && (
+              <p className="mt-2 text-center text-[11px] text-slate-600">
+                Live price feed requires the platform server (marketData). Layout renders regardless.
+              </p>
+            )}
+          </FsPanel>
 
-            {/* Quick Order Control Bar */}
-            <div className="bg-background/80 border border-slate-300 p-4 rounded-xl space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Order Configuration</span>
-                <div className="flex flex-wrap items-center gap-1 text-xs">
-                  <span className="text-muted-foreground font-semibold text-[11px] mr-1">Quick Lots:</span>
-                  {[0.01, 0.1, 0.5, 1.0, 5.0].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setLotSize(val)}
-                      className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] transition-colors border ${
-                        lotSize === val ? 'bg-brand-500 text-white border-brand-600' : 'bg-secondary text-muted-foreground border-slate-300 hover:text-foreground'
-                      }`}
-                    >
-                      {val}
-                    </button>
-                  ))}
-                </div>
+          {/* Order entry */}
+          <FsPanel className="p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <FsLabel>Order Ticket</FsLabel>
+              <div className="flex items-center gap-1 text-[10px]">
+                <span className="text-slate-500">Quick lots:</span>
+                {[0.01, 0.1, 0.5, 1.0, 5.0].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setLotSize(v)}
+                    className={cn(
+                      'fs-num rounded border px-2 py-0.5 font-bold transition-colors',
+                      lotSize === v ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-slate-800 text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    {v}
+                  </button>
+                ))}
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Lot Size</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max="50"
-                    value={lotSize}
-                    onChange={(e) => setLotSize(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-card border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Stop Loss Price</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    placeholder="Optional SL"
-                    value={stopLoss}
-                    onChange={(e) => setStopLoss(e.target.value)}
-                    className="w-full bg-card border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Take Profit Price</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    placeholder="Optional TP"
-                    value={takeProfit}
-                    onChange={(e) => setTakeProfit(e.target.value)}
-                    className="w-full bg-card border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                  />
-                </div>
-
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Field label="Volume (lots)" value={lotSize} onChange={(v) => setLotSize(v)} mono />
+              <Field label="Stop Loss (price)" value={stopLoss} onChange={(s) => setStopLoss(s)} />
+              <Field label="Take Profit (price)" value={takeProfit} onChange={(s) => setTakeProfit(s)} />
+              <div className="flex items-end gap-2">
                 {activeQuote.isMarketOpen === false ? (
-                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 text-xs font-bold flex items-center justify-center gap-1.5">
-                    <Clock className="h-4 w-4" /> Market Closed (Weekend) — Opens Sunday 22:00 UTC
+                  <div className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 py-2.5 text-xs font-bold text-amber-400">
+                    <Clock className="h-4 w-4" /> Market closed
                   </div>
                 ) : (
-                  <div className="flex items-end gap-2">
+                  <>
                     <button
-                      type="button"
-                      onClick={() => {
-                        setOrderType('BUY');
-                        handleExecuteOrder('BUY');
-                      }}
-                      disabled={submitting || (selectedAccount?.status !== 'ACTIVE' && selectedAccount?.status !== 'FUNDED')}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex flex-col items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                      onClick={() => exec('BUY')}
+                      disabled={submitting || (selected?.status !== 'active' && selected?.status !== 'funded')}
+                      className="flex-1 rounded-lg bg-emerald-500 py-2.5 text-xs font-bold text-white transition-all hover:bg-emerald-400 disabled:opacity-40"
                     >
-                      <span>BUY {selectedSymbol}</span>
-                      <span className="text-[10px] font-mono opacity-90">{formatPrice(activeQuote.ask, selectedSymbol)}</span>
+                      <span className="flex items-center justify-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> BUY</span>
+                      <span className="fs-num text-[10px] font-medium opacity-90">{fmt(activeQuote.ask, selectedSymbol)}</span>
                     </button>
-
                     <button
-                      type="button"
-                      onClick={() => {
-                        setOrderType('SELL');
-                        handleExecuteOrder('SELL');
-                      }}
-                      disabled={submitting || (selectedAccount?.status !== 'ACTIVE' && selectedAccount?.status !== 'FUNDED')}
-                      className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-500/20 flex flex-col items-center justify-center transition-all disabled:opacity-50 active:scale-95"
+                      onClick={() => exec('SELL')}
+                      disabled={submitting || (selected?.status !== 'active' && selected?.status !== 'funded')}
+                      className="flex-1 rounded-lg bg-rose-500 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-400 disabled:opacity-40"
                     >
-                      <span>SELL {selectedSymbol}</span>
-                      <span className="text-[10px] font-mono opacity-90">{formatPrice(activeQuote.bid, selectedSymbol)}</span>
+                      <span className="flex items-center justify-center gap-1"><TrendingDown className="h-3.5 w-3.5" /> SELL</span>
+                      <span className="fs-num text-[10px] font-medium opacity-90">{fmt(activeQuote.bid, selectedSymbol)}</span>
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Bottom Tabs: Open Positions, History, Account Rules */}
-          <div className="bg-card border border-slate-300 rounded-2xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-300 pb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setActiveTab('POSITIONS')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                    activeTab === 'POSITIONS'
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Briefcase className="h-3.5 w-3.5" /> Open Positions ({openPositions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('HISTORY')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                    activeTab === 'HISTORY'
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <History className="h-3.5 w-3.5" /> Closed History ({closedPositions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('RULES')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
-                    activeTab === 'RULES'
-                      ? 'bg-brand-500 text-white'
-                      : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <ShieldAlert className="h-3.5 w-3.5" /> Account Rules
-                </button>
+            {selected && metrics && (
+              <div className="mt-3 grid grid-cols-1 gap-3 text-xs md:grid-cols-3">
+                <div>
+                  <div className="flex justify-between text-slate-400"><span>Profit target</span><span className="fs-num text-slate-200">{metrics.targetProgress * 100 > 0 ? (metrics.targetProgress * 100).toFixed(0) : 0}%</span></div>
+                  <FsProgress value={metrics.targetProgress} className="mt-1" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-400"><span>Daily loss used</span><span className="fs-num text-rose-300">{((risk?.dailyUsedPct ?? 0) * 100).toFixed(0)}%</span></div>
+                  <FsProgress value={risk?.dailyUsedPct ?? 0} tone="rose" className="mt-1" />
+                </div>
+                <div>
+                  <div className="flex justify-between text-slate-400"><span>Max DD used</span><span className="fs-num text-amber-300">{((risk?.maxUsedPct ?? 0) * 100).toFixed(0)}%</span></div>
+                  <FsProgress value={risk?.maxUsedPct ?? 0} tone="amber" className="mt-1" />
+                </div>
               </div>
+            )}
+          </FsPanel>
 
+          {/* Positions / history / rules */}
+          <FsPanel className="p-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(
+                  [
+                    ['POSITIONS', `Open Positions (${openPositions.length})`, Briefcase],
+                    ['HISTORY', `History (${closedPositions.length})`, History],
+                    ['RULES', 'Account Rules', ShieldAlert],
+                  ] as const
+                ).map(([key, label, Icon]) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold transition-colors',
+                      activeTab === key ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {label}
+                  </button>
+                ))}
+              </div>
               {activeTab === 'POSITIONS' && openPositions.length > 0 && (
-                <button
-                  onClick={handleCloseAllPositions}
-                  disabled={closingAll}
-                  className="px-3 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 font-bold text-xs transition-colors flex items-center gap-1"
-                >
-                  {closingAll ? <RefreshCw className="h-3 w-3 animate-spin" /> : null} Close All Positions
+                <button onClick={closeAll} disabled={closingAll} className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-xs font-bold text-rose-400 hover:bg-rose-500/20">
+                  {closingAll ? 'Closing…' : 'Close All'}
                 </button>
               )}
             </div>
 
-            {/* TAB CONTENT: OPEN POSITIONS */}
-            {activeTab === 'POSITIONS' && (
-              openPositions.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground text-xs border border-dashed border-border/60 rounded-xl">
-                  No open market positions for account #{selectedAccount?.account_number}.
-                </div>
+            {activeTab === 'POSITIONS' &&
+              (openPositions.length === 0 ? (
+                <div className="px-6 py-14 text-center text-sm text-slate-500">No open positions for this account.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase">
-                      <tr>
-                        <th className="p-2.5 rounded-l-lg">Symbol</th>
-                        <th className="p-2.5">Side</th>
-                        <th className="p-2.5">Lots</th>
-                        <th className="p-2.5">Open Price</th>
-                        <th className="p-2.5">Current Price</th>
-                        <th className="p-2.5">Stop Loss</th>
-                        <th className="p-2.5">Take Profit</th>
-                        <th className="p-2.5">Floating P/L</th>
-                        <th className="p-2.5 rounded-r-lg text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/40">
-                      {openPositions.map((pos) => (
-                        <tr key={pos.id} className="hover:bg-secondary/30 transition-colors">
-                          <td className="p-2.5 font-bold text-foreground">{pos.symbol}</td>
-                          <td className="p-2.5">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                pos.type === 'BUY'
-                                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                  : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-                              }`}
-                            >
-                              {pos.type}
-                            </span>
-                          </td>
-                          <td className="p-2.5 font-mono font-semibold">{pos.lot_size}</td>
-                          <td className="p-2.5 font-mono">{formatPrice(pos.open_price, pos.symbol)}</td>
-                          <td className="p-2.5 font-mono font-semibold text-slate-700">
-                            {formatPrice(pos.current_price || (pos.type === 'BUY' ? activeQuote.bid : activeQuote.ask), pos.symbol)}
-                          </td>
-                          <td className="p-2.5 font-mono text-muted-foreground">{pos.stop_loss ? formatPrice(pos.stop_loss, pos.symbol) : '—'}</td>
-                          <td className="p-2.5 font-mono text-muted-foreground">{pos.take_profit ? formatPrice(pos.take_profit, pos.symbol) : '—'}</td>
-                          <td className="p-2.5 font-mono font-bold">
-                            <span className={pos.floating_pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                              {pos.floating_pnl >= 0 ? '+' : ''}${pos.floating_pnl?.toFixed(2)}
-                            </span>
-                          </td>
-                          <td className="p-2.5 text-right">
-                            <button
-                              onClick={() => handleClosePosition(pos.id)}
-                              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-bold text-xs transition-colors"
-                            >
-                              Close
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            )}
-
-            {/* TAB CONTENT: CLOSED HISTORY */}
-            {activeTab === 'HISTORY' && (
-              closedPositions.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground text-xs border border-dashed border-border/60 rounded-xl">
-                  No closed trade history recorded yet.
-                </div>
+                <PositionsTable rows={openPositions} fmt={fmt} onClose={closePos} />
+              ))}
+            {activeTab === 'HISTORY' &&
+              (closedPositions.length === 0 ? (
+                <div className="px-6 py-14 text-center text-sm text-slate-500">No closed trades recorded.</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-secondary/50 text-muted-foreground font-semibold uppercase">
-                      <tr>
-                        <th className="p-2.5 rounded-l-lg">Symbol</th>
-                        <th className="p-2.5">Side</th>
-                        <th className="p-2.5">Lots</th>
-                        <th className="p-2.5">Open Price</th>
-                        <th className="p-2.5">Close Price</th>
-                        <th className="p-2.5">Realized P/L</th>
-                        <th className="p-2.5 rounded-r-lg text-right">Close Time</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/40">
-                      {closedPositions.map((pos) => (
-                        <tr key={pos.id} className="hover:bg-secondary/30 transition-colors">
-                          <td className="p-2.5 font-bold text-foreground">{pos.symbol}</td>
-                          <td className="p-2.5">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                pos.type === 'BUY'
-                                  ? 'bg-emerald-500/10 text-emerald-500'
-                                  : 'bg-rose-500/10 text-rose-500'
-                              }`}
-                            >
-                              {pos.type}
-                            </span>
-                          </td>
-                          <td className="p-2.5 font-mono font-semibold">{pos.lot_size}</td>
-                          <td className="p-2.5 font-mono">{formatPrice(pos.open_price, pos.symbol)}</td>
-                          <td className="p-2.5 font-mono">{pos.close_price ? formatPrice(pos.close_price, pos.symbol) : '—'}</td>
-                          <td className="p-2.5 font-mono font-bold">
-                            <span className={(pos.realized_pnl || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                              {(pos.realized_pnl || 0) >= 0 ? '+' : ''}${(pos.realized_pnl || 0).toFixed(2)}
-                            </span>
-                          </td>
-                          <td className="p-2.5 text-right font-mono text-[11px] text-muted-foreground">
-                            {new Date(pos.closed_at || pos.updated_at || Date.now()).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )
-            )}
-
-            {/* TAB CONTENT: ACCOUNT RULES & RISK MONITOR */}
-            {activeTab === 'RULES' && selectedAccount && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                {(() => {
-                  const dailyPct = selectedAccount.rules?.daily_loss_limit_percent ?? selectedAccount.rules?.daily_drawdown ?? 5;
-                  const maxPct = selectedAccount.rules?.max_loss_limit_percent ?? selectedAccount.rules?.max_drawdown ?? 10;
-                  const targetPct = selectedAccount.rules?.profit_target_percent ?? selectedAccount.rules?.profit_target ?? 8;
-                  const startBal = selectedAccount.starting_balance || selectedAccount.account_size || 100000;
-                  return (
-                    <>
-                      <div className="p-4 rounded-xl bg-background border border-border/60 space-y-2">
-                        <p className="font-bold text-foreground text-sm flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Drawdown Model
-                        </p>
-                        <p className="text-muted-foreground">
-                          Model: <strong className="text-foreground">{selectedAccount.rules?.drawdown_model || 'STATIC'}</strong>
-                        </p>
-                        <p className="text-muted-foreground">
-                          Max Daily Loss: <strong className="text-foreground">{dailyPct}%</strong> (${((dailyPct / 100) * startBal).toLocaleString()})
-                        </p>
-                        <p className="text-muted-foreground">
-                          Max Overall Loss: <strong className="text-foreground">{maxPct}%</strong> (${((maxPct / 100) * startBal).toLocaleString()})
-                        </p>
-                      </div>
-
-                      <div className="p-4 rounded-xl bg-background border border-border/60 space-y-2">
-                        <p className="font-bold text-foreground text-sm flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-brand-500" /> Evaluation Target & Days
-                        </p>
-                        <p className="text-muted-foreground">
-                          Profit Target: <strong className="text-emerald-500">{targetPct}%</strong> (${((targetPct / 100) * startBal).toLocaleString()})
-                        </p>
-                        <p className="text-muted-foreground">
-                          Min Trading Days: <strong className="text-foreground">{selectedAccount.rules?.min_trading_days ?? 3} days</strong> (Current: {selectedAccount.trading_days_count || selectedAccount.trading_days || 0})
-                        </p>
-                        <p className="text-muted-foreground">
-                          Account Leverage: <strong className="text-foreground">1:{selectedAccount.rules?.leverage || 100}</strong>
-                        </p>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
+                <HistoryTable rows={closedPositions} fmt={fmt} />
+              ))}
+            {activeTab === 'RULES' && selected && metrics && <RulesView account={selected} />}
+          </FsPanel>
         </div>
       </div>
+    </div>
+  );
+}
+
+function tvSymbol(s: string) {
+  const map: Record<string, string> = {
+    XAUUSD: 'OANDA%3AXAUUSD', XAGUSD: 'TVC%3ASILVER', EURUSD: 'OANDA%3AEURUSD', GBPUSD: 'OANDA%3AGBPUSD',
+    USDJPY: 'OANDA%3AUSDJPY', AUDUSD: 'OANDA%3AAUDUSD', USDCAD: 'OANDA%3AUSDCAD', USDCHF: 'OANDA%3AUSDCHF',
+    NZDUSD: 'OANDA%3ANZDUSD', EURGBP: 'OANDA%3AEURGBP', EURJPY: 'OANDA%3AEURJPY', GBPJPY: 'OANDA%3AGBPJPY',
+    NAS100: 'NASDAQ%3ANDX', US30: 'OANDA%3AUS30USD', SPX500: 'SP%3ASPX', GER40: 'OANDA%3ADE30EUR',
+    BTCUSD: 'BINANCE%3ABTCUSDT', ETHUSD: 'BINANCE%3AETHUSDT', SOLUSD: 'BINANCE%3ASOLUSDT',
+  };
+  return map[s] || s;
+}
+
+function Metric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'up' | 'down' | 'neutral' }) {
+  return (
+    <FsPanel className="p-3">
+      <FsLabel>{label}</FsLabel>
+      <p className={cn('fs-num mt-1.5 text-lg font-semibold', tone === 'up' ? 'text-emerald-400' : tone === 'down' ? 'text-rose-400' : 'text-slate-100')}>
+        {value}
+      </p>
+    </FsPanel>
+  );
+}
+
+function Field({ label, value, onChange, mono }: { label: string; value: string | number; onChange: (v: any) => void; mono?: boolean }) {
+  return (
+    <label className="block">
+      <span className="fs-label">{label}</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(mono ? parseFloat(e.target.value) || 0 : e.target.value)}
+        className={cn(
+          'mt-1.5 w-full rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none',
+          mono && 'fs-num'
+        )}
+      />
+    </label>
+  );
+}
+
+function th(cls?: string) {
+  return `px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500 ${cls ?? ''}`;
+}
+function td(cls?: string) {
+  return `px-3 py-2.5 text-sm ${cls ?? ''}`;
+}
+
+function PositionsTable({ rows, fmt, onClose }: { rows: any[]; fmt: (v: any, s: string) => string; onClose: (id: string) => void }) {
+  return (
+    <div className="fs-scroll overflow-x-auto">
+      <table className="w-full">
+        <thead className="border-b border-slate-800">
+          <tr>
+            <th className={th()}>Symbol</th><th className={th()}>Side</th><th className={th()}>Lots</th><th className={th()}>Open</th>
+            <th className={th()}>Now</th><th className={th()}>SL</th><th className={th()}>TP</th><th className={th()}>Floating</th><th className={th('text-right')}></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800/70">
+          {rows.map((p) => (
+            <tr key={p.id} className="fs-row-hover">
+              <td className={cn(td(), 'fs-num font-semibold text-slate-100')}>{p.symbol}</td>
+              <td className={td()}>
+                <span className={cn('rounded px-1.5 py-px text-[10px] font-bold', p.type === 'BUY' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300')}>{p.type}</span>
+              </td>
+              <td className={cn(td(), 'fs-num text-slate-300')}>{p.lot_size}</td>
+              <td className={cn(td(), 'fs-num text-slate-400')}>{fmt(p.open_price, p.symbol)}</td>
+              <td className={cn(td(), 'fs-num text-slate-200')}>{fmt(p.current_price || (p.type === 'BUY' ? undefined : undefined), p.symbol)}</td>
+              <td className={cn(td(), 'fs-num text-slate-500')}>{p.stop_loss ? fmt(p.stop_loss, p.symbol) : '—'}</td>
+              <td className={cn(td(), 'fs-num text-slate-500')}>{p.take_profit ? fmt(p.take_profit, p.symbol) : '—'}</td>
+              <td className={cn(td(), 'fs-num font-semibold', (p.floating_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                {(p.floating_pnl || 0) >= 0 ? '+' : ''}
+                {formatCurrency(p.floating_pnl || 0)}
+              </td>
+              <td className={cn(td(), 'text-right')}>
+                <button onClick={() => onClose(p.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] font-bold text-rose-300 hover:bg-rose-500/25">
+                  Close
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function HistoryTable({ rows, fmt }: { rows: any[]; fmt: (v: any, s: string) => string }) {
+  return (
+    <div className="fs-scroll overflow-x-auto">
+      <table className="w-full">
+        <thead className="border-b border-slate-800">
+          <tr>
+            <th className={th()}>Symbol</th><th className={th()}>Side</th><th className={th()}>Lots</th><th className={th()}>Open</th>
+            <th className={th()}>Close</th><th className={th()}>Realized</th><th className={th('text-right')}>Time</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800/70">
+          {rows.map((p) => (
+            <tr key={p.id} className="fs-row-hover">
+              <td className={cn(td(), 'fs-num font-semibold text-slate-100')}>{p.symbol}</td>
+              <td className={td()}>
+                <span className={cn('rounded px-1.5 py-px text-[10px] font-bold', p.type === 'BUY' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-rose-500/15 text-rose-300')}>{p.type}</span>
+              </td>
+              <td className={cn(td(), 'fs-num text-slate-300')}>{p.lot_size}</td>
+              <td className={cn(td(), 'fs-num text-slate-400')}>{fmt(p.open_price, p.symbol)}</td>
+              <td className={cn(td(), 'fs-num text-slate-400')}>{p.close_price ? fmt(p.close_price, p.symbol) : '—'}</td>
+              <td className={cn(td(), 'fs-num font-semibold', (p.realized_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
+                {(p.realized_pnl || 0) >= 0 ? '+' : ''}
+                {formatCurrency(p.realized_pnl || 0)}
+              </td>
+              <td className={cn(td(), 'fs-num text-right text-xs text-slate-500')}>
+                {p.closed_at ? new Date(p.closed_at).toLocaleString() : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RulesView({ account }: { account: TradingAccount }) {
+  const m = fsMetrics(account);
+  const r = fsRisk(account);
+  const rules = [
+    { label: 'Profit target', value: `${m.profitTargetPct}% (${formatCurrency(m.targetAmt)})`, tone: 'emerald' },
+    { label: 'Daily drawdown', value: `${m.dailyPct}% (${formatCurrency(m.dailyLimitAmt)})`, tone: 'amber' },
+    { label: 'Max drawdown', value: `${m.maxPct}% (${formatCurrency(m.maxLossAmt)})`, tone: 'rose' },
+    { label: 'Min trading days', value: `${fsTradingDays(account)} / ${m.minDays || '—'}`, tone: 'indigo' },
+    { label: 'Leverage', value: `1:${m.leverage}`, tone: 'slate' },
+    { label: 'Profit split', value: `${m.profitSplit}%`, tone: 'slate' },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3">
+      {rules.map((rule) => (
+        <div key={rule.label} className="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+          <p className="fs-label">{rule.label}</p>
+          <p className={cn('fs-num mt-1 text-sm font-semibold', rule.tone === 'emerald' && 'text-emerald-300', rule.tone === 'amber' && 'text-amber-300', rule.tone === 'rose' && 'text-rose-300', rule.tone === 'indigo' && 'text-indigo-300', rule.tone === 'slate' && 'text-slate-200')}>
+            {rule.value}
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
