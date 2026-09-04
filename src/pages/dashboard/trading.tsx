@@ -357,6 +357,12 @@ export function DashboardTrading() {
   const metrics = selected ? fsMetrics(selected, equity) : null;
   const risk = selected ? fsRisk(selected, equity) : null;
 
+  // Feed freshness: a quote is "live" only if it carries a recent timestamp.
+  // Static backend base quotes carry the server-start timestamp and never move,
+  // so they are treated as NOT live and must not be presented as real prices.
+  const feedFresh = quotes.some((q) => q.timestamp && Date.now() - new Date(q.timestamp).getTime() < 15000);
+  const feedState: 'live' | 'waiting' | 'none' = quotes.length === 0 ? 'none' : feedFresh ? 'live' : 'waiting';
+
   return (
     <div className="space-y-4">
       {/* Terminal top bar */}
@@ -368,9 +374,15 @@ export function DashboardTrading() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display text-sm font-bold text-slate-50">Funded Shift Web Terminal</h2>
-              <span className="flex items-center gap-1 rounded-full border border-slate-700 px-2 py-px text-[10px] font-semibold text-slate-300">
-                <span className="fs-live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" /> ECN MATCHER
-              </span>
+              {feedState === 'live' ? (
+                <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 px-2 py-px text-[10px] font-semibold text-emerald-300">
+                  <span className="fs-live-dot h-1.5 w-1.5 rounded-full bg-emerald-400" /> LIVE
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/30 px-2 py-px text-[10px] font-semibold text-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> WAITING FOR FEED
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500">Streaming quotes · live rule monitoring · MT5-grade execution</p>
           </div>
@@ -417,8 +429,12 @@ export function DashboardTrading() {
           <FsPanel className="p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="fs-label flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Watchlist</p>
-              {activeQuote.isMarketOpen === false ? (
-                <StatusPill tone="amber"><Clock className="h-3 w-3" /> Closed</StatusPill>
+              {feedState === 'none' ? (
+                <StatusPill tone="amber"><Clock className="h-3 w-3" /> Waiting</StatusPill>
+              ) : feedState === 'waiting' ? (
+                <StatusPill tone="amber"><Clock className="h-3 w-3" /> Static</StatusPill>
+              ) : activeQuote.isMarketOpen === false ? (
+                <StatusPill tone="amber"><Clock className="h-3 w-3" /> Market closed</StatusPill>
               ) : (
                 <StatusPill tone="emerald"><CircleDot className="h-3 w-3" /> Live</StatusPill>
               )}
@@ -549,9 +565,14 @@ export function DashboardTrading() {
                 title={`${selectedSymbol} Live Chart`}
               />
             </div>
-            {quotes.length === 0 && (
+            {feedState === 'none' && (
               <p className="mt-2 text-center text-[11px] text-slate-600">
-                Prices streamed live from TradingView. If the feed is unreachable, prices will appear once a connection is restored.
+                Waiting for live prices — they stream from TradingView and should appear in a few seconds.
+              </p>
+            )}
+            {feedState === 'waiting' && (
+              <p className="mt-2 text-center text-[11px] text-amber-400/80">
+                Showing static fallback prices — the live TradingView feed is not connected in this environment.
               </p>
             )}
           </FsPanel>
