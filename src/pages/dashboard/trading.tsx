@@ -40,6 +40,9 @@ interface MarketQuote {
   prevBid?: number;
   isMarketOpen?: boolean;
   timestamp?: string;
+  /** 'tv' = direct TradingView/chart feed (authoritative for display);
+      undefined = platform backend feed (trading-engine source, may be stale). */
+  source?: 'tv';
 }
 
 const CATS = ['ALL', 'FOREX', 'COMMODITIES', 'INDICES', 'CRYPTO'] as const;
@@ -117,6 +120,7 @@ function buildQuoteFromTv(ticker: string, row: (number | null | undefined)[]): M
     change24h: typeof chg === 'number' && Number.isFinite(chg) ? Number(chg.toFixed(2)) : 0,
     isMarketOpen: isOpen,
     timestamp: new Date().toISOString(),
+    source: 'tv',
   };
 }
 
@@ -166,7 +170,6 @@ export function DashboardTrading() {
     let disposed = false;
     let es: EventSource | null = null;
     let timer: number | undefined;
-    let backendSeen = false;
 
     const apply = (incoming: MarketQuote[]) => {
       if (disposed || incoming.length === 0) return;
@@ -176,6 +179,11 @@ export function DashboardTrading() {
         const hist: Record<string, 'UP' | 'DOWN' | 'SAME'> = {};
         incoming.forEach((q) => {
           const old = map.get(q.symbol);
+          // TradingView (chart) feed is authoritative for display. A backend
+          // quote must NOT overwrite a chart-consistent quote for the same
+          // symbol, otherwise a stale/high backend value would override the
+          // real chart price.
+          if (old?.source === 'tv' && q.source !== 'tv') return;
           if (old) hist[q.symbol] = q.bid > old.bid ? 'UP' : q.bid < old.bid ? 'DOWN' : 'SAME';
           map.set(q.symbol, q);
         });
@@ -193,7 +201,6 @@ export function DashboardTrading() {
       .then((r) => r.json())
       .then((d) => {
         if (disposed || !Array.isArray(d) || d.length === 0) return;
-        backendSeen = true;
         apply(d as MarketQuote[]);
         try {
           es = new EventSource('/api/market/ticks/stream');
