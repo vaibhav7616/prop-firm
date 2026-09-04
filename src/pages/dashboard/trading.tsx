@@ -39,6 +39,7 @@ interface MarketQuote {
   change24h: number;
   prevBid?: number;
   isMarketOpen?: boolean;
+  timestamp?: string;
 }
 
 const CATS = ['ALL', 'FOREX', 'COMMODITIES', 'INDICES', 'CRYPTO'] as const;
@@ -46,6 +47,79 @@ const FOREX = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDU
 const METALS = ['XAUUSD', 'XAGUSD', 'USOIL'];
 const INDICES = ['NAS100', 'US30', 'SPX500', 'GER40'];
 const CRYPTO = ['BTCUSD', 'ETHUSD', 'SOLUSD'];
+const SUPPORTED_SYMBOLS = [...FOREX, ...METALS, ...INDICES, ...CRYPTO];
+
+/* Internal symbol <-> TradingView ticker (same feed the chart widget draws from). */
+const SYMBOL_TO_TV: Record<string, string> = {
+  XAUUSD: 'OANDA:XAUUSD', XAGUSD: 'TVC:SILVER', USOIL: 'NYMEX:CL1!',
+  EURUSD: 'OANDA:EURUSD', GBPUSD: 'OANDA:GBPUSD', USDJPY: 'OANDA:USDJPY',
+  AUDUSD: 'OANDA:AUDUSD', USDCAD: 'OANDA:USDCAD', USDCHF: 'OANDA:USDCHF',
+  NZDUSD: 'OANDA:NZDUSD', EURGBP: 'OANDA:EURGBP', EURJPY: 'OANDA:EURJPY', GBPJPY: 'OANDA:GBPJPY',
+  US30: 'OANDA:US30USD', GER40: 'OANDA:DE30EUR', NAS100: 'NASDAQ:NDX', SPX500: 'SP:SPX',
+  BTCUSD: 'BINANCE:BTCUSDT', ETHUSD: 'BINANCE:ETHUSDT', SOLUSD: 'BINANCE:SOLUSDT',
+};
+const TV_TO_SYMBOL: Record<string, string> = Object.fromEntries(Object.entries(SYMBOL_TO_TV).map(([s, t]) => [t, s]));
+const symbolToTv = (s: string) => SYMBOL_TO_TV[s] || s;
+const tvToSymbol = (t: string) => TV_TO_SYMBOL[t] || t;
+
+/* Quote precision by market convention (must match how prices are displayed). */
+const P5 = ['EURUSD', 'GBPUSD', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD', 'EURGBP'];
+const P3 = ['USDJPY', 'EURJPY', 'GBPJPY', 'XAGUSD'];
+function symbolPrecision(symbol: string): number {
+  if (P5.includes(symbol)) return 5;
+  if (P3.includes(symbol)) return 3;
+  return 2;
+}
+function roundP(v: number, p: number): number {
+  if (!Number.isFinite(v)) return 0;
+  const f = Math.pow(10, p);
+  return Math.round(v * f) / f;
+}
+function marketIsOpen(symbol: string): boolean {
+  const s = symbol.toUpperCase();
+  if (['BTCUSD', 'ETHUSD', 'SOLUSD'].includes(s)) return true; // crypto 24/7
+  const now = new Date();
+  const day = now.getUTCDay();
+  const hour = now.getUTCHours() + now.getUTCMinutes() / 60;
+  if (day === 6) return false;
+  if (day === 0 && hour < 22) return false;
+  if (day === 5 && hour >= 22) return false;
+  return true;
+}
+
+/* Build a MarketQuote from a raw TradingView scanner row:
+   row = { s: ticker, d: [close, bid, ask, high, low, change%] } */
+function buildQuoteFromTv(ticker: string, row: (number | null | undefined)[]): MarketQuote | null {
+  const symbol = tvToSymbol(ticker);
+  const [close, bid, ask, high, low, chg] = row || [];
+  const p = symbolPrecision(symbol);
+  const isOpen = marketIsOpen(symbol);
+  let b = typeof bid === 'number' && Number.isFinite(bid) ? roundP(bid, p) : null;
+  let a = typeof ask === 'number' && Number.isFinite(ask) ? roundP(ask, p) : null;
+  const c = typeof close === 'number' && Number.isFinite(close) ? roundP(close, p) : null;
+  if (b === null && c !== null) b = c;
+  if (a === null && c !== null) a = c;
+  if (b === null && a !== null) b = a;
+  if (a === null && b !== null) a = b;
+  if (b === null || a === null) return null;
+  if (a <= b) a = roundP(b + 1 / Math.pow(10, p), p);
+  const mid = roundP((b + a) / 2, p);
+  const hi = typeof high === 'number' && Number.isFinite(high) ? roundP(high, p) : mid;
+  const lo = typeof low === 'number' && Number.isFinite(low) ? roundP(low, p) : mid;
+  return {
+    symbol,
+    price: c ?? mid,
+    bid: b,
+    ask: a,
+    spread: Number((a - b).toFixed(Math.max(1, p))),
+    high: hi,
+    low: lo,
+    change24h: typeof chg === 'number' && Number.isFinite(chg) ? Number(chg.toFixed(2)) : 0,
+    isMarketOpen: isOpen,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 
 export function DashboardTrading() {
   const { user } = useAuth();
@@ -82,32 +156,91 @@ export function DashboardTrading() {
     };
   }, [selected?.id]);
 
-  // market data stream
+  // Market data — bid/ask always reflect the chart.
+  // Sources, in priority order:
+  //  1) the platform backend stream (/api/market/ticks/stream) when present, and
+  //  2) a direct poll of the SAME TradingView feed the chart widget renders from,
+  //     so bid/ask are guaranteed to be live and match the chart in every
+  //     environment (full stack, frontend-only, or a blocked container feed).
   useEffect(() => {
-    fetch('/api/market/quotes')
-      .then((r) => r.json())
-      .then((d) => d && Array.isArray(d) && d.length > 0 && setQuotes(d))
-      .catch(() => {});
-    const es = new EventSource('/api/market/ticks/stream');
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (Array.isArray(data)) {
-          setQuotes((prev) => {
-            const hist: Record<string, 'UP' | 'DOWN' | 'SAME'> = {};
-            data.forEach((nq) => {
-              const old = prev.find((p) => p.symbol === nq.symbol);
-              if (old) hist[nq.symbol] = nq.bid > old.bid ? 'UP' : nq.bid < old.bid ? 'DOWN' : 'SAME';
-            });
-            setQuoteHistory((p) => ({ ...p, ...hist }));
-            return data;
+    let disposed = false;
+    let es: EventSource | null = null;
+    let timer: number | undefined;
+    let backendSeen = false;
+
+    const apply = (incoming: MarketQuote[]) => {
+      if (disposed || incoming.length === 0) return;
+      setQuotes((prev) => {
+        const map = new Map<string, MarketQuote>();
+        prev.forEach((p) => map.set(p.symbol, p));
+        const hist: Record<string, 'UP' | 'DOWN' | 'SAME'> = {};
+        incoming.forEach((q) => {
+          const old = map.get(q.symbol);
+          if (old) hist[q.symbol] = q.bid > old.bid ? 'UP' : q.bid < old.bid ? 'DOWN' : 'SAME';
+          map.set(q.symbol, q);
+        });
+        if (Object.keys(hist).length) {
+          requestAnimationFrame(() => {
+            if (!disposed) setQuoteHistory((h) => ({ ...h, ...hist }));
           });
         }
+        return [...map.values()];
+      });
+    };
+
+    // 1) Platform backend feed (streaming, used by the trading engine).
+    fetch('/api/market/quotes')
+      .then((r) => r.json())
+      .then((d) => {
+        if (disposed || !Array.isArray(d) || d.length === 0) return;
+        backendSeen = true;
+        apply(d as MarketQuote[]);
+        try {
+          es = new EventSource('/api/market/ticks/stream');
+          es.onmessage = (e) => {
+            try {
+              const data = JSON.parse(e.data);
+              if (Array.isArray(data)) apply(data as MarketQuote[]);
+            } catch {
+              /* ignore bad frame */
+            }
+          };
+        } catch {
+          /* no backend stream available */
+        }
+      })
+      .catch(() => {});
+
+    // 2) TradingView scanner poll — authoritative chart-consistent bid/ask.
+    const loadTv = async () => {
+      try {
+        const res = await fetch('https://scanner.tradingview.com/global/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbols: { tickers: SUPPORTED_SYMBOLS.map(symbolToTv) },
+            columns: ['close', 'bid', 'ask', 'high', 'low', 'change'],
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (disposed || !Array.isArray(data?.data)) return;
+        const qs = (data.data as any[])
+          .map((it) => buildQuoteFromTv(it.s, it.d))
+          .filter((q): q is MarketQuote => q !== null && q.bid > 0 && q.ask > 0);
+        if (qs.length) apply(qs);
       } catch {
-        /* ignore */
+        /* TV unreachable — keep whatever we already have */
       }
     };
-    return () => es.close();
+    loadTv();
+    timer = window.setInterval(loadTv, 4000);
+
+    return () => {
+      disposed = true;
+      if (timer) clearInterval(timer);
+      if (es) es.close();
+    };
   }, []);
 
   const fmt = (val: number | undefined, sym: string) => {
@@ -411,7 +544,7 @@ export function DashboardTrading() {
             </div>
             {quotes.length === 0 && (
               <p className="mt-2 text-center text-[11px] text-slate-600">
-                Live price feed requires the platform server (marketData). Layout renders regardless.
+                Prices streamed live from TradingView. If the feed is unreachable, prices will appear once a connection is restored.
               </p>
             )}
           </FsPanel>
@@ -601,7 +734,7 @@ function PositionsTable({ rows, fmt, onClose }: { rows: any[]; fmt: (v: any, s: 
               </td>
               <td className={cn(td(), 'fs-num text-slate-300')}>{p.lot_size}</td>
               <td className={cn(td(), 'fs-num text-slate-400')}>{fmt(p.open_price, p.symbol)}</td>
-              <td className={cn(td(), 'fs-num text-slate-200')}>{fmt(p.current_price || (p.type === 'BUY' ? undefined : undefined), p.symbol)}</td>
+              <td className={cn(td(), 'fs-num text-slate-200')}>{fmt(p.current_price, p.symbol)}</td>
               <td className={cn(td(), 'fs-num text-slate-500')}>{p.stop_loss ? fmt(p.stop_loss, p.symbol) : '—'}</td>
               <td className={cn(td(), 'fs-num text-slate-500')}>{p.take_profit ? fmt(p.take_profit, p.symbol) : '—'}</td>
               <td className={cn(td(), 'fs-num font-semibold', (p.floating_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
