@@ -22,13 +22,14 @@ import {
   ChevronDown,
   Plus,
   CircleHelp,
-  ArrowUpRight,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useFsAccount } from '@/context/account-context';
 import { useFsNotifications } from '@/lib/fs-notifications';
 import { fsAccountMeta } from '@/lib/fs-risk';
 import { ACCOUNT_STATUS_LABELS } from '@/lib/constants';
+import { Logo } from '@/components/shared/logo';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -56,19 +57,21 @@ const NAV = [
   { label: 'Security', to: '/dashboard/security', icon: ShieldCheck },
 ];
 
-function Wordmark({ compact = false }: { compact?: boolean }) {
+/* Official FundedShift logo in a <Link> to /dashboard. Text is hidden on the
+   compact tablet icon-rail (md..lg) where there's no room, matching the other
+   rail labels. Reuses the shared Logo so the brand mark is identical to the
+   public site / previous dashboard. */
+function Wordmark() {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700">
-        <span className="fs-num text-sm font-bold text-white">F</span>
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border border-[#0c0f16] bg-emerald-400" />
-      </div>
-      {!compact && (
-        <div className="leading-none md:hidden lg:block">
-          <p className="font-display text-[15px] font-bold tracking-tight text-slate-50">Funded Shift</p>
-          <p className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">Trader OS</p>
-        </div>
-      )}
+    <Logo size="sm" className="md:mx-auto lg:mx-0" />
+  );
+}
+
+/* Compact brand tile for the tablet icon-rail only (logo icon, no wordmark). */
+function WordmarkRail() {
+  return (
+    <div className="mx-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-soft-md">
+      <TrendingUp className="h-4 w-4 text-white" strokeWidth={2.5} />
     </div>
   );
 }
@@ -87,9 +90,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between border-b border-slate-800/80 px-4">
-        <Link to="/dashboard" onClick={onNavigate} className="md:mx-auto lg:mx-0">
+        {/* Full official logo: mobile drawer & desktop sidebar */}
+        <div className="md:hidden lg:block" onClick={onNavigate}>
           <Wordmark />
-        </Link>
+        </div>
+        {/* Compact brand tile: tablet icon-rail */}
+        <div className="hidden md:block lg:hidden" onClick={onNavigate}>
+          <WordmarkRail />
+        </div>
       </div>
 
       <div className="border-b border-slate-800/80 px-3 py-2.5 md:px-2">
