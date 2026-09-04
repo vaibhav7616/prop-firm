@@ -78,6 +78,12 @@ function roundP(v: number, p: number): number {
   const f = Math.pow(10, p);
   return Math.round(v * f) / f;
 }
+/* Account is tradable when status is active or funded (case-insensitive:
+   the backend stores 'ACTIVE'/'FUNDED' while offline data uses lowercase). */
+function isTradable(account: { status?: string } | null | undefined): boolean {
+  const st = (account?.status || '').toUpperCase();
+  return st === 'ACTIVE' || st === 'FUNDED';
+}
 function marketIsOpen(symbol: string): boolean {
   const s = symbol.toUpperCase();
   if (['BTCUSD', 'ETHUSD', 'SOLUSD'].includes(s)) return true; // crypto 24/7
@@ -223,7 +229,12 @@ export function DashboardTrading() {
       try {
         const res = await fetch('https://scanner.tradingview.com/global/scan', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          // Must be text/plain (NOT application/json): text/plain is a
+          // CORS-safelisted content type, so no preflight is triggered.
+          // TradingView's preflight only allows 'Referer, Accept', so an
+          // application/json POST is blocked by the browser and the live feed
+          // would silently fail, leaving stale fallback prices.
+          headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify({
             symbols: { tickers: SUPPORTED_SYMBOLS.map(symbolToTv) },
             columns: ['close', 'bid', 'ask', 'high', 'low', 'change'],
@@ -610,7 +621,7 @@ export function DashboardTrading() {
                   <>
                     <button
                       onClick={() => exec('BUY')}
-                      disabled={submitting || (selected?.status !== 'active' && selected?.status !== 'funded')}
+                      disabled={submitting || !isTradable(selected)}
                       className="flex-1 rounded-lg bg-emerald-500 py-2.5 text-xs font-bold text-white transition-all hover:bg-emerald-400 disabled:opacity-40"
                     >
                       <span className="flex items-center justify-center gap-1"><TrendingUp className="h-3.5 w-3.5" /> BUY</span>
@@ -618,7 +629,7 @@ export function DashboardTrading() {
                     </button>
                     <button
                       onClick={() => exec('SELL')}
-                      disabled={submitting || (selected?.status !== 'active' && selected?.status !== 'funded')}
+                      disabled={submitting || !isTradable(selected)}
                       className="flex-1 rounded-lg bg-rose-500 py-2.5 text-xs font-bold text-white transition-all hover:bg-rose-400 disabled:opacity-40"
                     >
                       <span className="flex items-center justify-center gap-1"><TrendingDown className="h-3.5 w-3.5" /> SELL</span>
