@@ -35,7 +35,7 @@ import {
 import type { TradingAccount } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, getAccountPassword } from '@/lib/utils';
 import { toast } from 'sonner';
 
 import { DEFAULT_ACCOUNTS } from '@/lib/default-data';
@@ -89,7 +89,7 @@ export function DashboardAccounts() {
     const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
     const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
     const accNum = account.account_number || '7829401';
-    const pass = account.password || 'TrdPass123!';
+    const pass = getAccountPassword(account);
     const invPass = account.investor_password || `InvPass${accNum}!`;
 
     const fullText = `Server: ${server}\nBroker: ${broker}\nAccount Number: ${accNum}\nMaster Password: ${pass}\nInvestor Password: ${invPass}`;
@@ -101,7 +101,7 @@ export function DashboardAccounts() {
     const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
     const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
     const accNum = account.account_number || '7829401';
-    const pass = account.password || 'TrdPass123!';
+    const pass = getAccountPassword(account);
     const invPass = account.investor_password || `InvPass${accNum}!`;
 
     const content = `================================================
@@ -327,7 +327,7 @@ Investor Pass:    ${invPass}
             const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
             const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
             const accNumber = account.account_number || '7829401';
-            const masterPass = account.password || 'TrdPass123!';
+            const masterPass = getAccountPassword(account);
             const investorPass = account.investor_password || `InvPass${accNumber}!`;
             const platformName =
               PLATFORM_LABELS[account.platform as keyof typeof PLATFORM_LABELS] || 'FundedShift Web Terminal';

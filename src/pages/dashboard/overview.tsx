@@ -37,6 +37,9 @@ import {
   Briefcase,
   History,
   TrendingDown,
+  ShieldAlert,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import type { TradingAccount, Order, Notification } from '@/types';
@@ -44,6 +47,7 @@ import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/motion/animated-number';
 import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
 import { toast } from 'sonner';
+import { getAccountPassword } from '@/lib/utils';
 
 import { DEFAULT_ACCOUNTS, DEFAULT_ORDERS, DEFAULT_NOTIFICATIONS } from '@/lib/default-data';
 import { fetchUserAccounts, fetchUserOrders, fetchAccountPositionsApi } from '@/lib/api-client';
@@ -444,7 +448,6 @@ export function DashboardOverview() {
                         y={startingBalance}
                         stroke={isDark ? '#475569' : '#64748b'}
                         strokeDasharray="3 3"
-                        label={{ value: 'Baseline', fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }}
                       />
                       <Area
                         type="monotone"
@@ -500,73 +503,94 @@ export function DashboardOverview() {
           {/* Trading Objectives & Calendar Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Trading Objectives - 2 Cols */}
-            <div className="lg:col-span-2 bg-white border border-slate-300 rounded-3xl p-6 shadow-sm space-y-5">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold font-display text-slate-900 flex items-center gap-2">
-                  <Target className="h-4 w-4 text-brand-500" /> Evaluation Objectives
+                <h3 className="text-base font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
+                  <Target className="h-4 w-4 text-emerald-500" /> Evaluation Objectives
                 </h3>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> 3 / 4 Passed
-                </span>
+                {dailyLossUsed >= dailyLossLimitAmount || maxLossUsed >= maxLossLimitAmount ? (
+                  <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-3 py-1 rounded-full border border-rose-200 dark:border-rose-500/20 flex items-center gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5" /> Rule Breached
+                  </span>
+                ) : (
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> {
+                      (totalProfit >= profitTargetAmount ? 1 : 0) +
+                      (dailyLossUsed < dailyLossLimitAmount ? 1 : 0) +
+                      (maxLossUsed < maxLossLimitAmount ? 1 : 0) +
+                      ((selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)) >= (selectedAccount.rules?.min_trading_days || 3) ? 1 : 0)
+                    } / 4 Passed
+                  </span>
+                )}
               </div>
 
               <div className="space-y-4">
                 {/* Objective 1: Profit Target */}
-                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 border border-slate-300">
+                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-2">
-                      <Target className="h-3.5 w-3.5 text-brand-500" /> Profit Target ({profitTargetPercent}%)
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <Target className="h-3.5 w-3.5 text-emerald-500" /> Profit Target ({profitTargetPercent}%)
                     </span>
-                    <span className="font-bold font-mono text-slate-900">
+                    <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
                       ${Math.max(0, totalProfit).toLocaleString('en-US', { maximumFractionDigits: 0 })} / ${profitTargetAmount.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                     </span>
                   </div>
-                  <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden border border-slate-300/80">
+                  <div className="h-2.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, Math.max(0, (totalProfit / profitTargetAmount) * 100))}%` }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-brand-500 rounded-full"
+                      className="h-full bg-emerald-500 rounded-full"
                     />
                   </div>
                 </div>
 
                 {/* Objective 2: Daily Drawdown */}
-                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 border border-slate-300">
+                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Daily Drawdown Limit ({dailyLossLimitPercent}%)
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      {dailyLossUsed > 0 ? (
+                        <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                      )}
+                      Daily Drawdown Limit ({dailyLossLimitPercent}%)
                     </span>
-                    <span className="font-bold font-mono text-emerald-600">
+                    <span className={`font-bold font-mono ${dailyLossUsed > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       ${dailyLossUsed.toFixed(2)} / ${dailyLossLimitAmount.toLocaleString()} ({((dailyLossUsed / dailyLossLimitAmount) * 100).toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden border border-slate-300/80">
+                  <div className="h-2.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (dailyLossUsed / dailyLossLimitAmount) * 100)}%` }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-500 rounded-full"
+                      className={`h-full rounded-full ${dailyLossUsed > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                     />
                   </div>
                 </div>
 
                 {/* Objective 3: Overall Drawdown */}
-                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 border border-slate-300">
+                <div className="space-y-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-2">
-                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Max Overall Drawdown ({maxLossLimitPercent}%)
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      {maxLossUsed > 0 ? (
+                        <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                      )}
+                      Max Overall Drawdown ({maxLossLimitPercent}%)
                     </span>
-                    <span className="font-bold font-mono text-emerald-600">
+                    <span className={`font-bold font-mono ${maxLossUsed > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       ${maxLossUsed.toFixed(2)} / ${maxLossLimitAmount.toLocaleString()} ({((maxLossUsed / maxLossLimitAmount) * 100).toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden border border-slate-300/80">
+                  <div className="h-2.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, (maxLossUsed / maxLossLimitAmount) * 100)}%` }}
                       transition={{ duration: 0.8 }}
-                      className="h-full bg-emerald-500 rounded-full"
+                      className={`h-full rounded-full ${maxLossUsed > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                     />
                   </div>
                 </div>
@@ -574,12 +598,12 @@ export function DashboardOverview() {
             </div>
 
             {/* Trading Calendar */}
-            <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold font-display text-slate-900 flex items-center gap-2">
+                <h3 className="text-base font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4 text-brand-500" /> Minimum Trading Days
                 </h3>
-                <span className="text-xs font-mono font-bold text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-0.5 rounded-md">
+                <span className="text-xs font-mono font-bold text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 px-2.5 py-0.5 rounded-md">
                   {selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)} / 14 days
                 </span>
               </div>
@@ -594,11 +618,11 @@ export function DashboardOverview() {
                       key={i}
                       className={`h-10 rounded-xl flex items-center justify-center font-mono text-xs font-bold transition-all relative group ${
                         isActive
-                          ? 'bg-brand-50 text-brand-600 border-2 border-brand-500 shadow-xs'
-                          : 'bg-slate-100 text-slate-500 border border-slate-300'
+                          ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border-2 border-brand-500 shadow-xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60'
                       }`}
                     >
-                      {isActive ? <CheckCircle2 className="h-4 w-4 text-brand-600" /> : dayNum}
+                      {isActive ? <CheckCircle2 className="h-4 w-4 text-brand-600 dark:text-brand-400" /> : dayNum}
                     </div>
                   );
                 })}
@@ -607,33 +631,33 @@ export function DashboardOverview() {
           </div>
 
           {/* Recent Trade History Log */}
-          <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 flex-wrap gap-2">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 flex-wrap gap-2">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
                   <History className="h-4 w-4 text-brand-500" /> Account Trade Activity Log
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Live open positions and recently closed trades for account #{selectedAccount.account_number}
                 </p>
               </div>
 
               <Link to="/dashboard/trading">
-                <Button size="sm" variant="outline" className="border-slate-300 text-slate-800 font-bold text-xs rounded-xl hover:bg-slate-100">
+                <Button size="sm" variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
                   Open Web Terminal
                 </Button>
               </Link>
             </div>
 
             {positions.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
+              <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
                 No trades recorded for this account yet.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 font-sans uppercase text-[10px] tracking-wider">
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-sans uppercase text-[10px] tracking-wider">
                       <th className="pb-2">Symbol</th>
                       <th className="pb-2">Type</th>
                       <th className="pb-2">Lots</th>
@@ -643,37 +667,48 @@ export function DashboardOverview() {
                       <th className="pb-2 text-right">P&L ($)</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {positions.map((pos) => {
                       const isOpen = pos.status === 'OPEN';
                       const pnl = isOpen ? (pos.floating_pnl || 0) : (pos.realized_pnl || 0);
                       const isProfit = pnl >= 0;
+                      const isBuy = String(pos.type).toUpperCase() === 'BUY';
 
                       return (
-                        <tr key={pos.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="py-3 font-bold text-slate-900">{pos.symbol}</td>
+                        <tr key={pos.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-3 font-bold text-slate-900 dark:text-white">{pos.symbol}</td>
                           <td className="py-3">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              pos.type === 'BUY' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono tracking-wider uppercase ${
+                              isBuy
+                                ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                                : 'bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30'
                             }`}>
-                              {pos.type}
+                              {isBuy ? (
+                                <>
+                                  <ArrowUpRight className="h-3 w-3 text-emerald-500" /> BUY
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowDownRight className="h-3 w-3 text-rose-500" /> SELL
+                                </>
+                              )}
                             </span>
                           </td>
-                          <td className="py-3 text-slate-800">{pos.lot_size}</td>
-                          <td className="py-3 text-slate-800">{pos.open_price}</td>
-                          <td className="py-3 text-slate-800">{isOpen ? 'LIVE' : pos.close_price}</td>
+                          <td className="py-3 text-slate-800 dark:text-slate-200">{pos.lot_size}</td>
+                          <td className="py-3 text-slate-800 dark:text-slate-200">{pos.open_price}</td>
+                          <td className="py-3 text-slate-800 dark:text-slate-200">{isOpen ? 'LIVE' : pos.close_price}</td>
                           <td className="py-3">
                             {isOpen ? (
-                              <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
+                              <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" /> OPEN
                               </span>
                             ) : (
-                              <span className="text-[10px] text-slate-500 font-bold">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
                                 CLOSED
                               </span>
                             )}
                           </td>
-                          <td className={`py-3 text-right font-bold ${isProfit ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          <td className={`py-3 text-right font-bold font-mono ${isProfit ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                             {isProfit ? '+' : ''}${pnl.toFixed(2)}
                           </td>
                         </tr>
@@ -686,88 +721,93 @@ export function DashboardOverview() {
           </div>
 
           {/* Account Credentials Card */}
-          <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-300 pb-3 flex-wrap gap-2">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-brand-500" /> Platform Account Credentials
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Use these credentials to trade directly inside the FundedShift Web Trading Platform
-                </p>
-              </div>
-              <span className="text-xs font-mono text-slate-700 font-semibold px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-300">
-                Account #{selectedAccount.account_number}
-              </span>
-            </div>
+          {(() => {
+            const accountPassword = getAccountPassword(selectedAccount);
+            return (
+              <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-800 pb-3 flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-brand-500" /> Platform Account Credentials
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Use these credentials to trade directly inside the FundedShift Web Trading Platform
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono text-slate-700 dark:text-slate-300 font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                    Account #{selectedAccount.account_number}
+                  </span>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase">Platform</p>
-                  <p className="font-bold text-slate-900 font-mono mt-0.5">
-                    {PLATFORM_LABELS[selectedAccount.platform as keyof typeof PLATFORM_LABELS] || 'FundedShift Web Terminal'}
-                  </p>
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Platform</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">
+                        {PLATFORM_LABELS[selectedAccount.platform as keyof typeof PLATFORM_LABELS] || 'FundedShift Web Terminal'}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase">Broker</p>
-                  <p className="font-bold text-slate-900 font-mono mt-0.5">{selectedAccount.broker || 'FundedShift Markets'}</p>
-                </div>
-              </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Broker</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedAccount.broker || 'FundedShift Markets'}</p>
+                    </div>
+                  </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase">Server</p>
-                  <p className="font-bold text-slate-900 font-mono mt-0.5">{selectedAccount.server || 'FundedShift-Live01'}</p>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(selectedAccount.server || 'FundedShift-Live01', 'Server')}
-                  className="text-slate-500 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-200"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-              </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Server</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedAccount.server || 'FundedShift-Live01'}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(selectedAccount.server || 'FundedShift-Live01', 'Server')}
+                      className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase">Login</p>
-                  <p className="font-bold text-slate-900 font-mono mt-0.5">{selectedAccount.account_number}</p>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(selectedAccount.account_number, 'Login')}
-                  className="text-slate-500 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-200"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-              </div>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Login</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedAccount.account_number}</p>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(selectedAccount.account_number, 'Login')}
+                      className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-500 font-semibold uppercase">Password</p>
-                  <p className="font-bold text-slate-900 font-mono mt-0.5">
-                    {showPassword ? selectedAccount.password || 'Tr4de#2026' : '••••••••'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-slate-500 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-200"
-                  >
-                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  </button>
-                  <button
-                    onClick={() => copyToClipboard(selectedAccount.password || 'Tr4de#2026', 'Password')}
-                    className="text-slate-500 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-200"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Password</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">
+                        {showPassword ? accountPassword : '••••••••'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(accountPassword, 'Password')}
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       ) : (
         /* Empty State if no accounts */
