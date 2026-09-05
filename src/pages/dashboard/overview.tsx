@@ -226,31 +226,31 @@ export function DashboardOverview() {
   return (
     <div className="space-y-6">
       {/* Account Header & Switcher Banner */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-white border border-slate-300 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm overflow-hidden">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-card border border-slate-300 dark:border-slate-800 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm relative z-40">
         <div className="flex items-start sm:items-center gap-3 min-w-0 w-full lg:w-auto">
           <div className="h-10 w-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 font-bold shrink-0 mt-0.5 sm:mt-0">
             <Zap className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-bold font-display text-slate-900 leading-tight">Overview Dashboard</h1>
+              <h1 className="text-lg sm:text-xl font-bold font-display text-foreground leading-tight">Overview Dashboard</h1>
               {selectedAccount && (
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200 whitespace-nowrap">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 whitespace-nowrap">
                   {selectedAccount.status === 'FUNDED' ? 'Funded • Active' : 'Phase 1 Evaluation'}
                 </span>
               )}
-              <span className="text-[10px] sm:text-[11px] font-mono font-medium px-1.5 sm:px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
+              <span className="text-[10px] sm:text-[11px] font-mono font-medium px-1.5 sm:px-2 py-0.5 rounded-md bg-secondary text-foreground border border-border whitespace-nowrap">
                 Account #{selectedAccount?.account_number}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1 sm:mt-0.5 leading-normal">
+            <p className="text-xs text-muted-foreground mt-1 sm:mt-0.5 leading-normal">
               Institutional prop firm evaluation performance, drawdown monitoring & objectives tracker
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-start sm:justify-between lg:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 lg:border-none">
-          {accounts.length > 1 && (
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full lg:w-auto justify-start sm:justify-between lg:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-border lg:border-none">
+          {accounts.length > 0 && (
             <AnimatedAccountSelector
               accounts={accounts}
               selectedAccount={selectedAccount}
@@ -266,7 +266,7 @@ export function DashboardOverview() {
             </Link>
 
             <Link to="/challenges">
-              <Button variant="outline" className="border-slate-300 text-slate-800 font-bold text-xs rounded-xl px-3 sm:px-3.5 py-2 hover:bg-slate-100 whitespace-nowrap">
+              <Button variant="outline" className="border-border text-foreground font-bold text-xs rounded-xl px-3 sm:px-3.5 py-2 hover:bg-secondary whitespace-nowrap">
                 + Buy Challenge
               </Button>
             </Link>

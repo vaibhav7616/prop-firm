@@ -105,7 +105,7 @@ export function AnimatedAccountSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 sm:w-96 rounded-2xl bg-card border border-slate-300 dark:border-slate-700/80 shadow-2xl p-2.5 z-[100] backdrop-blur-xl"
+            className="absolute right-0 left-auto mt-2 w-[min(calc(100vw-2rem),24rem)] rounded-2xl bg-card border border-slate-300 dark:border-slate-700/80 shadow-2xl p-2.5 z-[100] backdrop-blur-xl"
           >
             <div className="px-2.5 py-1.5 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between border-b border-border/50 pb-2">
               <span>Your Trading Accounts</span>
