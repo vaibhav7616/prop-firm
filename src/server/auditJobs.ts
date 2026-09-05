@@ -6,10 +6,10 @@ export class ScheduledJobsEngine {
   private static ruleMonitorTimer: NodeJS.Timeout | null = null;
 
   public static startJobs() {
-    // Continuous rule evaluation monitor every 5 seconds
+    // Continuous rule evaluation & risk liquidator monitor every 1 second
     this.ruleMonitorTimer = setInterval(() => {
       this.runContinuousRuleCheck();
-    }, 5000);
+    }, 1000);
 
     // Daily reset check every minute (resets start-of-day baselines at 00:00 UTC)
     this.dailyTimer = setInterval(() => {

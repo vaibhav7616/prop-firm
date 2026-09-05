@@ -49,6 +49,46 @@ export class RuleEngine {
           quoteLookup: (sym) => marketDataService.getQuote(sym) || undefined,
         });
         pos.floating_pnl = pnlResult.netPnl;
+
+        // Check Automated SL / TP Execution
+        let shouldClose = false;
+        let closeReason: 'STOP_LOSS' | 'TAKE_PROFIT' = 'STOP_LOSS';
+        let execPrice = pnlResult.currentPrice;
+
+        if (pos.stop_loss && pos.stop_loss > 0) {
+          if (pos.type === 'BUY' && quote.bid <= pos.stop_loss) {
+            shouldClose = true;
+            closeReason = 'STOP_LOSS';
+            execPrice = pos.stop_loss;
+          } else if (pos.type === 'SELL' && quote.ask >= pos.stop_loss) {
+            shouldClose = true;
+            closeReason = 'STOP_LOSS';
+            execPrice = pos.stop_loss;
+          }
+        }
+
+        if (!shouldClose && pos.take_profit && pos.take_profit > 0) {
+          if (pos.type === 'BUY' && quote.bid >= pos.take_profit) {
+            shouldClose = true;
+            closeReason = 'TAKE_PROFIT';
+            execPrice = pos.take_profit;
+          } else if (pos.type === 'SELL' && quote.ask <= pos.take_profit) {
+            shouldClose = true;
+            closeReason = 'TAKE_PROFIT';
+            execPrice = pos.take_profit;
+          }
+        }
+
+        if (shouldClose) {
+          pos.status = 'CLOSED';
+          pos.close_price = execPrice;
+          pos.closed_at = new Date().toISOString();
+          pos.close_reason = closeReason;
+          pos.realized_pnl = pos.floating_pnl;
+          pos.floating_pnl = 0;
+          account.current_balance = Number((account.current_balance + pos.realized_pnl).toFixed(2));
+          continue;
+        }
       }
       totalFloatingPnL += pos.floating_pnl;
       totalUsedMargin += pos.margin;
@@ -140,12 +180,18 @@ export class RuleEngine {
 
       // Automatically close all open positions
       for (const pos of openPositions) {
-        pos.status = 'CLOSED';
-        pos.closed_at = new Date().toISOString();
-        pos.close_reason = 'BREACH_AUTO_CLOSE';
-        pos.realized_pnl = pos.floating_pnl;
-        account.current_balance += pos.realized_pnl;
+        if (pos.status === 'OPEN') {
+          pos.status = 'CLOSED';
+          const quote = marketDataService.getQuote(pos.symbol);
+          pos.close_price = quote ? (pos.type === 'BUY' ? quote.bid : quote.ask) : pos.open_price;
+          pos.closed_at = new Date().toISOString();
+          pos.close_reason = 'BREACH_AUTO_CLOSE';
+          pos.realized_pnl = pos.floating_pnl;
+          pos.floating_pnl = 0;
+          account.current_balance = Number((account.current_balance + pos.realized_pnl).toFixed(2));
+        }
       }
+      account.current_equity = account.current_balance;
 
       // Record violations in DB
       db.rule_violations.push(...violations);

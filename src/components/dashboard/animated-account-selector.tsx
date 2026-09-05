@@ -11,6 +11,23 @@ interface AnimatedAccountSelectorProps {
   className?: string;
 }
 
+export function getCleanPlanName(account: TradingAccount | undefined): string {
+  if (!account) return '$5,000 Challenge';
+  const size = account.account_size || 5000;
+  const sizeStr = `$${size.toLocaleString()}`;
+  if (account.plan_name && account.plan_name.startsWith(sizeStr)) {
+    return account.plan_name;
+  }
+  const accType = (account as any)?.type;
+  const typeStr =
+    accType === 'one_step'
+      ? 'One-Step Challenge'
+      : accType === 'instant_funding'
+      ? 'Instant Funded'
+      : 'Two-Step Evaluation';
+  return `${sizeStr} ${typeStr}`;
+}
+
 export function AnimatedAccountSelector({
   accounts,
   selectedAccount,
@@ -39,7 +56,7 @@ export function AnimatedAccountSelector({
         whileTap={{ scale: 0.98 }}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl text-left font-medium transition-all duration-200 border',
+          'flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl text-left font-medium transition-all duration-200 border w-full',
           'bg-card border-slate-300 dark:border-slate-700/80 shadow-xs hover:border-brand-400 dark:hover:border-brand-500/60',
           isOpen ? 'ring-2 ring-brand-500/20 border-brand-500' : ''
         )}
@@ -55,7 +72,7 @@ export function AnimatedAccountSelector({
               </span>
               <span
                 className={cn(
-                  'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-md font-mono',
+                  'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md font-mono',
                   String(active?.status).toLowerCase() === 'active' || String(active?.status).toLowerCase() === 'funded'
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                     : String(active?.status).toLowerCase() === 'passed'
@@ -66,8 +83,8 @@ export function AnimatedAccountSelector({
                 {active?.status || 'active'}
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground truncate max-w-[180px] sm:max-w-[220px]">
-              {active?.plan_name || `$${(active?.account_size || 100000).toLocaleString()} Challenge`}
+            <p className="text-[11px] text-muted-foreground truncate max-w-[200px] sm:max-w-[240px]">
+              {getCleanPlanName(active)}
             </p>
           </div>
         </div>
@@ -88,18 +105,19 @@ export function AnimatedAccountSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-72 sm:w-84 rounded-2xl bg-card border border-slate-300 dark:border-slate-700/80 shadow-2xl p-2 z-50 backdrop-blur-xl"
+            className="absolute left-0 sm:right-0 sm:left-auto mt-2 w-80 sm:w-96 rounded-2xl bg-card border border-slate-300 dark:border-slate-700/80 shadow-2xl p-2.5 z-[100] backdrop-blur-xl"
           >
-            <div className="px-2.5 py-1.5 mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+            <div className="px-2.5 py-1.5 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between border-b border-border/50 pb-2">
               <span>Your Trading Accounts</span>
-              <span className="text-[10px] font-mono bg-secondary px-1.5 py-0.5 rounded">
+              <span className="text-[10px] font-mono bg-secondary px-2 py-0.5 rounded font-bold">
                 {accounts.length} Total
               </span>
             </div>
 
-            <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
               {accounts.map((acc, idx) => {
                 const isSelected = acc.id === active?.id;
+                const bal = acc.current_balance ?? acc.starting_balance ?? acc.account_size;
                 return (
                   <motion.button
                     key={acc.id}
@@ -121,7 +139,7 @@ export function AnimatedAccountSelector({
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
                         className={cn(
-                          'h-6 w-6 rounded-md flex items-center justify-center text-xs shrink-0',
+                          'h-7 w-7 rounded-lg flex items-center justify-center text-xs shrink-0',
                           isSelected
                             ? 'bg-brand-500 text-white'
                             : 'bg-secondary text-muted-foreground'
@@ -134,9 +152,14 @@ export function AnimatedAccountSelector({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-mono font-bold truncate">#{acc.account_number}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {acc.plan_name || `$${acc.account_size.toLocaleString()}`}
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-mono font-bold truncate">#{acc.account_number}</p>
+                          <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                            ${bal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground truncate max-w-[180px] sm:max-w-[210px]">
+                          {getCleanPlanName(acc)}
                         </p>
                       </div>
                     </div>

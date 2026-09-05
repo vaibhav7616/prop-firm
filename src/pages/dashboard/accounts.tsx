@@ -11,6 +11,7 @@ import {
   Terminal,
   BarChart3,
   Award,
+  Activity,
   CheckCircle2,
   ShieldCheck,
   Zap,
@@ -303,12 +304,14 @@ Investor Pass:    ${invPass}
       ) : (
         <div className="space-y-6">
           {filteredAccounts.map((account, idx) => {
+            const accountSize = Number.isFinite(account.account_size) && account.account_size > 0 ? account.account_size : 5000;
             const curBal = Number.isFinite(account.current_balance)
               ? account.current_balance
-              : account.account_size || 100000;
-            const startBal = Number.isFinite(account.starting_balance)
+              : accountSize;
+            const startBal = Number.isFinite(account.starting_balance) && account.starting_balance > 0
               ? account.starting_balance
-              : account.account_size || 100000;
+              : accountSize;
+            const curEquity = Number.isFinite(account.current_equity) ? account.current_equity : curBal;
             const rawProfit =
               typeof account.profit === 'number' && !isNaN(account.profit)
                 ? account.profit
@@ -316,9 +319,37 @@ Investor Pass:    ${invPass}
             const profitVal = Number.isFinite(rawProfit) ? rawProfit : 0;
             const profitPct = startBal > 0 ? (profitVal / startBal) * 100 : 0;
 
-            const targetPct = 10; // Default 10% target
-            const targetAmount = startBal * (1 + targetPct / 100);
-            const progressRatio = Math.min(100, Math.max(0, (profitVal / (startBal * 0.1)) * 100));
+            const targetPct = account.rules?.profit_target_percent ?? (account.type === 'one_step' ? 10 : account.type === 'two_step' ? 8 : 0);
+            const targetAmount = (targetPct / 100) * startBal;
+            const progressRatio = targetAmount > 0 ? Math.min(100, Math.max(0, (profitVal / targetAmount) * 100)) : 100;
+
+            // Daily Drawdown metrics
+            const startOfDayBaseline = Math.max(account.start_of_day_balance || startBal, account.start_of_day_equity || startBal);
+            const dailyLimitPct = account.rules?.daily_loss_limit_percent ?? 5;
+            const maxDailyAllowed = (dailyLimitPct / 100) * startOfDayBaseline;
+            const currentDailyLoss = Math.max(0, startOfDayBaseline - curEquity);
+            const dailyBufferRemaining = Math.max(0, maxDailyAllowed - currentDailyLoss);
+            const dailyBufferPct = maxDailyAllowed > 0 ? (dailyBufferRemaining / maxDailyAllowed) * 100 : 100;
+
+            // Max Drawdown metrics
+            const maxLossLimitPct = account.rules?.max_loss_limit_percent ?? 10;
+            const maxLossAllowed = (maxLossLimitPct / 100) * startBal;
+            const currentOverallLoss = Math.max(0, startBal - curEquity);
+            const maxLossBufferRemaining = Math.max(0, maxLossAllowed - currentOverallLoss);
+            const maxLossBufferPct = maxLossAllowed > 0 ? (maxLossBufferRemaining / maxLossAllowed) * 100 : 100;
+
+            const isBreached = account.status === 'BREACHED' || dailyBufferRemaining <= 0 || maxLossBufferRemaining <= 0;
+
+            const accountTitle =
+              account.plan_name && account.plan_name.startsWith(`$${accountSize.toLocaleString()}`)
+                ? account.plan_name
+                : `$${accountSize.toLocaleString()} ${
+                    account.type === 'one_step'
+                      ? 'One-Step Challenge'
+                      : account.type === 'instant_funding'
+                      ? 'Instant Funded'
+                      : 'Two-Step Evaluation'
+                  }`;
 
             const hasEarnedCert =
               account.status === 'passed' || account.status === 'funded' || account.phase > 1;
@@ -345,13 +376,13 @@ Investor Pass:    ${invPass}
                     <div className="flex items-center gap-3.5">
                       <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shrink-0 shadow-inner">
                         <span className="font-display font-black text-white text-sm">
-                          {formatAccountSize(account.account_size)}
+                          {formatAccountSize(accountSize)}
                         </span>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <h2 className="font-display text-lg font-bold text-white tracking-wide">
-                            {account.challenge?.name ?? '100K Challenge'}
+                            {accountTitle}
                           </h2>
                           <span className="bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-full text-[11px] font-mono text-slate-300 font-semibold flex items-center gap-1">
                             #{accNumber}
@@ -399,7 +430,7 @@ Investor Pass:    ${invPass}
                         <p className="font-display text-lg font-bold text-foreground mt-0.5">
                           {formatCurrency(curBal)}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Base: {formatCurrency(startBal)}</p>
+                        <p className="text-[10px] text-muted-foreground">Equity: {formatCurrency(curEquity)}</p>
                       </div>
 
                       <div>
@@ -419,7 +450,7 @@ Investor Pass:    ${invPass}
                             {profitPct.toFixed(2)}%)
                           </span>
                         </p>
-                        <p className="text-[10px] text-muted-foreground">Net Closed P&L</p>
+                        <p className="text-[10px] text-muted-foreground">Net P&L</p>
                       </div>
 
                       <div>
@@ -428,9 +459,9 @@ Investor Pass:    ${invPass}
                         </p>
                         <p className="font-display text-lg font-bold text-foreground mt-0.5">
                           {account.trading_days}{' '}
-                          <span className="text-xs text-muted-foreground font-normal">/ 3 Min</span>
+                          <span className="text-xs text-muted-foreground font-normal">/ {account.rules?.min_trading_days ?? 3} Min</span>
                         </p>
-                        <p className="text-[10px] text-emerald-600 font-medium">Requirement Passed</p>
+                        <p className="text-[10px] text-emerald-600 font-medium">Requirement Active</p>
                       </div>
 
                       <div>
@@ -448,15 +479,15 @@ Investor Pass:    ${invPass}
                     </div>
 
                     {/* Target & Drawdown Gauges */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       {/* Profit Target Progress */}
                       <div className="bg-card border border-border/70 p-3.5 rounded-xl space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-foreground flex items-center gap-1.5">
-                            <BarChart3 className="h-3.5 w-3.5 text-emerald-600" /> Profit Target ({targetPct}%)
+                            <BarChart3 className="h-3.5 w-3.5 text-emerald-600" /> Target ({targetPct}%)
                           </span>
-                          <span className="font-mono text-muted-foreground font-medium">
-                            {formatCurrency(profitVal)} / {formatCurrency(startBal * 0.1)}
+                          <span className="font-mono text-muted-foreground font-medium text-[11px]">
+                            {formatCurrency(profitVal)} / {formatCurrency(targetAmount)}
                           </span>
                         </div>
                         <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -465,19 +496,61 @@ Investor Pass:    ${invPass}
                             style={{ width: `${progressRatio}%` }}
                           />
                         </div>
+                        <p className="text-[10px] text-muted-foreground font-mono text-right">{progressRatio.toFixed(1)}% Achieved</p>
+                      </div>
+
+                      {/* Daily Loss Gauge */}
+                      <div className="bg-card border border-border/70 p-3.5 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-foreground flex items-center gap-1.5">
+                            <Activity className="h-3.5 w-3.5 text-amber-500" /> Daily Loss ({dailyLimitPct}%)
+                          </span>
+                          <span className={cn('font-mono font-semibold text-[11px]', dailyBufferRemaining <= 0 ? 'text-rose-600' : 'text-foreground')}>
+                            {formatCurrency(currentDailyLoss)} / {formatCurrency(maxDailyAllowed)}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full transition-all duration-500 rounded-full',
+                              dailyBufferRemaining <= 0 ? 'bg-rose-500' : dailyBufferPct < 30 ? 'bg-amber-500' : 'bg-emerald-500'
+                            )}
+                            style={{ width: `${Math.min(100, Math.max(0, 100 - dailyBufferPct))}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground font-mono flex items-center justify-between">
+                          <span>Buffer left:</span>
+                          <strong className={dailyBufferRemaining <= 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                            {formatCurrency(dailyBufferRemaining)}
+                          </strong>
+                        </p>
                       </div>
 
                       {/* Overall Drawdown Floor */}
                       <div className="bg-card border border-border/70 p-3.5 rounded-xl space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <span className="font-semibold text-foreground flex items-center gap-1.5">
-                            <ShieldCheck className="h-3.5 w-3.5 text-blue-600" /> Max Drawdown Buffer
+                            <ShieldCheck className="h-3.5 w-3.5 text-blue-600" /> Max Loss ({maxLossLimitPct}%)
                           </span>
-                          <span className="font-mono text-emerald-600 font-semibold">100% Safe (Safe Buffer)</span>
+                          <span className={cn('font-mono font-semibold text-[11px]', maxLossBufferRemaining <= 0 ? 'text-rose-600' : 'text-foreground')}>
+                            {formatCurrency(currentOverallLoss)} / {formatCurrency(maxLossAllowed)}
+                          </span>
                         </div>
                         <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 w-full rounded-full" />
+                          <div
+                            className={cn(
+                              'h-full transition-all duration-500 rounded-full',
+                              maxLossBufferRemaining <= 0 ? 'bg-rose-500' : maxLossBufferPct < 30 ? 'bg-amber-500' : 'bg-emerald-500'
+                            )}
+                            style={{ width: `${Math.min(100, Math.max(0, 100 - maxLossBufferPct))}%` }}
+                          />
                         </div>
+                        <p className="text-[10px] text-muted-foreground font-mono flex items-center justify-between">
+                          <span>Buffer left:</span>
+                          <strong className={maxLossBufferRemaining <= 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                            {formatCurrency(maxLossBufferRemaining)}
+                          </strong>
+                        </p>
                       </div>
                     </div>
 

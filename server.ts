@@ -742,20 +742,50 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
   }
 
   const challengeType = type || 'two_step';
-  const plan = db.account_plans.find((p) => p.account_size === Number(account_size) && p.type === challengeType) || db.account_plans[1];
-  const rulesConfig = plan ? plan.rules : db.account_plans[0].rules;
+  const sizeNum = Number(account_size) || 5000;
+  const matchedPlan = db.account_plans.find((p) => p.account_size === sizeNum && p.type === challengeType);
+
+  const typeTitle =
+    challengeType === 'one_step'
+      ? 'One-Step Challenge'
+      : challengeType === 'instant_funding'
+      ? 'Instant Funded'
+      : 'Two-Step Evaluation';
+
+  const planName = matchedPlan ? matchedPlan.name : `$${sizeNum.toLocaleString()} ${typeTitle}`;
+  const planId = matchedPlan ? matchedPlan.id : `plan-${challengeType}-${sizeNum >= 1000 ? `${sizeNum / 1000}k` : sizeNum}`;
+  const defaultMaxLot = sizeNum <= 5000 ? 5 : sizeNum <= 10000 ? 10 : sizeNum <= 25000 ? 20 : sizeNum <= 50000 ? 35 : sizeNum <= 100000 ? 50 : 100;
+
+  const rulesConfig = matchedPlan
+    ? matchedPlan.rules
+    : {
+        profit_target_percent: challengeType === 'one_step' ? 10 : challengeType === 'two_step' ? 8 : 0,
+        daily_loss_limit_percent: challengeType === 'one_step' ? 4 : 5,
+        max_loss_limit_percent: challengeType === 'one_step' ? 8 : 10,
+        drawdown_model: 'STATIC' as const,
+        min_trading_days: challengeType === 'one_step' ? 3 : challengeType === 'instant_funding' ? 7 : 0,
+        max_trading_days: null,
+        leverage: challengeType === 'instant_funding' ? 50 : 100,
+        profit_split_percent: challengeType === 'instant_funding' ? 70 : 90,
+        max_lot_size: defaultMaxLot,
+        max_open_positions: 15,
+        news_trading_allowed: true,
+        weekend_holding_allowed: challengeType !== 'instant_funding',
+        ea_trading_allowed: true,
+      };
+
   const isInstant = challengeType === 'instant_funding';
 
   const orderId = `ord-${Date.now()}-admin`;
   const newOrder = {
     id: orderId,
     user_id: user.id,
-    plan_id: plan ? plan.id : 'plan-2step-100k',
-    plan_name: plan ? plan.name : `FundedShift $${Number(account_size).toLocaleString()} Account`,
-    account_size: Number(account_size),
+    plan_id: planId,
+    plan_name: planName,
+    account_size: sizeNum,
     platform: platform || 'fundedshift_terminal',
     addons: [],
-    discount_amount: plan ? plan.price : 499,
+    discount_amount: matchedPlan ? matchedPlan.price : 99,
     total_amount: 0,
     status: 'PAID' as const,
     payment_method: 'visa' as const,
@@ -775,17 +805,17 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     password_hash: traderPassword,
     investor_password_hash: investorPassword,
     server: 'FundedShift-Live01',
-    plan_id: plan ? plan.id : 'plan-2step-100k',
-    plan_name: plan ? plan.name : `FundedShift $${Number(account_size).toLocaleString()} Account`,
+    plan_id: planId,
+    plan_name: planName,
     type: challengeType as any,
-    account_size: Number(account_size),
-    starting_balance: Number(account_size),
-    current_balance: Number(account_size),
-    current_equity: Number(account_size),
-    highest_balance: Number(account_size),
-    highest_equity: Number(account_size),
-    start_of_day_balance: Number(account_size),
-    start_of_day_equity: Number(account_size),
+    account_size: sizeNum,
+    starting_balance: sizeNum,
+    current_balance: sizeNum,
+    current_equity: sizeNum,
+    highest_balance: sizeNum,
+    highest_equity: sizeNum,
+    start_of_day_balance: sizeNum,
+    start_of_day_equity: sizeNum,
     status: isInstant ? ('FUNDED' as const) : ('ACTIVE' as const),
     phase: isInstant ? 3 : 1,
     trading_days: 0,

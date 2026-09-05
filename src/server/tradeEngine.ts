@@ -47,12 +47,33 @@ export class TradeExecutionService implements TradingProvider {
       return { success: false, error: `Account is currently ${account.status}. Trading is disabled.` };
     }
 
+    // Pre-trade rule evaluation
+    const preCheck = RuleEngine.evaluateAccount(account.id);
+    if (preCheck.hasBreached) {
+      return { success: false, error: 'Cannot trade: Account has breached risk rules and is locked.' };
+    }
+
+    // Daily & Overall Drawdown Buffer Verification
+    const startOfDayBaseline = Math.max(account.start_of_day_balance || account.starting_balance, account.start_of_day_equity || account.starting_balance);
+    const maxDailyAllowedLoss = ((account.rules?.daily_loss_limit_percent ?? 5) / 100) * startOfDayBaseline;
+    const currentDailyLoss = Math.max(0, startOfDayBaseline - account.current_equity);
+    if (currentDailyLoss >= maxDailyAllowedLoss) {
+      return { success: false, error: 'Cannot open trade: Daily loss limit has been reached.' };
+    }
+
+    const maxOverallAllowedLoss = ((account.rules?.max_loss_limit_percent ?? 10) / 100) * account.starting_balance;
+    const currentOverallLoss = Math.max(0, account.starting_balance - account.current_equity);
+    if (currentOverallLoss >= maxOverallAllowedLoss) {
+      return { success: false, error: 'Cannot open trade: Maximum overall drawdown limit has been reached.' };
+    }
+
     const symbolConfig = db.symbols.find((s) => s.symbol === params.symbol && s.tradingEnabled);
     if (!symbolConfig) {
       return { success: false, error: `Symbol ${params.symbol} is not available for trading.` };
     }
 
-    // Lot size checks
+    // Lot size checks with tier scaling
+    const maxAccountLot = account.rules?.max_lot_size || (account.account_size <= 5000 ? 5 : account.account_size <= 10000 ? 10 : account.account_size <= 25000 ? 20 : 50);
     if (params.lotSize < symbolConfig.minLot || params.lotSize > symbolConfig.maxLot) {
       return {
         success: false,
@@ -60,10 +81,10 @@ export class TradeExecutionService implements TradingProvider {
       };
     }
 
-    if (account.rules.max_lot_size > 0 && params.lotSize > account.rules.max_lot_size) {
+    if (params.lotSize > maxAccountLot) {
       return {
         success: false,
-        error: `Lot size exceeds account maximum lot limit of ${account.rules.max_lot_size} lots.`,
+        error: `Lot size (${params.lotSize}) exceeds account maximum lot limit of ${maxAccountLot} lots for $${account.account_size.toLocaleString()} account.`,
       };
     }
 
