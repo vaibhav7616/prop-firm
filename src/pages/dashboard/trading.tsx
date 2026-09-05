@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   Activity,
@@ -19,6 +19,7 @@ import {
   executeOrderApi,
   closePositionApi,
   fetchAccountPositionsApi,
+  enforceRiskProtectApi,
 } from '@/lib/api-client';
 import type { TradingAccount } from '@/types';
 import { fsMetrics, fsRisk, fsTradingDays } from '@/lib/fs-risk';
@@ -260,6 +261,70 @@ export function DashboardTrading() {
       if (es) es.close();
     };
   }, []);
+
+  // Live loss-limit enforcement using the authoritative quotes we already hold.
+  // Re-evaluates the account's daily / max loss against live equity (balance +
+  // open floating P&L at live bid/ask). If the account has breached its loss
+  // limit, asks the backend to halt it and close positions at the live price.
+  const haltedRef = useRef(false);
+  const enforceLoss = useCallback(async () => {
+    if (!selected || !user) return;
+    const open = positions.filter((p) => p.status === 'OPEN');
+    const qs = quotes.filter((q) => q.bid > 0 && q.ask > 0 && q.ask > q.bid);
+    if (!open.length || !qs.length) return;
+
+    const liveQuotes: Record<string, { bid: number; ask: number }> = {};
+    qs.forEach((q) => (liveQuotes[q.symbol] = { bid: q.bid, ask: q.ask }));
+
+    const quoteOf = (sym: string) => qs.find((x) => x.symbol === sym);
+    let floating = 0;
+    for (const p of open) {
+      const q = quoteOf(p.symbol);
+      if (!q) return; // wait until every open symbol has a live quote
+      const pnl = calculateMT5PnL({
+        symbol: p.symbol,
+        type: p.type as 'BUY' | 'SELL',
+        lotSize: p.lot_size,
+        openPrice: p.open_price,
+        currentBid: q.bid,
+        currentAsk: q.ask,
+        commission: p.commission || 0,
+        swap: p.swap || 0,
+        quoteLookup: (sym) => liveQuotes[sym],
+      });
+      floating += pnl.netPnl;
+    }
+
+    const anyAcc = selected as any;
+    const rules = anyAcc.rules || {};
+    const start = Number(anyAcc.starting_balance ?? anyAcc.account_size ?? 0);
+    const bal = Number(anyAcc.current_balance ?? start);
+    const equity = Number((bal + floating).toFixed(2));
+    if (start <= 0) return;
+
+    const sod = Math.max(Number(anyAcc.start_of_day_balance ?? start), Number(anyAcc.start_of_day_equity ?? start));
+    const maxPct = Number(rules.max_loss_limit_percent ?? rules.max_drawdown ?? rules.max_drawdown_percent ?? 0);
+    const dailyPct = Number(rules.daily_loss_limit_percent ?? rules.daily_drawdown ?? rules.daily_drawdown_percent ?? 0);
+    const maxAmt = (maxPct / 100) * start;
+    const dailyAmt = (dailyPct / 100) * sod;
+    const overallLoss = start - equity;
+    const dailyLoss = sod - equity;
+
+    const breached = (maxAmt > 0 && overallLoss >= maxAmt) || (dailyAmt > 0 && dailyLoss >= dailyAmt);
+    if (!breached || haltedRef.current) return;
+    haltedRef.current = true; // only request the halt once until the user reloads
+
+    const res = await enforceRiskProtectApi({ userId: user.id, accountId: selected.id, liveQuotes });
+    if (res && res.halted) {
+      toast.error(`Trading halted — ${res.breach === 'MAX_LOSS' ? 'Max drawdown' : 'Daily loss'} limit reached. Positions closed.`);
+      const p = await fetchAccountPositionsApi(selected.id);
+      if (Array.isArray(p)) setPositions(p);
+    }
+  }, [positions, quotes, selected, user]);
+
+  useEffect(() => {
+    enforceLoss();
+  }, [enforceLoss]);
 
   const fmt = (val: number | undefined, sym: string) => {
     if (val === undefined || val === null || isNaN(val)) return '0.00';

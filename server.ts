@@ -294,6 +294,28 @@ app.post('/api/trading/close-position', async (req, res) => {
   res.json(result);
 });
 
+// Force re-evaluate risk using authoritative live quotes the client already
+// holds (see TradeExecutionService.enforceRiskLimit). Closes a breached
+// account at the live price so a runaway position is halted at the limit.
+app.post('/api/trading/risk-protect', (req, res) => {
+  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const { accountId, liveQuotes } = req.body || {};
+  if (!accountId) {
+    res.status(400).json({ success: false, error: 'accountId is required.' });
+    return;
+  }
+  const result = tradeExecutionEngine.enforceRiskLimit({
+    accountId,
+    userId,
+    liveQuotes: liveQuotes || {},
+  });
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
 // -------------------------------------------------------------
 // CHECKOUT & ORDERS API
 // -------------------------------------------------------------

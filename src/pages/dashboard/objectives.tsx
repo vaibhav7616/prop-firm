@@ -13,7 +13,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { useFsAccount } from '@/context/account-context';
-import { fsMetrics, fsRisk, objectiveState, fsAccountMeta, fsTradingDays } from '@/lib/fs-risk';
+import { fsMetrics, fsRisk, objectiveState, fsAccountMeta, fsTradingDays, fsStatusKey } from '@/lib/fs-risk';
 import { formatCurrency, formatAccountSize, ACCOUNT_STATUS_LABELS } from '@/lib/constants';
 import type { TradingAccount } from '@/types';
 import { FsPanel, FsPageHeader, StatusPill, RingMeter, FsProgress, FsEmpty } from '@/components/fs/fs-ui';
@@ -38,6 +38,7 @@ export function DashboardObjectives() {
   }
 
   const account = selected;
+  const isStopped = fsStatusKey(account.status) === 'failed' || fsStatusKey(account.status) === 'breached';
   const dayProgress = m.minDays > 0 ? Math.min(1, fsTradingDays(account) / m.minDays) : 0;
   const consistency = (account.rules as any)?.consistency || 0;
 
@@ -112,7 +113,7 @@ export function DashboardObjectives() {
           icon={<Target className="h-4 w-4" />}
           accent="indigo"
           title={`Profit Target · ${m.profitTargetPct}%`}
-          status={m.isFunded ? 'completed' : m.targetProgress >= 1 ? 'completed' : account.status === 'failed' || account.status === 'breached' ? 'failed' : r.maxUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
+          status={m.isFunded ? 'completed' : m.targetProgress >= 1 ? 'completed' : isStopped ? 'failed' : r.maxUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
           body={
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -134,7 +135,7 @@ export function DashboardObjectives() {
           icon={<TrendingDown className="h-4 w-4" />}
           accent="amber"
           title={`Daily Drawdown · ${m.dailyPct}%`}
-          status={account.status === 'failed' || account.status === 'breached' ? 'failed' : r.dailyUsedPct >= 1 ? 'at_risk' : r.dailyUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
+          status={isStopped ? 'failed' : r.dailyUsedPct >= 1 ? 'at_risk' : r.dailyUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
           body={
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -153,7 +154,7 @@ export function DashboardObjectives() {
           icon={<ShieldAlert className="h-4 w-4" />}
           accent="rose"
           title={`Maximum Drawdown · ${m.maxPct}%`}
-          status={account.status === 'failed' || account.status === 'breached' ? 'failed' : r.maxUsedPct >= 1 ? 'failed' : r.maxUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
+          status={isStopped ? 'failed' : r.maxUsedPct >= 1 ? 'failed' : r.maxUsedPct > 0.75 ? 'at_risk' : 'in_progress'}
           body={
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-2 text-center">

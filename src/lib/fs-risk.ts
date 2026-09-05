@@ -6,6 +6,12 @@ import type { TradingAccount } from '@/types';
  * here — every value is computed from the account record + rules.
  */
 
+/** Normalize an account status to lowercase so comparisons are robust against
+    both backend (uppercase: ACTIVE/BREACHED/FUNDED/PASSED) and offline
+    (lowercase: active/breached/funded/passed) data sources. */
+export function fsStatusKey(status?: string | null): string {
+  return (status || '').trim().toLowerCase();
+}
 function num(v: number | null | undefined, fallback = 0): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 }
@@ -49,8 +55,9 @@ export function fsMetrics(account: TradingAccount, equity?: number): FsMetrics {
   const netProfit = equity !== undefined ? equity - start : profit;
   const targetRemaining = Math.max(0, targetAmt - netProfit);
   const targetProgress = targetAmt > 0 ? Math.min(1, Math.max(0, netProfit / targetAmt)) : netProfit > 0 ? 1 : 0;
-  const isFunded = account.status === 'funded';
-  const isEval = !isFunded && account.status === 'active' || account.status === 'passed';
+  const isFunded = fsStatusKey(account.status) === 'funded';
+  const st = fsStatusKey(account.status);
+  const isEval = (!isFunded && st === 'active') || st === 'passed';
   return {
     start, balance, profit, profitTargetPct, dailyPct, maxPct, minDays, leverage, profitSplit,
     targetAmt, dailyLimitAmt, maxLossAmt, breachFloor, netProfit, targetRemaining,
@@ -92,7 +99,8 @@ export function fsRisk(account: TradingAccount, equity?: number): FsRisk {
 export type ObjState = 'completed' | 'in_progress' | 'at_risk' | 'failed';
 
 export function objectiveState(account: TradingAccount, metrics?: FsMetrics): ObjState {
-  if (account.status === 'failed' || account.status === 'breached') return 'failed';
+  const st = fsStatusKey(account.status);
+  if (st === 'failed' || st === 'breached') return 'failed';
   const m = metrics || fsMetrics(account);
   // funded accounts have no remaining eval objective
   if (m.isFunded) return 'completed';

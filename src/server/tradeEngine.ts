@@ -220,6 +220,120 @@ export class TradeExecutionService implements TradingProvider {
 
     return { success: true, closedPosition: position };
   }
+
+  /**
+   * Live loss-limit enforcement driven by authoritative live quotes supplied
+   * by the client (the same prices the chart/terminal show).
+   *
+   * Why: the background rule monitor can only auto-close a runaway position
+   * when the server itself can fetch a fresh quote for the symbol. If that
+   * server-side feed is stale/unreachable while the user's browser still shows
+   * live prices, a losing position can far overshoot the account's daily / max
+   * loss limit before anything stops it. This endpoint lets the client force a
+   * re-evaluation using the live bid/ask it already holds, so the account is
+   * breached and all open positions closed the moment the limit is actually hit.
+   */
+  public enforceRiskLimit(params: {
+    accountId: string;
+    userId: string;
+    liveQuotes: Record<string, { bid: number; ask: number }>;
+  }): { success: boolean; halted?: boolean; equity?: number; breach?: string; error?: string } {
+    const db = DBEngine.getDB();
+    const account = db.accounts.find((a) => a.id === params.accountId && a.user_id === params.userId);
+    if (!account) return { success: false, error: 'Trading account not found.' };
+    if (account.status !== 'ACTIVE' && account.status !== 'FUNDED') {
+      return { success: false, error: `Account is ${account.status}. Trading is disabled.` };
+    }
+
+    const openPositions = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN');
+    if (openPositions.length === 0) return { success: true, halted: false };
+
+    let floating = 0;
+    for (const pos of openPositions) {
+      const lq = params.liveQuotes?.[pos.symbol];
+      const quote = lq && lq.bid > 0 && lq.ask > lq.bid
+        ? { bid: lq.bid, ask: lq.ask }
+        : marketDataService.getQuote(pos.symbol);
+      if (quote) {
+        const pnl = calculateMT5PnL({
+          symbol: pos.symbol,
+          type: pos.type,
+          lotSize: pos.lot_size,
+          openPrice: pos.open_price,
+          currentBid: quote.bid,
+          currentAsk: quote.ask,
+          commission: pos.commission,
+          swap: pos.swap,
+          quoteLookup: (sym) => {
+            const q2 = params.liveQuotes?.[sym];
+            return q2 ? { bid: q2.bid, ask: q2.ask } as any : marketDataService.getQuote(sym) || undefined;
+          },
+        });
+        pos.floating_pnl = pnl.netPnl;
+        floating += pnl.netPnl;
+      } else {
+        floating += pos.floating_pnl || 0;
+      }
+    }
+
+    const equity = Number((account.current_balance + floating).toFixed(2));
+    const rules = account.rules;
+
+    // Daily loss (from start-of-day baseline)
+    const startOfDay = Math.max(account.start_of_day_balance, account.start_of_day_equity);
+    const dailyLimitAmt = ((rules.daily_loss_limit_percent || 0) / 100) * startOfDay;
+    const dailyLoss = startOfDay - equity;
+
+    // Max loss (static from starting_balance, or trailing from highest equity)
+    const maxLimitAmt = ((rules.max_loss_limit_percent || 0) / 100) * account.starting_balance;
+    let overallLoss = account.starting_balance - equity;
+    if (rules.drawdown_model === 'TRAILING') overallLoss = account.highest_equity - equity;
+
+    let breach: string | null = null;
+    if (maxLimitAmt > 0 && overallLoss >= maxLimitAmt) breach = 'MAX_LOSS';
+    else if (dailyLimitAmt > 0 && dailyLoss >= dailyLimitAmt) breach = 'DAILY_LOSS';
+
+    if (!breach) return { success: true, halted: false, equity };
+
+    // Halt: close everything, breach the account (mirrors RuleEngine auto-close)
+    account.status = 'BREACHED';
+    account.breached_at = new Date().toISOString();
+    for (const pos of openPositions) {
+      pos.status = 'CLOSED';
+      pos.closed_at = new Date().toISOString();
+      pos.close_reason = 'BREACH_AUTO_CLOSE';
+      pos.realized_pnl = pos.floating_pnl;
+      account.current_balance = Number((account.current_balance + (pos.realized_pnl || 0)).toFixed(2));
+    }
+    account.current_equity = account.current_balance;
+
+    const thresh = breach === 'MAX_LOSS' ? maxLimitAmt : dailyLimitAmt;
+    db.rule_violations.push({
+      id: `viol-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
+      account_id: account.id,
+      user_id: account.user_id,
+      rule_type: breach as any,
+      threshold_value: thresh,
+      actual_value: Math.abs(breach === 'MAX_LOSS' ? overallLoss : dailyLoss),
+      balance_at_breach: account.current_balance,
+      equity_at_breach: equity,
+      drawdown_at_breach: (Math.abs(breach === 'MAX_LOSS' ? overallLoss : dailyLoss) / account.starting_balance) * 100,
+      details: `${breach === 'MAX_LOSS' ? 'Maximum loss' : 'Daily loss'} limit of $${thresh.toFixed(2)} exceeded (${(breach === 'MAX_LOSS' ? overallLoss : dailyLoss).toFixed(2)}). Account halted.`,
+      created_at: new Date().toISOString(),
+    });
+    db.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      user_id: account.user_id,
+      title: `Account #${account.account_number} Breached`,
+      body: `${breach === 'MAX_LOSS' ? 'Maximum loss' : 'Daily loss'} limit exceeded — trading halted and positions closed.`,
+      type: 'error',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+    DBEngine.saveDB();
+
+    return { success: true, halted: true, equity, breach };
+  }
 }
 
 export const tradeExecutionEngine = new TradeExecutionService();

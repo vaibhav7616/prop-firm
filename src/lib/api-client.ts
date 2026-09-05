@@ -105,6 +105,27 @@ export async function closePositionApi(params: {
   }
 }
 
+export async function enforceRiskProtectApi(params: {
+  userId: string;
+  accountId: string;
+  liveQuotes: Record<string, { bid: number; ask: number }>;
+}) {
+  try {
+    const res = await fetch('/api/trading/risk-protect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': params.userId,
+      },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Risk enforcement failed.' };
+  }
+}
+
 export async function fetchAccountPositionsApi(accountId: string) {
   try {
     const res = await fetch(`/api/accounts/${accountId}/positions`);
