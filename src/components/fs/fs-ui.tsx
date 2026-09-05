@@ -67,14 +67,14 @@ export function FsStat({
   sub?: ReactNode;
 }) {
   return (
-    <FsPanel className="p-4">
+    <FsPanel className="min-w-0 p-4">
       <div className="flex items-center justify-between">
         <p className="fs-label">{label}</p>
         <span className={cn('h-1.5 w-1.5 rounded-full', accentDot[accent])} />
       </div>
       <p
         className={cn(
-          'mt-2 text-xl font-semibold tracking-tight text-slate-50',
+          'mt-2 break-words text-xl font-semibold leading-tight tracking-tight [overflow-wrap:anywhere] text-slate-50',
           mono && 'fs-num',
           hint === 'up' && 'text-emerald-400',
           hint === 'down' && 'text-rose-400'
