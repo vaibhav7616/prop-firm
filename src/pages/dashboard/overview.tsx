@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
   AreaChart,
   Area,
   XAxis,
@@ -12,8 +10,8 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
-  Cell,
 } from 'recharts';
+import { useTheme } from '@/context/theme-context';
 import {
   Wallet,
   TrendingUp,
@@ -60,7 +58,8 @@ export function DashboardOverview() {
   const [positions, setPositions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [chartView, setChartView] = useState<'PNL' | 'EQUITY'>('PNL');
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   useEffect(() => {
     const load = async () => {
@@ -361,13 +360,13 @@ export function DashboardOverview() {
           {/* Performance Chart & Account Overview Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Dynamic Chart Area - 2 Columns */}
-            <div className="lg:col-span-2 bg-white border border-slate-300 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <h3 className="text-base font-bold font-display text-slate-900 flex items-center gap-2">
+                  <h3 className="text-base font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-brand-500" /> Performance Curve
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {closedPositionsList.length > 0
                       ? 'Real daily closed profit/loss & cumulative equity growth'
                       : 'Account baseline state (No closed trades recorded yet)'}
@@ -375,26 +374,11 @@ export function DashboardOverview() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
-                    <button
-                      onClick={() => setChartView('PNL')}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        chartView === 'PNL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      P&L Growth
-                    </button>
-                    <button
-                      onClick={() => setChartView('EQUITY')}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        chartView === 'EQUITY' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      Equity Curve
-                    </button>
-                  </div>
+                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-slate-900 dark:bg-slate-800 text-white shadow-xs">
+                    Equity Curve
+                  </span>
 
-                  <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded-full ${profitPercent >= 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>
+                  <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded-full ${profitPercent >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'}`}>
                     {profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}% Overall
                   </span>
                 </div>
@@ -402,133 +386,76 @@ export function DashboardOverview() {
 
               {/* Dynamic Chart Display */}
               <div className="w-full pt-2">
-                {chartView === 'PNL' ? (
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartDays} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis
-                          dataKey="day"
-                          tickLine={false}
-                          axisLine={{ stroke: '#cbd5e1' }}
-                          tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
-                        />
-                        <YAxis
-                          tickLine={false}
-                          axisLine={false}
-                          tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
-                          tickFormatter={(val) => `$${val}`}
-                        />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              const val = data.pnl;
-                              const isPos = val >= 0;
-                              return (
-                                <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-white text-xs space-y-1 z-50 min-w-[160px]">
-                                  <p className="font-mono text-slate-400 font-semibold text-[11px] border-b border-slate-800 pb-1">
-                                    {data.fullDate || data.day}
-                                  </p>
-                                  <div className="flex items-center justify-between gap-3 pt-0.5">
-                                    <span className="text-slate-300">Daily Closed P/L:</span>
-                                    <span className={`font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                      {val >= 0 ? '+' : ''}${val.toFixed(2)}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                                    <span className="text-slate-400">Trades Executed:</span>
-                                    <span className="font-mono font-semibold text-slate-200">{data.tradesCount} trades</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                                    <span className="text-slate-400">Account Equity:</span>
-                                    <span className="font-mono font-semibold text-slate-200">${data.equity.toLocaleString()}</span>
-                                  </div>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartDays} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#1e293b' : '#e2e8f0'} />
+                      <XAxis
+                        dataKey="day"
+                        tickLine={false}
+                        axisLine={{ stroke: isDark ? '#334155' : '#cbd5e1' }}
+                        tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 600 }}
+                      />
+                      <YAxis
+                        domain={['auto', 'auto']}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10, fontWeight: 600 }}
+                        tickFormatter={(val) => `$${(val / 1000).toFixed(1)}k`}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const val = data.equity;
+                            const netGain = val - startingBalance;
+                            const isPos = netGain >= 0;
+                            return (
+                              <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-white text-xs space-y-1 z-50 min-w-[160px]">
+                                <p className="font-mono text-slate-400 font-semibold text-[11px] border-b border-slate-800 pb-1">
+                                  {data.fullDate || data.day}
+                                </p>
+                                <div className="flex items-center justify-between gap-3 pt-0.5">
+                                  <span className="text-slate-300">Account Equity:</span>
+                                  <span className="font-mono font-bold text-white">${val.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" strokeWidth={1.5} />
-                        <Bar dataKey="pnl" radius={[6, 6, 0, 0]} maxBarSize={42}>
-                          {chartDays.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={entry.pnl > 0 ? '#10b981' : entry.pnl < 0 ? '#f43f5e' : '#cbd5e1'}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartDays} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
-                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis
-                          dataKey="day"
-                          tickLine={false}
-                          axisLine={{ stroke: '#cbd5e1' }}
-                          tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
-                        />
-                        <YAxis
-                          domain={['auto', 'auto']}
-                          tickLine={false}
-                          axisLine={false}
-                          tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
-                          tickFormatter={(val) => `$${(val / 1000).toFixed(1)}k`}
-                        />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload;
-                              const val = data.equity;
-                              const netGain = val - startingBalance;
-                              const isPos = netGain >= 0;
-                              return (
-                                <div className="bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-xl text-white text-xs space-y-1 z-50 min-w-[160px]">
-                                  <p className="font-mono text-slate-400 font-semibold text-[11px] border-b border-slate-800 pb-1">
-                                    {data.fullDate || data.day}
-                                  </p>
-                                  <div className="flex items-center justify-between gap-3 pt-0.5">
-                                    <span className="text-slate-300">Account Equity:</span>
-                                    <span className="font-mono font-bold text-white">${val.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                                  </div>
-                                  <div className="flex items-center justify-between gap-3 text-[11px]">
-                                    <span className="text-slate-400">Net Growth:</span>
-                                    <span className={`font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                      {isPos ? '+' : ''}${netGain.toFixed(2)}
-                                    </span>
-                                  </div>
+                                <div className="flex items-center justify-between gap-3 text-[11px]">
+                                  <span className="text-slate-400">Net Growth:</span>
+                                  <span className={`font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    {isPos ? '+' : ''}${netGain.toFixed(2)}
+                                  </span>
                                 </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <ReferenceLine y={startingBalance} stroke="#64748b" strokeDasharray="3 3" label={{ value: 'Baseline', fill: '#64748b', fontSize: 10 }} />
-                        <Area
-                          type="monotone"
-                          dataKey="equity"
-                          stroke="#2563eb"
-                          strokeWidth={2.5}
-                          fillOpacity={1}
-                          fill="url(#colorEquity)"
-                          dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#ffffff' }}
-                          activeDot={{ r: 6, fill: '#1d4ed8' }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <ReferenceLine
+                        y={startingBalance}
+                        stroke={isDark ? '#475569' : '#64748b'}
+                        strokeDasharray="3 3"
+                        label={{ value: 'Baseline', fill: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="equity"
+                        stroke="#2563eb"
+                        strokeWidth={2.5}
+                        fillOpacity={1}
+                        fill="url(#colorEquity)"
+                        dot={false}
+                        activeDot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
