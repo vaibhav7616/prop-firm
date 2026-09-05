@@ -20,7 +20,7 @@ import { FsPanel, FsPageHeader, StatusPill, RingMeter, FsProgress, FsEmpty } fro
 import { cn } from '@/lib/utils';
 
 export function DashboardObjectives() {
-  const { selected, accounts } = useFsAccount();
+  const { selected, accounts, selectAccount } = useFsAccount();
   const m = selected ? fsMetrics(selected) : null;
   const r = selected ? fsRisk(selected) : null;
   const meta = selected ? fsAccountMeta(selected) : null;
@@ -67,10 +67,14 @@ export function DashboardObjectives() {
             return (
               <button
                 key={a.id}
-                disabled={sel}
+                onClick={() => selectAccount(a.id)}
+                type="button"
+                aria-pressed={sel}
                 className={cn(
-                  'shrink-0 rounded-lg border px-3 py-1.5 text-left',
-                  sel ? 'border-indigo-500/60 bg-indigo-500/10' : 'border-slate-800 bg-slate-900/40'
+                  'shrink-0 rounded-lg border px-3 py-1.5 text-left transition-colors',
+                  sel
+                    ? 'cursor-default border-indigo-500/60 bg-indigo-500/10'
+                    : 'cursor-pointer border-slate-800 bg-slate-900/40 hover:border-indigo-500/40 hover:bg-slate-800/60'
                 )}
               >
                 <p className="fs-num text-xs font-bold text-slate-100">#{a.account_number ?? a.id}</p>
