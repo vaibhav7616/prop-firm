@@ -134,6 +134,8 @@ export function DashboardOverview() {
   const rawProfit = currentEquity - startingBalance;
   const totalProfit = Number.isFinite(rawProfit) ? rawProfit : 0;
   const profitPercent = startingBalance > 0 ? (totalProfit / startingBalance) * 100 : 0;
+  const isProfitable = totalProfit >= 0;
+  const curveColor = isProfitable ? '#10b981' : '#f43f5e';
 
   // Today's P/L
   const rawTodaysPnl = selectedAccount?.todays_pnl !== undefined 
@@ -364,7 +366,7 @@ export function DashboardOverview() {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <h3 className="text-base font-bold font-display text-slate-900 dark:text-white flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-brand-500" /> Performance Curve
+                    <BarChart3 className={`h-4 w-4 ${isProfitable ? 'text-emerald-500' : 'text-rose-500'}`} /> Performance Curve
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {closedPositionsList.length > 0
@@ -374,12 +376,13 @@ export function DashboardOverview() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-slate-900 dark:bg-slate-800 text-white shadow-xs">
+                  <span className="text-xs font-bold px-3 py-1 rounded-lg bg-slate-900 dark:bg-slate-800 text-white shadow-xs flex items-center gap-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${isProfitable ? 'bg-emerald-400' : 'bg-rose-400'} animate-pulse`} />
                     Equity Curve
                   </span>
 
-                  <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded-full ${profitPercent >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'}`}>
-                    {profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}% Overall
+                  <span className={`text-xs font-bold font-mono px-2.5 py-1 rounded-full ${isProfitable ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20'}`}>
+                    {isProfitable ? '+' : ''}{profitPercent.toFixed(2)}% Overall
                   </span>
                 </div>
               </div>
@@ -391,8 +394,8 @@ export function DashboardOverview() {
                     <AreaChart data={chartDays} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor={curveColor} stopOpacity={0.28} />
+                          <stop offset="95%" stopColor={curveColor} stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#1e293b' : '#e2e8f0'} />
@@ -446,7 +449,7 @@ export function DashboardOverview() {
                       <Area
                         type="monotone"
                         dataKey="equity"
-                        stroke="#2563eb"
+                        stroke={curveColor}
                         strokeWidth={2.5}
                         fillOpacity={1}
                         fill="url(#colorEquity)"
