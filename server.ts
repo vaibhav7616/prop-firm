@@ -8,6 +8,7 @@ import { tradeExecutionEngine } from './src/server/tradeEngine';
 import { PayoutEngine } from './src/server/payoutEngine';
 import { paymentService } from './src/server/paymentEngine';
 import { ScheduledJobsEngine } from './src/server/auditJobs';
+import { makeFirmPlan, resolveFirmTypeName, normalizeChallengeType } from './src/server/firmConfig';
 
 const app = express();
 const PORT = 3000;
@@ -763,17 +764,26 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     db.users.push(user);
   }
 
-  const challengeType = type || 'two_step';
-  const plan = db.account_plans.find((p) => p.account_size === Number(account_size) && p.type === challengeType) || db.account_plans[1];
-  const rulesConfig = plan ? plan.rules : db.account_plans[0].rules;
+  const challengeType = normalizeChallengeType(type);
+  const issueSize = Number(account_size);
+  // Always resolve the EXACT plan for this size+type. Prefer an existing row
+  // if it matches both; otherwise derive correct firm rules so loss/profit/
+  // leverage limits always match the account size (never fall back to a
+  // mismatched 100K plan).
+  const existingPlan = db.account_plans.find(
+    (p) => Number(p.account_size) === issueSize && normalizeChallengeType((p as any).type) === challengeType
+  );
+  const plan = existingPlan || makeFirmPlan(issueSize, challengeType);
+  const planName = existingPlan ? existingPlan.name : resolveFirmTypeName(issueSize, challengeType);
+  const rulesConfig = plan.rules;
   const isInstant = challengeType === 'instant_funding';
 
   const orderId = `ord-${Date.now()}-admin`;
   const newOrder = {
     id: orderId,
     user_id: user.id,
-    plan_id: plan ? plan.id : 'plan-2step-100k',
-    plan_name: plan ? plan.name : `FundedShift $${Number(account_size).toLocaleString()} Account`,
+    plan_id: plan.id,
+    plan_name: planName,
     account_size: Number(account_size),
     platform: platform || 'fundedshift_terminal',
     addons: [],
@@ -797,9 +807,9 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     password_hash: traderPassword,
     investor_password_hash: investorPassword,
     server: 'FundedShift-Live01',
-    plan_id: plan ? plan.id : 'plan-2step-100k',
-    plan_name: plan ? plan.name : `FundedShift $${Number(account_size).toLocaleString()} Account`,
-    type: challengeType as any,
+    plan_id: plan.id,
+    plan_name: planName,
+    type: challengeType,
     account_size: Number(account_size),
     starting_balance: Number(account_size),
     current_balance: Number(account_size),

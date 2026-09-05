@@ -1,5 +1,6 @@
 import { DBEngine } from './db';
 import type { OrderEntity, PaymentEntity, TradingAccountEntity, PaymentMethod } from './types';
+import { buildFirmRules, normalizeChallengeType } from './firmConfig';
 
 export interface PaymentProvider {
   processCheckout(params: {
@@ -90,8 +91,8 @@ export class CheckoutPaymentService implements PaymentProvider {
     const traderPassword = `FS_${Math.random().toString(36).slice(-6)}!`;
     const investorPassword = `INV_${Math.random().toString(36).slice(-6)}#`;
 
-    const rulesConfig = plan ? plan.rules : DBEngine.getDB().account_plans[1].rules;
-    const isInstant = plan ? plan.type === 'instant_funding' : false;
+    const rulesConfig = plan ? plan.rules : buildFirmRules(params.accountSize, (plan as any)?.type);
+    const isInstant = plan ? normalizeChallengeType(plan.type) === 'instant_funding' : false;
 
     const newAccount: TradingAccountEntity = {
       id: `acc-${Date.now()}`,
@@ -104,7 +105,7 @@ export class CheckoutPaymentService implements PaymentProvider {
       server: 'FundedShift-Live01',
       plan_id: plan ? plan.id : 'plan-2step-100k',
       plan_name: planName,
-      type: plan ? plan.type : 'two_step',
+      type: plan ? normalizeChallengeType(plan.type) : 'two_step',
       account_size: params.accountSize,
       starting_balance: params.accountSize,
       current_balance: params.accountSize,
