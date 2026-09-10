@@ -110,3 +110,90 @@ export function calculateMT5PnL(params: {
     contractSize,
   };
 }
+
+/**
+ * Calculates exact institutional required margin for a position in USD
+ *
+ * Forex Conventions:
+ * - Direct pairs (EURUSD, GBPUSD, AUDUSD, NZDUSD): Base is foreign currency (EUR, GBP, etc.).
+ *   Margin in USD = (lotSize * 100,000 * entryPrice) / leverage
+ * - Indirect pairs with USD as Base currency (USDJPY, USDCAD, USDCHF):
+ *   Base is USD, contract size is $100,000 USD.
+ *   Margin in USD = (lotSize * 100,000) / leverage
+ * - Cross pairs (EURJPY, EURGBP, GBPJPY):
+ *   Margin in USD = (lotSize * 100,000 * BaseToUSDRate) / leverage
+ * - Commodities:
+ *   XAUUSD: 100 oz per lot. Margin = (lotSize * 100 * entryPrice) / leverage
+ *   XAGUSD: 5,000 oz per lot. Margin = (lotSize * 5,000 * entryPrice) / leverage
+ *   USOIL: 1,000 bbl per lot. Margin = (lotSize * 1,000 * entryPrice) / leverage
+ * - Indices & Crypto:
+ *   NAS100, US30, SPX500, BTCUSD, ETHUSD, SOLUSD: contract size 1. Margin = (lotSize * 1 * entryPrice) / leverage
+ *   GER40: contract size 1 EUR. Margin = (lotSize * 1 * entryPrice * EURUSD) / leverage
+ */
+export function calculateInstitutionalMargin(params: {
+  symbol: string;
+  lotSize: number;
+  entryPrice: number;
+  leverage?: number;
+  contractSize?: number;
+  quoteLookup?: (sym: string) => MT5QuoteLookup | undefined;
+}): number {
+  const { symbol, lotSize, entryPrice, leverage = 100, quoteLookup } = params;
+  const upper = symbol.toUpperCase();
+  const effLeverage = leverage > 0 ? leverage : 100;
+
+  let notionalUSD = 0;
+
+  if (['USDJPY', 'USDCAD', 'USDCHF'].includes(upper)) {
+    // USD is the base currency: 1 lot = $100,000 USD
+    notionalUSD = lotSize * 100000;
+  } else if (['EURJPY', 'EURGBP'].includes(upper)) {
+    // Base is EUR
+    const eurusd = quoteLookup ? quoteLookup('EURUSD')?.bid || 1.1678 : 1.1678;
+    notionalUSD = lotSize * 100000 * eurusd;
+  } else if (upper === 'GBPJPY') {
+    // Base is GBP
+    const gbpusd = quoteLookup ? quoteLookup('GBPUSD')?.bid || 1.3634 : 1.3634;
+    notionalUSD = lotSize * 100000 * gbpusd;
+  } else if (upper === 'GER40') {
+    // DAX index in EUR
+    const eurusd = quoteLookup ? quoteLookup('EURUSD')?.bid || 1.1678 : 1.1678;
+    notionalUSD = lotSize * entryPrice * eurusd;
+  } else if (upper === 'XAUUSD') {
+    // Gold Spot 100 oz
+    notionalUSD = lotSize * 100 * entryPrice;
+  } else if (upper === 'XAGUSD') {
+    // Silver Spot 5,000 oz
+    notionalUSD = lotSize * 5000 * entryPrice;
+  } else if (upper === 'USOIL') {
+    // WTI 1,000 bbl
+    notionalUSD = lotSize * 1000 * entryPrice;
+  } else if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(upper)) {
+    // Crypto 1 unit
+    notionalUSD = lotSize * 1 * entryPrice;
+  } else if (['NAS100', 'US30', 'SPX500'].includes(upper)) {
+    // US Indices 1 unit
+    notionalUSD = lotSize * 1 * entryPrice;
+  } else {
+    // Direct Forex (EURUSD, GBPUSD, AUDUSD, NZDUSD) or fallback
+    const contract = params.contractSize || 100000;
+    notionalUSD = lotSize * contract * entryPrice;
+  }
+
+  return Number((notionalUSD / effLeverage).toFixed(2));
+}
+
+/**
+ * Returns accurate pip / point multiplier for spread and pip calculation
+ */
+export function getPipMultiplier(symbol: string, precision?: number): number {
+  const upper = symbol.toUpperCase();
+  if (upper.endsWith('JPY')) return 0.01;
+  if (upper === 'XAGUSD') return 0.001;
+  if (upper === 'XAUUSD' || upper === 'USOIL') return 0.01;
+  if (['NAS100', 'US30', 'SPX500', 'GER40', 'BTCUSD', 'ETHUSD', 'SOLUSD'].includes(upper)) return 1.0;
+  if (precision === 5) return 0.0001;
+  if (precision === 3) return 0.01;
+  if (precision === 2) return 0.01;
+  return 0.0001;
+}

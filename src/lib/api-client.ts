@@ -190,12 +190,12 @@ export async function fetchAdminStatsApi() {
   return null;
 }
 
-export async function updateAccountStatusApi(account_id: string, status: string) {
+export async function updateAccountStatusApi(account_id: string, status: string, immediate: boolean = false) {
   try {
     const res = await fetch('/api/admin/accounts/update-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ account_id, status }),
+      body: JSON.stringify({ account_id, status, immediate }),
     });
     if (res.ok) {
       return await res.json();
@@ -204,6 +204,18 @@ export async function updateAccountStatusApi(account_id: string, status: string)
     console.warn('Failed to update account status:', err);
   }
   return null;
+}
+
+export async function expediteTransitionApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/accounts/${accountId}/expedite-transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to expedite transition' };
+  }
 }
 
 export async function processPayoutAdminApi(payoutId: string, action: 'APPROVE' | 'REJECT', reason?: string) {
@@ -227,6 +239,7 @@ export async function issueManualAccountApi(params: {
   full_name?: string;
   account_size: number;
   type: string;
+  stage?: string;
   platform?: string;
   broker?: string;
 }) {

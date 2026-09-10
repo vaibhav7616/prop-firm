@@ -114,6 +114,16 @@ export interface UserEntity {
   updated_at: string;
 }
 
+export interface ScheduledTransition {
+  target_type: 'step_2' | 'funded';
+  target_title: string;
+  passed_at: string;
+  scheduled_for: string; // ISO date string (1 to 2 hours from passed_at)
+  estimated_hours: number;
+  status: 'SCHEDULED' | 'PROVISIONED';
+  provisioned_account_id?: string;
+}
+
 export interface TradingAccountEntity {
   id: string;
   user_id: string;
@@ -123,6 +133,8 @@ export interface TradingAccountEntity {
   password_hash: string;
   investor_password_hash: string;
   server: string;
+  broker?: string;
+  platform?: string;
   plan_id: string;
   plan_name: string;
   type: ChallengeType;
@@ -135,11 +147,13 @@ export interface TradingAccountEntity {
   start_of_day_balance: number;
   start_of_day_equity: number;
   status: AccountStatus;
-  phase: number; // 1 for Step 1, 2 for Step 2, 3 for Funded
+  phase: number; // 1 for Step 1, 2 for Step 2, 1 (or 3) for Funded
+  is_funded?: boolean;
   trading_days: number;
   leverage: number;
   rules: AccountRuleConfig;
   parent_account_id?: string;
+  scheduled_transition?: ScheduledTransition;
   breached_at?: string;
   passed_at?: string;
   funded_at?: string;

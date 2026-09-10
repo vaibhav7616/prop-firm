@@ -66,16 +66,97 @@ export const ACCOUNT_STATUS_LABELS: Record<string, string> = {
   failed: 'Failed',
   breached: 'Breached',
   funded: 'Funded',
+  PENDING: 'Pending',
+  PENDING_PAYMENT: 'Pending Payment',
+  PENDING_ACTIVATION: 'Pending Activation',
+  ACTIVE: 'Active',
+  PASSED: 'Passed',
+  FAILED: 'Failed',
+  BREACHED: 'Breached',
+  FUNDED: 'Funded',
+  SUSPENDED: 'Suspended',
+  EXPIRED: 'Expired',
+  PAYOUT_PENDING: 'Payout Pending',
+  CLOSED: 'Closed',
 };
 
 export const ACCOUNT_STATUS_COLORS: Record<string, string> = {
   pending: 'bg-muted-foreground/20 text-muted-foreground',
   active: 'bg-blue-500/15 text-blue-400',
-  passed: 'bg-success/15 text-success',
+  passed: 'bg-emerald-500/15 text-emerald-400',
   failed: 'bg-destructive/15 text-destructive',
   breached: 'bg-destructive/15 text-destructive',
-  funded: 'bg-gold-400/15 text-gold-400',
+  funded: 'bg-amber-500/15 text-amber-400',
+  PENDING: 'bg-muted-foreground/20 text-muted-foreground',
+  PENDING_PAYMENT: 'bg-amber-500/15 text-amber-400',
+  PENDING_ACTIVATION: 'bg-blue-500/15 text-blue-400',
+  ACTIVE: 'bg-blue-500/15 text-blue-400',
+  PASSED: 'bg-emerald-500/15 text-emerald-400',
+  FAILED: 'bg-destructive/15 text-destructive',
+  BREACHED: 'bg-destructive/15 text-destructive',
+  FUNDED: 'bg-amber-500/15 text-amber-400',
+  SUSPENDED: 'bg-muted-foreground/20 text-muted-foreground',
+  EXPIRED: 'bg-muted-foreground/20 text-muted-foreground',
+  PAYOUT_PENDING: 'bg-purple-500/15 text-purple-400',
+  CLOSED: 'bg-muted-foreground/20 text-muted-foreground',
 };
+
+export function getAccountStatusLabel(status: string | null | undefined): string {
+  if (!status) return 'Active';
+  return ACCOUNT_STATUS_LABELS[status] || ACCOUNT_STATUS_LABELS[status.toLowerCase()] || status;
+}
+
+export function getAccountPhaseLabel(acc: {
+  type?: string;
+  phase?: number;
+  status?: string;
+  is_funded?: boolean;
+  plan_name?: string;
+} | null | undefined): string {
+  if (!acc) return 'Step 1';
+  const status = (acc.status || '').toUpperCase();
+  const type = (acc.type || '').toLowerCase();
+  const plan = (acc.plan_name || '').toLowerCase();
+  const phase = acc.phase || 1;
+
+  if (
+    type === 'instant_funding' ||
+    status === 'FUNDED' ||
+    phase >= 3 ||
+    acc.is_funded ||
+    plan.includes('funded') ||
+    plan.includes('instant')
+  ) {
+    return 'Funded';
+  }
+  if (type === 'one_step' || plan.includes('1-step') || plan.includes('one-step')) {
+    return 'Step 1';
+  }
+  if (phase === 2) {
+    return 'Step 2';
+  }
+  return 'Step 1';
+}
+
+export function formatAccountDropdownLabel(acc: {
+  account_size?: number;
+  type?: string;
+  phase?: number;
+  status?: string;
+  account_number?: string;
+  is_funded?: boolean;
+  plan_name?: string;
+}): string {
+  const sizeStr = formatAccountSize(acc.account_size || 5000);
+  const phaseLabel = getAccountPhaseLabel(acc);
+  const statusLabel = getAccountStatusLabel(acc.status);
+  const accNum = acc.account_number ? ` #${acc.account_number}` : '';
+
+  if (phaseLabel === 'Funded') {
+    return `${sizeStr} Funded${accNum} - ${statusLabel}`;
+  }
+  return `${sizeStr} (${phaseLabel})${accNum} - ${statusLabel}`;
+}
 
 export function formatCurrency(amount: number | null | undefined): string {
   const val = typeof amount === 'number' && !isNaN(amount) ? amount : 0;

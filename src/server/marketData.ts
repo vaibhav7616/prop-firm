@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import type { MarketQuote, SymbolConfig } from './types';
 import { DBEngine } from './db';
+import { getPipMultiplier } from './mt5';
 
 // Market Data Provider Interface
 export interface MarketDataProvider {
@@ -191,7 +192,7 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
     const symConfig = DBEngine.getDB().symbols.find((s) => s.symbol === symbol);
     const precision = symConfig?.decimalPrecision || defaultPrecision;
     const spreadPips = symConfig?.spreadPips || defaultSpreadPips;
-    const pipsMultiplier = precision === 5 || precision === 3 ? 0.0001 : precision === 2 ? 0.01 : 0.1;
+    const pipsMultiplier = getPipMultiplier(symbol, precision);
     const defaultSpreadVal = spreadPips * pipsMultiplier;
 
     let lp = typeof tick.lp === 'number' && tick.lp > 0 ? tick.lp : existing ? existing.price : 0;

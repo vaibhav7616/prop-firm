@@ -139,6 +139,17 @@ export interface TradingAccount {
   trading_days: number;
   max_trading_days: number | null;
   phase: number;
+  type?: ChallengeType;
+  is_funded?: boolean;
+  scheduled_transition?: {
+    target_type: 'step_2' | 'funded';
+    target_title: string;
+    passed_at: string;
+    scheduled_for: string;
+    estimated_hours: number;
+    status: 'SCHEDULED' | 'PROVISIONED';
+    provisioned_account_id?: string;
+  };
   rules: ChallengeRules;
   assigned_at: string | null;
   created_at: string;

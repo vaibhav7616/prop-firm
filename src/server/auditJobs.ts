@@ -4,12 +4,18 @@ import { RuleEngine } from './ruleEngine';
 export class ScheduledJobsEngine {
   private static dailyTimer: NodeJS.Timeout | null = null;
   private static ruleMonitorTimer: NodeJS.Timeout | null = null;
+  private static transitionTimer: NodeJS.Timeout | null = null;
 
   public static startJobs() {
     // Continuous rule evaluation & risk liquidator monitor every 1 second
     this.ruleMonitorTimer = setInterval(() => {
       this.runContinuousRuleCheck();
     }, 1000);
+
+    // Check pending phase transitions every 3 seconds
+    this.transitionTimer = setInterval(() => {
+      this.checkPendingPhaseTransitions();
+    }, 3000);
 
     // Daily reset check every minute (resets start-of-day baselines at 00:00 UTC)
     this.dailyTimer = setInterval(() => {
@@ -19,7 +25,27 @@ export class ScheduledJobsEngine {
       }
     }, 60000);
 
-    console.log('[ScheduledJobs] Background prop firm risk monitor & daily reset jobs started.');
+    console.log('[ScheduledJobs] Background prop firm risk monitor, phase transitions & daily reset jobs started.');
+  }
+
+  /**
+   * Checks accounts in PASSED state that have an elapsed scheduled transition (1-2 hour delay)
+   * and automatically provisions their Step 2 or Funded account.
+   */
+  public static checkPendingPhaseTransitions() {
+    const db = DBEngine.getDB();
+    const now = Date.now();
+    for (const acc of db.accounts) {
+      if (
+        acc.status === 'PASSED' &&
+        acc.scheduled_transition &&
+        acc.scheduled_transition.status === 'SCHEDULED' &&
+        now >= new Date(acc.scheduled_transition.scheduled_for).getTime()
+      ) {
+        console.log(`[ScheduledJobs] Auto-provisioning elapsed transition for account #${acc.account_number}...`);
+        RuleEngine.provisionScheduledAccount(acc.id);
+      }
+    }
   }
 
   /**

@@ -23,7 +23,11 @@ import {
   formatCurrency,
   ACCOUNT_STATUS_LABELS,
   ACCOUNT_STATUS_COLORS,
+  getAccountPhaseLabel,
+  getAccountStatusLabel,
+  formatAccountDropdownLabel,
 } from '@/lib/constants';
+import { expediteTransitionApi } from '@/lib/api-client';
 import type { TradingAccount } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +40,30 @@ export function DashboardObjectives() {
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expediting, setExpediting] = useState(false);
+  const [nowTimestamp, setNowTimestamp] = useState(Date.now());
   const detailedSectionRef = useRef<HTMLDivElement>(null);
+
+  const reloadAccounts = async () => {
+    try {
+      const { fetchUserAccounts } = await import('@/lib/api-client');
+      const accs = await fetchUserAccounts(user?.id);
+      if (accs && accs.length > 0) {
+        setAccounts(accs);
+        return accs;
+      }
+    } catch (_) {
+      // fallback
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -79,6 +106,31 @@ export function DashboardObjectives() {
   };
 
   const selected = accounts.find((a) => a.id === selectedId) || accounts[0];
+
+  const handleExpedite = async (accId: string) => {
+    setExpediting(true);
+    try {
+      const res = await expediteTransitionApi(accId);
+      if (res && res.success && res.account) {
+        const freshAccounts = await reloadAccounts();
+        if (freshAccounts && freshAccounts.some((a: TradingAccount) => a.id === res.account.id)) {
+          handleSelectAccount(res.account.id, true);
+        }
+      }
+    } finally {
+      setExpediting(false);
+    }
+  };
+
+  const getCountdownString = (scheduledFor?: string) => {
+    if (!scheduledFor) return '1h 30m';
+    const diff = new Date(scheduledFor).getTime() - nowTimestamp;
+    if (diff <= 0) return 'Ready to activate';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+    return `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+  };
 
   if (loading) {
     return (
@@ -221,10 +273,10 @@ export function DashboardObjectives() {
                   </div>
                   <div>
                     <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
-                      {account.challenge?.name || `${formatAccountSize(account.account_size)} Account`}
+                      {account.plan_name || `${formatAccountSize(account.account_size)} ${getAccountPhaseLabel(account)}`}
                     </h3>
                     <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                      Phase {account.phase || 1} · {account.trading_days || 0} trading days
+                      {getAccountPhaseLabel(account)} · {account.trading_days || 0} trading days
                     </p>
                   </div>
                 </div>
@@ -235,14 +287,20 @@ export function DashboardObjectives() {
                       <Check className="h-3 w-3" /> Active View
                     </span>
                   )}
-                  <span
-                    className={cn(
-                      'text-xs px-2.5 py-1 rounded-full font-medium',
-                      ACCOUNT_STATUS_COLORS[account.status] || 'bg-secondary text-foreground'
-                    )}
-                  >
-                    {ACCOUNT_STATUS_LABELS[account.status] || account.status}
-                  </span>
+                  {account.scheduled_transition?.status === 'SCHEDULED' ? (
+                    <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> Next Stage in 1–2h
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        'text-xs px-2.5 py-1 rounded-full font-medium',
+                        ACCOUNT_STATUS_COLORS[account.status] || 'bg-secondary text-foreground'
+                      )}
+                    >
+                      {getAccountStatusLabel(account.status)}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -301,7 +359,7 @@ export function DashboardObjectives() {
                 <span>Detailed Objectives Breakdown</span>
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Detailed real-time metrics for {selected.challenge?.name || `${formatAccountSize(selected.account_size)} Account`} (Phase {selected.phase || 1})
+                Detailed real-time metrics for {selected.plan_name || `${formatAccountSize(selected.account_size)} Account`} ({getAccountPhaseLabel(selected)})
               </p>
             </div>
 
@@ -316,13 +374,62 @@ export function DashboardObjectives() {
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
-                      {formatAccountSize(acc.account_size)} (Phase {acc.phase || 1}) - {ACCOUNT_STATUS_LABELS[acc.status]}
+                      {formatAccountDropdownLabel(acc)}
                     </option>
                   ))}
                 </select>
               </div>
             )}
           </div>
+
+          {/* Scheduled Transition Notice & Expedite Control */}
+          {selected.status === 'PASSED' && selected.scheduled_transition?.status === 'SCHEDULED' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-brand-500/15 border border-amber-500/40 p-5 shadow-sm space-y-3"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Clock className="h-5 w-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display font-bold text-foreground text-sm sm:text-base">
+                        🎉 Challenge Passed! {selected.scheduled_transition.target_title} In Preparation
+                      </h3>
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        1–2 Hour Review
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Your trading logs have met all rule requirements. Your new {selected.scheduled_transition.target_type === 'funded' ? 'Funded' : 'Phase 2'} credentials will be provisioned automatically within the scheduled window.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                  <div className="text-right">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Scheduled Activation</p>
+                    <p className="font-mono text-sm font-bold text-amber-600 dark:text-amber-400">
+                      {getCountdownString(selected.scheduled_transition.scheduled_for)}
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    disabled={expediting}
+                    onClick={() => handleExpedite(selected.id)}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm flex items-center gap-1.5"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {expediting ? 'Activating...' : '⚡ Activate Now (Skip Wait)'}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* 4 Objective Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

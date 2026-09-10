@@ -871,6 +871,20 @@ export class DBEngine {
       if (!loaded.affiliate_withdrawals) {
         loaded.affiliate_withdrawals = [];
       }
+      // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true
+      if (loaded.accounts && Array.isArray(loaded.accounts)) {
+        for (const acc of loaded.accounts) {
+          if (acc.phase === 3 || acc.status === 'FUNDED' || acc.type === 'instant_funding') {
+            acc.phase = 1;
+            acc.is_funded = true;
+            acc.status = 'FUNDED';
+            if (acc.rules) acc.rules.profit_target_percent = 0;
+            if (!acc.plan_name || acc.plan_name.includes('Phase 3')) {
+              acc.plan_name = `$${Number(acc.account_size).toLocaleString()} Funded Account`;
+            }
+          }
+        }
+      }
       return loaded;
     } catch (err) {
       console.error('Error reading database file:', err);

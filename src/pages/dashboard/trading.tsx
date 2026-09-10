@@ -30,7 +30,7 @@ import {
 } from '@/lib/api-client';
 import type { TradingAccount, OrderType } from '@/types';
 import { toast } from 'sonner';
-import { calculateMT5PnL } from '@/utils/mt5';
+import { calculateMT5PnL, calculateInstitutionalMargin } from '@/utils/mt5';
 import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
 
 interface MarketQuote {
@@ -326,6 +326,15 @@ export function DashboardTrading() {
   const dailyLossLeft = Math.max(0, maxDailyAllowedLoss - currentDailyLoss);
 
   const openPositionsForSymbol = openPositions.filter((p) => p.symbol === selectedSymbol);
+  const liveUsedMargin = openPositions.reduce((sum, p) => sum + (p.margin || 0), 0);
+  const liveFreeMargin = Math.max(0, liveEquity - liveUsedMargin);
+  const estimatedOrderMargin = calculateInstitutionalMargin({
+    symbol: selectedSymbol,
+    lotSize: lotSize || 0,
+    entryPrice: activeQuote.ask > 0 ? activeQuote.ask : (activeQuote.bid || 1),
+    leverage: selectedAccount?.leverage || 100,
+    quoteLookup: (sym) => quoteMap.get(sym),
+  });
 
   return (
     <div className="space-y-6">
@@ -696,6 +705,10 @@ export function DashboardTrading() {
                     onChange={(e) => setLotSize(parseFloat(e.target.value) || 0)}
                     className="w-full bg-card border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                   />
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1 font-mono">
+                    <span>Margin: <strong className="text-foreground font-semibold">${estimatedOrderMargin.toFixed(2)}</strong></span>
+                    <span>Free: <strong className="text-foreground font-semibold">${liveFreeMargin.toFixed(2)}</strong></span>
+                  </div>
                 </div>
 
                 <div>

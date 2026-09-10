@@ -668,7 +668,7 @@ app.get('/api/admin/stats', (_req, res) => {
 });
 
 app.post('/api/admin/accounts/update-status', (req, res) => {
-  const { account_id, status } = req.body;
+  const { account_id, status, immediate } = req.body;
   const db = DBEngine.getDB();
 
   const acc = db.accounts.find((a) => a.id === account_id);
@@ -677,19 +677,42 @@ app.post('/api/admin/accounts/update-status', (req, res) => {
     return;
   }
 
-  acc.status = status;
+  if (status === 'PASSED') {
+    RuleEngine.handlePhasePass(acc, immediate === true);
+  } else if (status === 'FUNDED') {
+    acc.status = 'FUNDED';
+    acc.phase = 1;
+    acc.is_funded = true;
+    acc.funded_at = new Date().toISOString();
+    acc.rules.profit_target_percent = 0;
+    acc.plan_name = `$${acc.account_size.toLocaleString()} Funded Account`;
+  } else {
+    acc.status = status;
+  }
+
   db.audit_logs.push({
     id: `audit-${Date.now()}`,
     actor_id: 'ADMIN',
     actor_role: 'ADMIN',
     action: 'ADMIN_ACCOUNT_STATUS_CHANGE',
     target_id: acc.id,
-    details: `Admin changed account #${acc.account_number} status to ${status}.`,
+    details: `Admin changed account #${acc.account_number} status to ${status}${immediate ? ' (immediate transition)' : ''}.`,
     created_at: new Date().toISOString(),
   });
 
   DBEngine.saveDB();
   res.json({ success: true, account: acc });
+});
+
+// Expedite scheduled phase transition (1-2 hour review skip / test mode)
+app.post('/api/accounts/:id/expedite-transition', (req, res) => {
+  const accId = req.params.id;
+  const newAccount = RuleEngine.provisionScheduledAccount(accId);
+  if (!newAccount) {
+    res.status(400).json({ error: 'No scheduled transition found or account already provisioned.' });
+    return;
+  }
+  res.json({ success: true, account: newAccount });
 });
 
 app.post('/api/admin/payouts/process', (req, res) => {
@@ -713,7 +736,7 @@ app.post('/api/admin/payouts/process', (req, res) => {
 // ADMIN MANUAL ACCOUNT PROVISIONING
 // -------------------------------------------------------------
 app.post('/api/admin/accounts/issue-manual', (req, res) => {
-  const { email, full_name, account_size, type, platform, broker } = req.body;
+  const { email, full_name, account_size, type, stage, platform, broker } = req.body;
   const db = DBEngine.getDB();
 
   if (!email || !account_size) {
@@ -741,40 +764,58 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     db.users.push(user);
   }
 
-  const challengeType = type || 'two_step';
+  let challengeType = type || 'two_step';
   const sizeNum = Number(account_size) || 5000;
+  const selectedStage = stage || (challengeType === 'instant_funding' ? 'funded' : 'step_1');
+
+  const isFunded = selectedStage === 'funded' || challengeType === 'instant_funding';
+  const isStep2 = selectedStage === 'step_2';
+
+  if (isFunded) {
+    challengeType = 'instant_funding';
+  } else if (isStep2) {
+    challengeType = 'two_step';
+  }
+
   const matchedPlan = db.account_plans.find((p) => p.account_size === sizeNum && p.type === challengeType);
 
-  const typeTitle =
-    challengeType === 'one_step'
-      ? 'One-Step Challenge'
-      : challengeType === 'instant_funding'
-      ? 'Instant Funded'
-      : 'Two-Step Evaluation';
+  let planName: string;
+  let phaseNum: number = 1;
+  let accStatus: 'ACTIVE' | 'FUNDED' = 'ACTIVE';
 
-  const planName = matchedPlan ? matchedPlan.name : `$${sizeNum.toLocaleString()} ${typeTitle}`;
+  if (isFunded) {
+    planName = `$${sizeNum.toLocaleString()} Funded Account`;
+    phaseNum = 1;
+    accStatus = 'FUNDED';
+  } else if (isStep2) {
+    planName = `$${sizeNum.toLocaleString()} 2-Step Challenge - Step 2`;
+    phaseNum = 2;
+    accStatus = 'ACTIVE';
+  } else {
+    const typeLabel = challengeType === 'one_step' ? 'One-Step Challenge' : '2-Step Challenge';
+    planName = `$${sizeNum.toLocaleString()} ${typeLabel} - Step 1`;
+    phaseNum = 1;
+    accStatus = 'ACTIVE';
+  }
+
   const planId = matchedPlan ? matchedPlan.id : `plan-${challengeType}-${sizeNum >= 1000 ? `${sizeNum / 1000}k` : sizeNum}`;
   const defaultMaxLot = sizeNum <= 5000 ? 5 : sizeNum <= 10000 ? 10 : sizeNum <= 25000 ? 20 : sizeNum <= 50000 ? 35 : sizeNum <= 100000 ? 50 : 100;
 
-  const rulesConfig = matchedPlan
-    ? matchedPlan.rules
-    : {
-        profit_target_percent: challengeType === 'one_step' ? 10 : challengeType === 'two_step' ? 8 : 0,
-        daily_loss_limit_percent: challengeType === 'one_step' ? 4 : 5,
-        max_loss_limit_percent: challengeType === 'one_step' ? 8 : 10,
-        drawdown_model: 'STATIC' as const,
-        min_trading_days: challengeType === 'one_step' ? 3 : challengeType === 'instant_funding' ? 7 : 0,
-        max_trading_days: null,
-        leverage: challengeType === 'instant_funding' ? 50 : 100,
-        profit_split_percent: challengeType === 'instant_funding' ? 70 : 90,
-        max_lot_size: defaultMaxLot,
-        max_open_positions: 15,
-        news_trading_allowed: true,
-        weekend_holding_allowed: challengeType !== 'instant_funding',
-        ea_trading_allowed: true,
-      };
-
-  const isInstant = challengeType === 'instant_funding';
+  const rulesConfig = {
+    profit_target_percent: isFunded ? 0 : isStep2 ? 5 : challengeType === 'one_step' ? 10 : 8,
+    daily_loss_limit_percent: challengeType === 'one_step' ? 4 : 5,
+    max_loss_limit_percent: challengeType === 'one_step' ? 8 : 10,
+    drawdown_model: 'STATIC' as const,
+    min_trading_days: isFunded ? 0 : challengeType === 'one_step' ? 3 : 0,
+    max_trading_days: null,
+    leverage: isFunded ? 50 : 100,
+    profit_split_percent: isFunded ? 80 : 90,
+    max_lot_size: defaultMaxLot,
+    max_open_positions: 15,
+    news_trading_allowed: true,
+    weekend_holding_allowed: !isFunded,
+    ea_trading_allowed: true,
+  };
 
   const orderId = `ord-${Date.now()}-admin`;
   const newOrder = {
@@ -805,6 +846,8 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     password_hash: traderPassword,
     investor_password_hash: investorPassword,
     server: 'FundedShift-Live01',
+    broker: broker || 'FundedShift Direct ECN',
+    platform: platform || 'fundedshift_terminal',
     plan_id: planId,
     plan_name: planName,
     type: challengeType as any,
@@ -816,8 +859,10 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     highest_equity: sizeNum,
     start_of_day_balance: sizeNum,
     start_of_day_equity: sizeNum,
-    status: isInstant ? ('FUNDED' as const) : ('ACTIVE' as const),
-    phase: isInstant ? 3 : 1,
+    status: accStatus,
+    phase: phaseNum,
+    is_funded: isFunded,
+    funded_at: isFunded ? new Date().toISOString() : undefined,
     trading_days: 0,
     leverage: rulesConfig.leverage,
     rules: rulesConfig,
@@ -828,11 +873,12 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
   db.orders.unshift(newOrder);
   db.accounts.unshift(newAccount);
 
+  const stageLabel = isFunded ? 'Direct Funded Account' : isStep2 ? 'Step 2 Verification' : 'Step 1 Challenge';
   db.notifications.unshift({
     id: `notif-${Date.now()}`,
     user_id: user.id,
-    title: '🎉 Admin Issued Trading Account!',
-    body: `Admin assigned a $${Number(account_size).toLocaleString()} ${challengeType.replace('_', ' ').toUpperCase()} account (#${newAccNumber}) to your email. Login: ${newAccNumber}, Password: ${traderPassword}`,
+    title: `🎉 Admin Issued ${stageLabel}!`,
+    body: `Admin assigned a $${sizeNum.toLocaleString()} ${stageLabel} account (#${newAccNumber}) to your profile. Login: ${newAccNumber}, Password: ${traderPassword}`,
     type: 'success',
     is_read: false,
     created_at: new Date().toISOString(),
@@ -844,7 +890,7 @@ app.post('/api/admin/accounts/issue-manual', (req, res) => {
     actor_role: 'ADMIN',
     action: 'ADMIN_MANUAL_ACCOUNT_PROVISION',
     target_id: newAccount.id,
-    details: `Admin issued $${Number(account_size).toLocaleString()} account #${newAccNumber} to ${user.email}.`,
+    details: `Admin issued $${sizeNum.toLocaleString()} ${stageLabel} account #${newAccNumber} to ${user.email}.`,
     created_at: new Date().toISOString(),
   });
 

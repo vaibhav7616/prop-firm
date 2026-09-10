@@ -110,3 +110,64 @@ export function calculateMT5PnL(params: {
     contractSize,
   };
 }
+
+/**
+ * Calculates exact institutional required margin for a position in USD
+ */
+export function calculateInstitutionalMargin(params: {
+  symbol: string;
+  lotSize: number;
+  entryPrice: number;
+  leverage?: number;
+  contractSize?: number;
+  quoteLookup?: (sym: string) => MT5QuoteLookup | undefined;
+}): number {
+  const { symbol, lotSize, entryPrice, leverage = 100, quoteLookup } = params;
+  const upper = symbol.toUpperCase();
+  const effLeverage = leverage > 0 ? leverage : 100;
+
+  let notionalUSD = 0;
+
+  if (['USDJPY', 'USDCAD', 'USDCHF'].includes(upper)) {
+    notionalUSD = lotSize * 100000;
+  } else if (['EURJPY', 'EURGBP'].includes(upper)) {
+    const eurusd = quoteLookup ? quoteLookup('EURUSD')?.bid || 1.1678 : 1.1678;
+    notionalUSD = lotSize * 100000 * eurusd;
+  } else if (upper === 'GBPJPY') {
+    const gbpusd = quoteLookup ? quoteLookup('GBPUSD')?.bid || 1.3634 : 1.3634;
+    notionalUSD = lotSize * 100000 * gbpusd;
+  } else if (upper === 'GER40') {
+    const eurusd = quoteLookup ? quoteLookup('EURUSD')?.bid || 1.1678 : 1.1678;
+    notionalUSD = lotSize * entryPrice * eurusd;
+  } else if (upper === 'XAUUSD') {
+    notionalUSD = lotSize * 100 * entryPrice;
+  } else if (upper === 'XAGUSD') {
+    notionalUSD = lotSize * 5000 * entryPrice;
+  } else if (upper === 'USOIL') {
+    notionalUSD = lotSize * 1000 * entryPrice;
+  } else if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(upper)) {
+    notionalUSD = lotSize * 1 * entryPrice;
+  } else if (['NAS100', 'US30', 'SPX500'].includes(upper)) {
+    notionalUSD = lotSize * 1 * entryPrice;
+  } else {
+    const contract = params.contractSize || 100000;
+    notionalUSD = lotSize * contract * entryPrice;
+  }
+
+  return Number((notionalUSD / effLeverage).toFixed(2));
+}
+
+/**
+ * Returns accurate pip / point multiplier for spread and pip calculation
+ */
+export function getPipMultiplier(symbol: string, precision?: number): number {
+  const upper = symbol.toUpperCase();
+  if (upper.endsWith('JPY')) return 0.01;
+  if (upper === 'XAGUSD') return 0.001;
+  if (upper === 'XAUUSD' || upper === 'USOIL') return 0.01;
+  if (['NAS100', 'US30', 'SPX500', 'GER40', 'BTCUSD', 'ETHUSD', 'SOLUSD'].includes(upper)) return 1.0;
+  if (precision === 5) return 0.0001;
+  if (precision === 3) return 0.01;
+  if (precision === 2) return 0.01;
+  return 0.0001;
+}

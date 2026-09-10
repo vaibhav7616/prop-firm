@@ -2,7 +2,7 @@ import { DBEngine } from './db';
 import type { PositionEntity, TradeOrderEntity, OrderType } from './types';
 import { marketDataService } from './marketData';
 import { RuleEngine } from './ruleEngine';
-import { calculateMT5PnL } from './mt5';
+import { calculateMT5PnL, calculateInstitutionalMargin } from './mt5';
 
 // Trading Provider Abstraction Interface
 export interface TradingProvider {
@@ -112,9 +112,15 @@ export class TradeExecutionService implements TradingProvider {
 
     const entryPrice = params.type === 'BUY' ? quote.ask : quote.bid;
 
-    // Calculate required margin
-    const notionalValue = params.lotSize * symbolConfig.contractSize * entryPrice;
-    const requiredMargin = notionalValue / (account.leverage || 100);
+    // Calculate required margin using institutional MT5 formula
+    const requiredMargin = calculateInstitutionalMargin({
+      symbol: params.symbol,
+      lotSize: params.lotSize,
+      entryPrice,
+      leverage: account.leverage || 100,
+      contractSize: symbolConfig.contractSize,
+      quoteLookup: (sym) => marketDataService.getQuote(sym) || undefined,
+    });
 
     // Calculate used margin across all open positions
     const currentUsedMargin = openPositions.reduce((sum, p) => sum + p.margin, 0);
@@ -228,7 +234,11 @@ export class TradeExecutionService implements TradingProvider {
 
     // Update account balance
     account.current_balance = Number((account.current_balance + finalPnL).toFixed(2));
-    account.current_equity = account.current_balance;
+    
+    // Accurately recalculate equity with remaining open positions
+    const remainingOpen = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN' && p.id !== position.id);
+    const remainingFloatingPnL = remainingOpen.reduce((sum, p) => sum + (p.floating_pnl || 0), 0);
+    account.current_equity = Number((account.current_balance + remainingFloatingPnL).toFixed(2));
 
     if (account.current_balance > account.highest_balance) {
       account.highest_balance = account.current_balance;

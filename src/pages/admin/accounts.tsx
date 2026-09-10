@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Wallet, Search, Plus, Eye, ShieldAlert, CheckCircle2, XCircle, AlertTriangle, UserCheck, Key, RefreshCw } from 'lucide-react';
-import { formatDateTime, formatCurrency, PLATFORM_LABELS, ACCOUNT_STATUS_LABELS, ACCOUNT_STATUS_COLORS } from '@/lib/constants';
+import { formatDateTime, formatCurrency, PLATFORM_LABELS, ACCOUNT_STATUS_LABELS, ACCOUNT_STATUS_COLORS, getAccountPhaseLabel } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { fetchAdminStatsApi, updateAccountStatusApi, issueManualAccountApi } from '@/lib/api-client';
+import { fetchAdminStatsApi, updateAccountStatusApi, issueManualAccountApi, expediteTransitionApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function AdminAccounts() {
@@ -20,10 +20,11 @@ export function AdminAccounts() {
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [issueEmail, setIssueEmail] = useState('');
   const [issueFullName, setIssueFullName] = useState('');
-  const [issueSize, setIssueSize] = useState(100000);
-  const [issueType, setIssueType] = useState('two_step');
-  const [issuePlatform, setIssuePlatform] = useState('mt5');
-  const [issueBroker, setIssueBroker] = useState('FundedShift Brokerage');
+  const [issueSize, setIssueSize] = useState(5000);
+  const [issueStage, setIssueStage] = useState<'funded' | 'step_1' | 'step_2'>('funded');
+  const [issueType, setIssueType] = useState('instant_funding');
+  const [issuePlatform, setIssuePlatform] = useState('fundedshift_terminal');
+  const [issueBroker, setIssueBroker] = useState('FundedShift Direct ECN');
   const [issuing, setIssuing] = useState(false);
 
   // Detail Modal State
@@ -43,16 +44,26 @@ export function AdminAccounts() {
     loadData();
   }, []);
 
-  const handleStatusChange = async (accountId: string, newStatus: string) => {
-    const res = await updateAccountStatusApi(accountId, newStatus);
+  const handleStatusChange = async (accountId: string, newStatus: string, immediate: boolean = false) => {
+    const res = await updateAccountStatusApi(accountId, newStatus, immediate);
     if (res && res.success) {
-      toast.success(`Account status updated to ${newStatus.toUpperCase()}`);
+      toast.success(`Account status updated to ${newStatus.toUpperCase()}${immediate ? ' (Immediate)' : ''}`);
       loadData();
       if (selectedAccount && selectedAccount.id === accountId) {
-        setSelectedAccount({ ...selectedAccount, status: newStatus });
+        setSelectedAccount(res.account || { ...selectedAccount, status: newStatus });
       }
     } else {
       toast.error('Failed to update account status.');
+    }
+  };
+
+  const handleExpediteAccount = async (accountId: string) => {
+    const res = await expediteTransitionApi(accountId);
+    if (res && res.success) {
+      toast.success(`Transition expedited! New account #${res.account.account_number} created.`);
+      loadData();
+    } else {
+      toast.error(res?.error || 'Failed to expedite transition.');
     }
   };
 
@@ -62,11 +73,13 @@ export function AdminAccounts() {
       return;
     }
     setIssuing(true);
+    const calculatedType = issueStage === 'funded' ? 'instant_funding' : issueStage === 'step_2' ? 'two_step' : issueType;
     const res = await issueManualAccountApi({
       email: issueEmail.trim(),
       full_name: issueFullName.trim() || undefined,
       account_size: issueSize,
-      type: issueType,
+      stage: issueStage,
+      type: calculatedType,
       platform: issuePlatform,
       broker: issueBroker,
     });
@@ -74,7 +87,7 @@ export function AdminAccounts() {
     setIssuing(false);
 
     if (res && res.success) {
-      toast.success(`Trading account #${res.account.account_number} issued to ${res.user.email}!`);
+      toast.success(`Trading account #${res.account.account_number} (${issueStage.toUpperCase()}) issued to ${res.user.email}!`);
       setShowIssueModal(false);
       setIssueEmail('');
       setIssueFullName('');
@@ -204,14 +217,21 @@ export function AdminAccounts() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-bold text-foreground">{account.plan_name || 'Challenge Account'}</p>
+                          <p className="text-sm font-bold text-foreground">
+                            {account.plan_name || `${account.account_size >= 1000 ? `$${account.account_size / 1000}K` : `$${account.account_size}`} ${getAccountPhaseLabel(account)}`}
+                          </p>
                           <span className={cn('text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase', ACCOUNT_STATUS_COLORS[account.status as keyof typeof ACCOUNT_STATUS_COLORS] || 'bg-muted text-muted-foreground')}>
                             {ACCOUNT_STATUS_LABELS[account.status as keyof typeof ACCOUNT_STATUS_LABELS] || account.status}
                           </span>
+                          {account.scheduled_transition?.status === 'SCHEDULED' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold border border-amber-500/40 animate-pulse">
+                              Scheduled for {account.scheduled_transition.target_type === 'funded' ? 'Funded' : 'Step 2'}
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Trader: <span className="text-foreground font-medium">{accUser?.email ?? account.user_id}</span> ({accUser?.full_name ?? 'N/A'})
+                          Trader: <span className="text-foreground font-medium">{accUser?.email ?? account.user_id}</span> ({accUser?.full_name ?? 'N/A'}) · <span className="text-gold-400 font-semibold">{getAccountPhaseLabel(account)}</span>
                         </p>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 font-mono">
@@ -243,7 +263,7 @@ export function AdminAccounts() {
                     </div>
 
                     {/* Right Actions */}
-                    <div className="flex items-center gap-2 self-end lg:self-center">
+                    <div className="flex items-center gap-2 self-end lg:self-center flex-wrap">
                       <button
                         onClick={() => setSelectedAccount(account)}
                         className="px-3 py-2 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold flex items-center gap-1.5 transition-colors border border-border/50"
@@ -252,13 +272,30 @@ export function AdminAccounts() {
                         Inspect Details
                       </button>
 
+                      {account.scheduled_transition?.status === 'SCHEDULED' && (
+                        <button
+                          onClick={() => handleExpediteAccount(account.id)}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-bold transition-colors border border-amber-500/40"
+                          title="Skip 1-2h wait and provision next phase immediately"
+                        >
+                          ⚡ Activate Now
+                        </button>
+                      )}
+
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleStatusChange(account.id, 'PASSED')}
                           className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold transition-colors"
-                          title="Mark Account Passed"
+                          title="Pass Phase (Schedules 1-2h transition)"
                         >
                           Pass
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(account.id, 'FUNDED')}
+                          className="px-2.5 py-1.5 rounded-lg bg-gold-400/10 hover:bg-gold-400/20 text-gold-400 text-xs font-bold transition-colors"
+                          title="Grant Direct Funded Account"
+                        >
+                          Fund
                         </button>
                         <button
                           onClick={() => handleStatusChange(account.id, 'BREACHED')}
@@ -293,7 +330,7 @@ export function AdminAccounts() {
               Issue Manual Account to User
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Directly assign a funded or evaluation trading account to a user by email. Ideal if payment was made offline or auto-generation was delayed.
+              Directly assign a funded or evaluation trading account to a user by email. Ideal if payment was made offline or manual onboarding is requested.
             </DialogDescription>
           </DialogHeader>
 
@@ -318,6 +355,63 @@ export function AdminAccounts() {
               />
             </div>
 
+            {/* Stage Selector: Funded vs Step 1 vs Step 2 */}
+            <div>
+              <label className="text-xs font-semibold text-foreground mb-1.5 block">Account Stage / Tier *</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIssueStage('funded');
+                    setIssueType('instant_funding');
+                  }}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer',
+                    issueStage === 'funded'
+                      ? 'bg-gold-400/20 border-gold-400 text-gold-400 shadow-xs'
+                      : 'bg-background border-border text-muted-foreground hover:border-border/80'
+                  )}
+                >
+                  <span className="block font-bold">Funded Account</span>
+                  <span className="text-[10px] font-normal opacity-80 block mt-0.5">Direct Funded (No Eval)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIssueStage('step_1');
+                    if (issueType === 'instant_funding') setIssueType('two_step');
+                  }}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer',
+                    issueStage === 'step_1'
+                      ? 'bg-blue-500/20 border-blue-400 text-blue-400 shadow-xs'
+                      : 'bg-background border-border text-muted-foreground hover:border-border/80'
+                  )}
+                >
+                  <span className="block font-bold">Step 1</span>
+                  <span className="text-[10px] font-normal opacity-80 block mt-0.5">Evaluation Phase 1</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIssueStage('step_2');
+                    setIssueType('two_step');
+                  }}
+                  className={cn(
+                    'p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer',
+                    issueStage === 'step_2'
+                      ? 'bg-purple-500/20 border-purple-400 text-purple-400 shadow-xs'
+                      : 'bg-background border-border text-muted-foreground hover:border-border/80'
+                  )}
+                >
+                  <span className="block font-bold">Step 2</span>
+                  <span className="text-[10px] font-normal opacity-80 block mt-0.5">Verification Phase 2</span>
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">Account Size</label>
@@ -336,16 +430,27 @@ export function AdminAccounts() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-foreground mb-1 block">Account Type</label>
-                <select
-                  value={issueType}
-                  onChange={(e) => setIssueType(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-background border border-border text-xs"
-                >
-                  <option value="instant_funding">Instant Funded (No Eval)</option>
-                  <option value="one_step">1-Step Challenge</option>
-                  <option value="two_step">2-Step Challenge</option>
-                </select>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {issueStage === 'funded' ? 'Account Type' : 'Challenge Format'}
+                </label>
+                {issueStage === 'funded' ? (
+                  <div className="w-full p-2.5 rounded-xl bg-background/50 border border-gold-400/40 text-xs font-semibold text-gold-400">
+                    Instant Funded Account (Live)
+                  </div>
+                ) : issueStage === 'step_2' ? (
+                  <div className="w-full p-2.5 rounded-xl bg-background/50 border border-purple-400/40 text-xs font-semibold text-purple-400">
+                    2-Step Challenge (Phase 2)
+                  </div>
+                ) : (
+                  <select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value)}
+                    className="w-full p-2.5 rounded-xl bg-background border border-border text-xs"
+                  >
+                    <option value="two_step">2-Step Challenge</option>
+                    <option value="one_step">1-Step Challenge</option>
+                  </select>
+                )}
               </div>
             </div>
 
