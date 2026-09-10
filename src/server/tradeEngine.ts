@@ -43,8 +43,17 @@ export class TradeExecutionService implements TradingProvider {
       return { success: false, error: 'Trading account not found or unauthorized.' };
     }
 
+    if (account.status === 'PASSED') {
+      const nextAcc = db.accounts.find((a) => a.id === account.scheduled_transition?.provisioned_account_id);
+      const nextAccHint = nextAcc ? ` #${nextAcc.account_number} (${nextAcc.plan_name})` : '';
+      return {
+        success: false,
+        error: `Trading is locked: Account #${account.account_number} has successfully PASSED this evaluation phase. Please switch to your new next-stage account${nextAccHint} to continue trading.`,
+      };
+    }
+
     if (account.status !== 'ACTIVE' && account.status !== 'FUNDED') {
-      return { success: false, error: `Account is currently ${account.status}. Trading is disabled.` };
+      return { success: false, error: `Account #${account.account_number} is currently ${account.status}. Trading is disabled.` };
     }
 
     // Pre-trade rule evaluation

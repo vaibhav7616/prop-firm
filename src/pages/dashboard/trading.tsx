@@ -20,6 +20,9 @@ import {
   Crosshair,
   Zap,
   Clock,
+  Award,
+  ArrowRight,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -336,6 +339,10 @@ export function DashboardTrading() {
     quoteLookup: (sym) => quoteMap.get(sym),
   });
 
+  const provisionedNextAccount = accounts.find(
+    (a) => a.id === selectedAccount?.scheduled_transition?.provisioned_account_id
+  );
+
   return (
     <div className="space-y-6">
       {/* Top Header & Account Switcher */}
@@ -370,6 +377,42 @@ export function DashboardTrading() {
           )}
         </div>
       </div>
+
+      {/* Passed Account Global Notification Banner */}
+      {selectedAccount?.status === 'PASSED' && (
+        <div className="bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/15 border border-emerald-500/30 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Award className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-foreground">
+                  Evaluation Stage Passed — Trading Is Locked
+                </h3>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold">
+                  Phase Complete
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Congratulations! You successfully completed this phase on account #{selectedAccount.account_number}. To prevent risk after qualification, trading on this account is locked.
+                {provisionedNextAccount ? ` Your next account (${provisionedNextAccount.plan_name}) is active and ready.` : ''}
+              </p>
+            </div>
+          </div>
+
+          {provisionedNextAccount && (
+            <button
+              type="button"
+              onClick={() => setSelectedAccount(provisionedNextAccount)}
+              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-2 shrink-0 transition-all active:scale-95 whitespace-nowrap"
+            >
+              <span>Switch to #{provisionedNextAccount.account_number} ({provisionedNextAccount.status === 'FUNDED' ? 'Funded' : 'Step 2'})</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Account Metrics Ribbon */}
       {selectedAccount && (
@@ -409,12 +452,14 @@ export function DashboardTrading() {
             <div className="mt-1 flex items-center gap-2">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase ${
-                  selectedAccount.status === 'ACTIVE' || selectedAccount.status === 'FUNDED'
+                  selectedAccount.status === 'PASSED'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : selectedAccount.status === 'ACTIVE' || selectedAccount.status === 'FUNDED'
                     ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                     : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                 }`}
               >
-                {selectedAccount.status}
+                {selectedAccount.status === 'PASSED' ? 'PASSED (LOCKED)' : selectedAccount.status}
               </span>
             </div>
           </div>
@@ -735,7 +780,28 @@ export function DashboardTrading() {
                   />
                 </div>
 
-                {activeQuote.isMarketOpen === false ? (
+                {selectedAccount?.status === 'PASSED' ? (
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-2.5">
+                    <div className="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
+                      <Lock className="h-4 w-4" />
+                      <span>Stage Passed — Trading Locked</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      You passed this evaluation stage! Trades cannot be opened on account #{selectedAccount.account_number}.
+                      {provisionedNextAccount ? ` Switch to your next account to continue.` : ''}
+                    </p>
+                    {provisionedNextAccount && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAccount(provisionedNextAccount)}
+                        className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                      >
+                        <span>Trade Next Account (#{provisionedNextAccount.account_number})</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ) : activeQuote.isMarketOpen === false ? (
                   <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center text-amber-500 text-xs font-bold flex items-center justify-center gap-1.5">
                     <Clock className="h-4 w-4" /> Market Closed (Weekend) — Opens Sunday 22:00 UTC
                   </div>

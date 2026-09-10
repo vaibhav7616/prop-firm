@@ -16,6 +16,8 @@ import {
   Info,
   Clock,
   Layers,
+  Award,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -404,7 +406,7 @@ export function DashboardObjectives() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Your trading logs have met all rule requirements. Your new {selected.scheduled_transition.target_type === 'funded' ? 'Funded' : 'Phase 2'} credentials will be provisioned automatically within the scheduled window.
+                      Your trading logs have met all rule requirements. Trading on account #{selected.account_number} is locked. Your new {selected.scheduled_transition.target_type === 'funded' ? 'Funded' : 'Phase 2'} credentials will be provisioned automatically within the scheduled window.
                     </p>
                   </div>
                 </div>
@@ -428,6 +430,53 @@ export function DashboardObjectives() {
                   </Button>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* Passed and Next Account Already Provisioned Banner */}
+          {selected.status === 'PASSED' && selected.scheduled_transition?.status === 'PROVISIONED' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-brand-500/15 border border-emerald-500/40 p-5 shadow-sm space-y-3"
+            >
+              {(() => {
+                const nextAccount = accounts.find((a) => a.id === selected.scheduled_transition?.provisioned_account_id);
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                        <Award className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-display font-bold text-foreground text-sm sm:text-base">
+                            🎉 Phase Completed & Account Passed!
+                          </h3>
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <Lock className="h-3 w-3" /> Trading Locked
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Account #{selected.account_number} has passed all objectives. In accordance with prop firm risk policy, trading is locked on this account.
+                          {nextAccount ? ` Your new ${nextAccount.status === 'FUNDED' ? 'Live Funded Account' : 'Step 2 Account'} #${nextAccount.account_number} is ready!` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    {nextAccount && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleSelectAccount(nextAccount.id, true)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 shrink-0 self-end sm:self-center"
+                      >
+                        <span>Trade Next Account (#{nextAccount.account_number})</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
 

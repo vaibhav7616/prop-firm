@@ -80,7 +80,7 @@ export function AnimatedAccountSelector({
                     : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
                 )}
               >
-                {active?.status || 'active'}
+                {String(active?.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : active?.status || 'active'}
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground truncate max-w-[200px] sm:max-w-[240px]">
@@ -175,7 +175,7 @@ export function AnimatedAccountSelector({
                             : 'bg-rose-500/10 text-rose-600'
                         )}
                       >
-                        {acc.status}
+                        {String(acc.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : acc.status}
                       </span>
                       {isSelected && <Check className="h-3.5 w-3.5 text-brand-500" />}
                     </div>

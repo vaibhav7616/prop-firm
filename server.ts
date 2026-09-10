@@ -678,7 +678,7 @@ app.post('/api/admin/accounts/update-status', (req, res) => {
   }
 
   if (status === 'PASSED') {
-    RuleEngine.handlePhasePass(acc, immediate === true);
+    RuleEngine.handlePhasePass(acc, immediate !== false);
   } else if (status === 'FUNDED') {
     acc.status = 'FUNDED';
     acc.phase = 1;

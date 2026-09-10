@@ -228,6 +228,11 @@ export function AdminAccounts() {
                               Scheduled for {account.scheduled_transition.target_type === 'funded' ? 'Funded' : 'Step 2'}
                             </span>
                           )}
+                          {account.status === 'PASSED' && account.scheduled_transition?.status === 'PROVISIONED' && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/40">
+                              Locked · Next Account Provisioned
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-0.5">

@@ -26,6 +26,15 @@ export class RuleEngine {
       return { hasBreached: true, violations: db.rule_violations.filter((v) => v.account_id === accountId), passedTarget: false, warnings: [] };
     }
 
+    if (account.status === 'PASSED') {
+      return {
+        hasBreached: false,
+        violations: [],
+        passedTarget: true,
+        warnings: ['Account has passed this evaluation stage and is locked for trading.'],
+      };
+    }
+
     // Get active open positions for account
     const openPositions = db.positions.filter((p) => p.account_id === accountId && p.status === 'OPEN');
 
@@ -249,7 +258,7 @@ export class RuleEngine {
         const stillOpenPositions = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN');
         if (stillOpenPositions.length === 0) {
           passedTarget = true;
-          this.handlePhasePass(account);
+          this.handlePhasePass(account, true);
         } else {
           warnings.push('Profit target reached! Close all open positions to complete evaluation.');
         }
@@ -263,19 +272,59 @@ export class RuleEngine {
   /**
    * Transitions or schedules an account transition when profit target is achieved or admin passes account.
    */
-  public static handlePhasePass(account: TradingAccountEntity, immediate: boolean = false) {
+  public static handlePhasePass(account: TradingAccountEntity, immediate: boolean = true) {
     const db = DBEngine.getDB();
 
     account.status = 'PASSED';
     account.passed_at = account.passed_at || new Date().toISOString();
 
-    let target_type: 'step_2' | 'funded' = 'funded';
-    let target_title = 'Instant Funded Account';
+    // Institutional rule: Ensure all remaining open positions are closed flat at current market prices
+    const openPositions = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN');
+    for (const pos of openPositions) {
+      const quote = marketDataService.getQuote(pos.symbol);
+      const currentBid = quote ? quote.bid : pos.open_price;
+      const currentAsk = quote ? quote.ask : pos.open_price;
+      const pnlResult = calculateMT5PnL({
+        symbol: pos.symbol,
+        type: pos.type,
+        lotSize: pos.lot_size,
+        openPrice: pos.open_price,
+        currentBid,
+        currentAsk,
+        commission: pos.commission || 0,
+        swap: pos.swap || 0,
+        quoteLookup: (sym) => marketDataService.getQuote(sym) || undefined,
+      });
 
-    if (account.type === 'one_step') {
+      pos.status = 'CLOSED';
+      pos.close_price = pnlResult.currentPrice;
+      pos.closed_at = new Date().toISOString();
+      pos.close_reason = 'PHASE_PASSED_FLAT';
+      pos.realized_pnl = pnlResult.netPnl;
+      pos.floating_pnl = 0;
+      account.current_balance = Number((account.current_balance + pnlResult.netPnl).toFixed(2));
+    }
+    account.current_equity = account.current_balance;
+
+    let target_type: 'step_2' | 'step_3' | 'funded' = 'funded';
+    let target_title = 'Live Funded Account';
+
+    const accType = (account.type || '').toLowerCase();
+    const planId = (account.plan_id || '').toLowerCase();
+    const planName = (account.plan_name || '').toLowerCase();
+
+    const isOneStep = accType.includes('one') || accType.includes('1step') || planId.includes('1step') || planName.includes('one-step') || planName.includes('1-step');
+    const isThreeStep = accType.includes('three') || accType.includes('3step') || planId.includes('3step');
+    const isTwoStep = !isOneStep && !isThreeStep && (accType.includes('two') || accType.includes('2step') || planId.includes('2step') || planName.includes('two-step') || planName.includes('2-step') || !account.is_funded);
+
+    if (isOneStep) {
+      // 1-Step Challenge: passing Phase 1 -> Immediately Funded Account!
       target_type = 'funded';
-      target_title = 'Instant Funded Account';
-    } else if (account.type === 'two_step') {
+      target_title = 'Live Funded Account';
+    } else if (isTwoStep) {
+      // 2-Step Challenge:
+      // Phase 1 -> Step 2 Verification Account
+      // Phase 2 -> Live Funded Account
       if (account.phase === 1) {
         target_type = 'step_2';
         target_title = 'Step 2 Verification Account';
@@ -283,8 +332,20 @@ export class RuleEngine {
         target_type = 'funded';
         target_title = 'Live Funded Account';
       }
+    } else if (isThreeStep) {
+      // 3-Step Challenge:
+      if (account.phase === 1) {
+        target_type = 'step_2';
+        target_title = 'Step 2 Verification Account';
+      } else if (account.phase === 2) {
+        target_type = 'step_3';
+        target_title = 'Step 3 Final Verification Account';
+      } else {
+        target_type = 'funded';
+        target_title = 'Live Funded Account';
+      }
     } else {
-      // instant_funding or other
+      // Default fallback
       target_type = 'funded';
       target_title = 'Live Funded Account';
     }
@@ -302,8 +363,8 @@ export class RuleEngine {
       return this.provisionScheduledAccount(account.id);
     }
 
-    // Schedule next phase in 1 to 2 hours (e.g. 90 minutes)
-    const delayMinutes = 60 + Math.floor(Math.random() * 60); // 60 to 120 minutes
+    // Schedule next phase in 1 to 2 hours
+    const delayMinutes = 60 + Math.floor(Math.random() * 60);
     const scheduledFor = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 
     account.scheduled_transition = {
@@ -316,17 +377,17 @@ export class RuleEngine {
     };
 
     let notificationTitle = '🎉 Step Passed!';
-    let notificationBody = `Congratulations! You passed your evaluation for account #${account.account_number}. Your ${target_title} is undergoing automated risk review and will be provisioned in 1–2 hours.`;
+    let notificationBody = `Congratulations! You passed your evaluation for account #${account.account_number}. Your ${target_title} is being prepared.`;
 
-    if (account.type === 'one_step') {
+    if (isOneStep) {
       notificationTitle = '🎉 One-Step Challenge Passed!';
-      notificationBody = `Outstanding job! You passed your One-Step Challenge. Your $${account.account_size.toLocaleString()} Instant Funded Account is scheduled for activation in 1–2 hours.`;
-    } else if (account.type === 'two_step' && account.phase === 1) {
+      notificationBody = `Outstanding job! You passed your One-Step Challenge. Your $${account.account_size.toLocaleString()} Live Funded Account is being provisioned.`;
+    } else if (isTwoStep && account.phase === 1) {
       notificationTitle = '🎉 Step 1 Evaluation Passed!';
-      notificationBody = `Great work! Phase 1 evaluation complete. Your Step 2 Verification account ($${account.account_size.toLocaleString()}) is scheduled for delivery in 1–2 hours.`;
-    } else if (account.type === 'two_step' && account.phase === 2) {
-      notificationTitle = '🏆 Challenge Completed! Live Funded Awaiting!';
-      notificationBody = `Incredible trading! Phase 2 verification complete. Your $${account.account_size.toLocaleString()} Live Funded Account is scheduled for activation in 1–2 hours.`;
+      notificationBody = `Great work! Phase 1 evaluation complete. Your Step 2 Verification account ($${account.account_size.toLocaleString()}) is being provisioned.`;
+    } else if (isTwoStep && account.phase === 2) {
+      notificationTitle = '🏆 Challenge Completed! Live Funded Account Ready!';
+      notificationBody = `Incredible trading! Phase 2 verification complete. Your $${account.account_size.toLocaleString()} Live Funded Account is being provisioned.`;
     }
 
     db.notifications.unshift({
@@ -345,7 +406,7 @@ export class RuleEngine {
       actor_role: 'SYSTEM',
       action: 'PHASE_PASSED_TRANSITION_SCHEDULED',
       target_id: account.id,
-      details: `Account #${account.account_number} passed. Scheduled ${target_title} for ${scheduledFor} (1–2 hour window).`,
+      details: `Account #${account.account_number} passed. Scheduled ${target_title}.`,
       created_at: new Date().toISOString(),
     });
 
@@ -354,15 +415,21 @@ export class RuleEngine {
   }
 
   /**
-   * Provisions the next account once the 1-2 hour delay expires or if expedited by user/admin.
+   * Provisions the next account once passed or when scheduled.
    */
   public static provisionScheduledAccount(parentAccountId: string): TradingAccountEntity | null {
     const db = DBEngine.getDB();
     const parent = db.accounts.find((a) => a.id === parentAccountId);
     if (!parent) return null;
 
-    if (!parent.scheduled_transition || parent.scheduled_transition.status !== 'SCHEDULED') {
+    if (!parent.scheduled_transition || (parent.scheduled_transition.status !== 'SCHEDULED' && parent.scheduled_transition.status !== 'PROVISIONED')) {
       return null;
+    }
+
+    // If already provisioned, return existing provisioned account
+    if (parent.scheduled_transition.status === 'PROVISIONED' && parent.scheduled_transition.provisioned_account_id) {
+      const existing = db.accounts.find((a) => a.id === parent.scheduled_transition!.provisioned_account_id);
+      if (existing) return existing;
     }
 
     const { target_type } = parent.scheduled_transition;
@@ -373,7 +440,7 @@ export class RuleEngine {
     let newAccount: TradingAccountEntity;
 
     if (target_type === 'step_2') {
-      const step2Rules = { ...parent.rules, profit_target_percent: 5 };
+      const step2Rules = { ...parent.rules, profit_target_percent: 5, min_trading_days: 0 };
       newAccount = {
         ...parent,
         id: `acc-step2-${Date.now()}`,
@@ -406,19 +473,62 @@ export class RuleEngine {
       db.notifications.unshift({
         id: `notif-${Date.now()}`,
         user_id: parent.user_id,
-        title: '⚡ Step 2 Verification Account is LIVE!',
-        body: `Your Step 2 Verification account #${newAccNumber} ($${parent.account_size.toLocaleString()}) has been provisioned! You can now start trading Step 2.`,
+        title: '⚡ Step 2 Verification Account is Active!',
+        body: `Congratulations! You passed Step 1. Your Step 2 Verification account #${newAccNumber} ($${parent.account_size.toLocaleString()}) has been provisioned! You can now trade Step 2.`,
+        type: 'success',
+        is_read: false,
+        created_at: new Date().toISOString(),
+      });
+    } else if (target_type === 'step_3') {
+      const step3Rules = { ...parent.rules, profit_target_percent: 5, min_trading_days: 0 };
+      newAccount = {
+        ...parent,
+        id: `acc-step3-${Date.now()}`,
+        parent_account_id: parent.id,
+        account_number: newAccNumber,
+        login: newAccNumber,
+        password_hash: traderPassword,
+        investor_password_hash: investorPassword,
+        server: 'FundedShift-Live01',
+        plan_name: `$${parent.account_size.toLocaleString()} 3-Step Challenge - Step 3`,
+        type: 'three_step',
+        phase: 3,
+        status: 'ACTIVE',
+        is_funded: false,
+        account_size: parent.account_size,
+        starting_balance: parent.account_size,
+        current_balance: parent.account_size,
+        current_equity: parent.account_size,
+        highest_balance: parent.account_size,
+        highest_equity: parent.account_size,
+        start_of_day_balance: parent.account_size,
+        start_of_day_equity: parent.account_size,
+        trading_days: 0,
+        rules: step3Rules,
+        scheduled_transition: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      db.notifications.unshift({
+        id: `notif-${Date.now()}`,
+        user_id: parent.user_id,
+        title: '⚡ Step 3 Final Verification Account is Active!',
+        body: `Congratulations! You passed Step 2. Your Step 3 Verification account #${newAccNumber} ($${parent.account_size.toLocaleString()}) has been provisioned!`,
         type: 'success',
         is_read: false,
         created_at: new Date().toISOString(),
       });
     } else {
-      // Funded Account
+      // Live Funded Account
       const fundedRules = {
         ...parent.rules,
         profit_target_percent: 0, // No profit target for funded accounts
         min_trading_days: 0,
       };
+
+      const parentType = (parent.type || '').toLowerCase();
+      const isOneStep = parentType.includes('one') || (parent.plan_name || '').toLowerCase().includes('one-step') || (parent.plan_name || '').toLowerCase().includes('1-step');
 
       newAccount = {
         ...parent,
@@ -429,9 +539,9 @@ export class RuleEngine {
         password_hash: traderPassword,
         investor_password_hash: investorPassword,
         server: 'FundedShift-Live01',
-        plan_name: `$${parent.account_size.toLocaleString()} Funded Account`,
-        type: parent.type === 'one_step' ? 'one_step' : 'instant_funding',
-        phase: 1, // Funded accounts are live stage, not "Phase 3"
+        plan_name: `$${parent.account_size.toLocaleString()} Live Funded Account`,
+        type: isOneStep ? 'one_step' : parent.type === 'instant_funding' ? 'instant_funding' : 'two_step',
+        phase: 1, // Funded accounts are live stage
         status: 'FUNDED',
         is_funded: true,
         account_size: parent.account_size,
@@ -472,7 +582,7 @@ export class RuleEngine {
       actor_role: 'SYSTEM',
       action: 'PROVISION_SCHEDULED_ACCOUNT',
       target_id: newAccount.id,
-      details: `Provisioned ${newAccount.plan_name} #${newAccount.account_number} following completed transition from parent #${parent.account_number}.`,
+      details: `Provisioned ${newAccount.plan_name} #${newAccount.account_number} following completed transition from passed parent #${parent.account_number}.`,
       created_at: new Date().toISOString(),
     });
 

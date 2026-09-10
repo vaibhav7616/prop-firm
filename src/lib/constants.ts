@@ -62,7 +62,7 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
 export const ACCOUNT_STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
   active: 'Active',
-  passed: 'Passed',
+  passed: 'Passed (Locked)',
   failed: 'Failed',
   breached: 'Breached',
   funded: 'Funded',
@@ -70,7 +70,7 @@ export const ACCOUNT_STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: 'Pending Payment',
   PENDING_ACTIVATION: 'Pending Activation',
   ACTIVE: 'Active',
-  PASSED: 'Passed',
+  PASSED: 'Passed (Locked)',
   FAILED: 'Failed',
   BREACHED: 'Breached',
   FUNDED: 'Funded',
