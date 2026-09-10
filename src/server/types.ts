@@ -12,7 +12,7 @@ export type AccountStatus =
   | 'PAYOUT_PENDING'
   | 'CLOSED';
 
-export type ChallengeType = 'one_step' | 'two_step' | 'instant_funding' | 'three_step';
+export type ChallengeType = 'one_step' | 'two_step' | 'instant_funding';
 
 export type OrderType = 'BUY' | 'SELL' | 'BUY_LIMIT' | 'SELL_LIMIT' | 'BUY_STOP' | 'SELL_STOP';
 
@@ -115,7 +115,7 @@ export interface UserEntity {
 }
 
 export interface ScheduledTransition {
-  target_type: 'step_2' | 'step_3' | 'funded';
+  target_type: 'step_2' | 'funded';
   target_title: string;
   passed_at: string;
   scheduled_for: string; // ISO date string (1 to 2 hours from passed_at)

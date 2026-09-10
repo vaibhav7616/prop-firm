@@ -306,7 +306,7 @@ export class RuleEngine {
     }
     account.current_equity = account.current_balance;
 
-    let target_type: 'step_2' | 'step_3' | 'funded' = 'funded';
+    let target_type: 'step_2' | 'funded' = 'funded';
     let target_title = 'Live Funded Account';
 
     const accType = (account.type || '').toLowerCase();
@@ -314,8 +314,7 @@ export class RuleEngine {
     const planName = (account.plan_name || '').toLowerCase();
 
     const isOneStep = accType.includes('one') || accType.includes('1step') || planId.includes('1step') || planName.includes('one-step') || planName.includes('1-step');
-    const isThreeStep = accType.includes('three') || accType.includes('3step') || planId.includes('3step');
-    const isTwoStep = !isOneStep && !isThreeStep && (accType.includes('two') || accType.includes('2step') || planId.includes('2step') || planName.includes('two-step') || planName.includes('2-step') || !account.is_funded);
+    const isTwoStep = !isOneStep && (accType.includes('two') || accType.includes('2step') || planId.includes('2step') || planName.includes('two-step') || planName.includes('2-step') || !account.is_funded);
 
     if (isOneStep) {
       // 1-Step Challenge: passing Phase 1 -> Immediately Funded Account!
@@ -328,18 +327,6 @@ export class RuleEngine {
       if (account.phase === 1) {
         target_type = 'step_2';
         target_title = 'Step 2 Verification Account';
-      } else {
-        target_type = 'funded';
-        target_title = 'Live Funded Account';
-      }
-    } else if (isThreeStep) {
-      // 3-Step Challenge:
-      if (account.phase === 1) {
-        target_type = 'step_2';
-        target_title = 'Step 2 Verification Account';
-      } else if (account.phase === 2) {
-        target_type = 'step_3';
-        target_title = 'Step 3 Final Verification Account';
       } else {
         target_type = 'funded';
         target_title = 'Live Funded Account';
@@ -475,46 +462,6 @@ export class RuleEngine {
         user_id: parent.user_id,
         title: '⚡ Step 2 Verification Account is Active!',
         body: `Congratulations! You passed Step 1. Your Step 2 Verification account #${newAccNumber} ($${parent.account_size.toLocaleString()}) has been provisioned! You can now trade Step 2.`,
-        type: 'success',
-        is_read: false,
-        created_at: new Date().toISOString(),
-      });
-    } else if (target_type === 'step_3') {
-      const step3Rules = { ...parent.rules, profit_target_percent: 5, min_trading_days: 0 };
-      newAccount = {
-        ...parent,
-        id: `acc-step3-${Date.now()}`,
-        parent_account_id: parent.id,
-        account_number: newAccNumber,
-        login: newAccNumber,
-        password_hash: traderPassword,
-        investor_password_hash: investorPassword,
-        server: 'FundedShift-Live01',
-        plan_name: `$${parent.account_size.toLocaleString()} 3-Step Challenge - Step 3`,
-        type: 'three_step',
-        phase: 3,
-        status: 'ACTIVE',
-        is_funded: false,
-        account_size: parent.account_size,
-        starting_balance: parent.account_size,
-        current_balance: parent.account_size,
-        current_equity: parent.account_size,
-        highest_balance: parent.account_size,
-        highest_equity: parent.account_size,
-        start_of_day_balance: parent.account_size,
-        start_of_day_equity: parent.account_size,
-        trading_days: 0,
-        rules: step3Rules,
-        scheduled_transition: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      db.notifications.unshift({
-        id: `notif-${Date.now()}`,
-        user_id: parent.user_id,
-        title: '⚡ Step 3 Final Verification Account is Active!',
-        body: `Congratulations! You passed Step 2. Your Step 3 Verification account #${newAccNumber} ($${parent.account_size.toLocaleString()}) has been provisioned!`,
         type: 'success',
         is_read: false,
         created_at: new Date().toISOString(),
