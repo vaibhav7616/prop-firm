@@ -136,10 +136,11 @@ Investor Pass:    ${invPass}
   // Filter accounts
   const filteredAccounts = useMemo(() => {
     return accounts.filter((acc) => {
+      const statusLower = (acc.status || '').toLowerCase();
       // Tab filter
-      if (activeTab === 'active' && acc.status !== 'active') return false;
-      if (activeTab === 'funded' && acc.status !== 'funded') return false;
-      if (activeTab === 'passed' && acc.status !== 'passed') return false;
+      if (activeTab === 'active' && statusLower !== 'active') return false;
+      if (activeTab === 'funded' && statusLower !== 'funded' && !acc.is_funded) return false;
+      if (activeTab === 'passed' && statusLower !== 'passed') return false;
 
       // Search filter
       if (searchQuery.trim()) {
@@ -160,8 +161,8 @@ Investor Pass:    ${invPass}
       return sum + bal;
     }, 0);
     const totalPnl = totalEquity - totalCap;
-    const fundedAccs = accounts.filter((a) => a.status === 'funded').length;
-    const activeAccs = accounts.filter((a) => a.status === 'active').length;
+    const fundedAccs = accounts.filter((a) => (a.status || '').toLowerCase() === 'funded' || a.is_funded).length;
+    const activeAccs = accounts.filter((a) => (a.status || '').toLowerCase() === 'active').length;
 
     return { totalCap, totalEquity, totalPnl, fundedAccs, activeAccs };
   }, [accounts]);
@@ -249,9 +250,9 @@ Investor Pass:    ${invPass}
           {(
             [
               { id: 'all', label: `All (${accounts.length})` },
-              { id: 'active', label: `Active (${accounts.filter((a) => a.status === 'active').length})` },
-              { id: 'funded', label: `Funded (${accounts.filter((a) => a.status === 'funded').length})` },
-              { id: 'passed', label: `Passed (${accounts.filter((a) => a.status === 'passed').length})` },
+              { id: 'active', label: `Active (${accounts.filter((a) => (a.status || '').toLowerCase() === 'active').length})` },
+              { id: 'funded', label: `Funded (${accounts.filter((a) => (a.status || '').toLowerCase() === 'funded' || a.is_funded).length})` },
+              { id: 'passed', label: `Passed (${accounts.filter((a) => (a.status || '').toLowerCase() === 'passed').length})` },
             ] as const
           ).map((tab) => (
             <button
@@ -352,7 +353,10 @@ Investor Pass:    ${invPass}
                   }`;
 
             const hasEarnedCert =
-              account.status === 'passed' || account.status === 'funded' || account.phase > 1;
+              (account.status || '').toLowerCase() === 'passed' ||
+              (account.status || '').toLowerCase() === 'funded' ||
+              account.is_funded ||
+              account.phase > 1;
 
             // Fallback credentials formatting
             const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
@@ -473,7 +477,7 @@ Investor Pass:    ${invPass}
                           Phase {account.phase}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          {account.status === 'funded' ? 'Funded Capital Account' : 'Evaluation Stage'}
+                          {(account.status || '').toLowerCase() === 'funded' || account.is_funded ? 'Funded Capital Account' : 'Evaluation Stage'}
                         </p>
                       </div>
                     </div>

@@ -53,11 +53,21 @@ export function DashboardCertificates() {
           const profitAmt = (typeof acc.profit === 'number' && !isNaN(acc.profit)) ? acc.profit : (currentBal - startingBal);
           const p1Target = (startingBal * (((acc.rules as any)?.profit_target_percent || (acc.rules as any)?.profit_target || 8) / 100));
 
+          const statusLower = (acc.status || '').toLowerCase();
+          const isFundedAcc = statusLower === 'funded' || acc.is_funded === true;
+          const isBreached = statusLower === 'failed' || statusLower === 'breached';
+
           // Condition 1: Step 1 Passed
-          const hasPassedStep1 = acc.status === 'passed' || acc.status === 'funded' || acc.phase > 1 || (acc.phase === 1 && profitAmt >= p1Target && acc.status !== 'failed');
+          const hasPassedStep1 =
+            statusLower === 'passed' ||
+            isFundedAcc ||
+            acc.phase > 1 ||
+            (acc.phase === 1 && profitAmt >= p1Target && !isBreached);
 
           // Condition 2: Step 2 Passed / Funded
-          const hasPassedStep2OrFunded = acc.status === 'funded' || acc.phase > 2 || (acc.phase === 2 && (acc.status === 'passed' || profitAmt >= (startingBal * 0.05)));
+          const hasPassedStep2OrFunded =
+            isFundedAcc ||
+            (acc.phase === 2 && (statusLower === 'passed' || profitAmt >= (startingBal * 0.05)));
 
           // Step 1 Passed Certificate - ONLY IF STEP 1 IS CLEARED
           if (hasPassedStep1) {

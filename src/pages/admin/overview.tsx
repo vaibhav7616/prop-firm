@@ -333,11 +333,11 @@ export function AdminOverview() {
                   <div className="flex items-center gap-3">
                     <span
                       className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${
-                        acc.status === 'active'
+                        (acc.status || '').toLowerCase() === 'active'
                           ? 'bg-blue-500/15 text-blue-400'
-                          : acc.status === 'passed' || acc.status === 'funded'
+                          : (acc.status || '').toLowerCase() === 'passed' || (acc.status || '').toLowerCase() === 'funded'
                           ? 'bg-emerald-500/15 text-emerald-400'
-                          : acc.status === 'failed'
+                          : (acc.status || '').toLowerCase() === 'failed' || (acc.status || '').toLowerCase() === 'breached'
                           ? 'bg-red-500/15 text-red-400'
                           : 'bg-muted text-muted-foreground'
                       }`}

@@ -179,10 +179,12 @@ export class TradeExecutionService implements TradingProvider {
     db.positions.unshift(newPosition);
     db.trade_orders.unshift(tradeOrder);
 
-    // Update trading days if first trade of the day
-    if (account.trading_days === 0) {
-      account.trading_days = 1;
-    }
+    // Update distinct trading days based on executed orders
+    const accountOrders = db.trade_orders.filter((o) => o.account_id === account.id);
+    const distinctDays = new Set(
+      accountOrders.map((o) => (o.executed_at || new Date().toISOString()).slice(0, 10))
+    );
+    account.trading_days = Math.max(1, distinctDays.size);
 
     DBEngine.saveDB();
 

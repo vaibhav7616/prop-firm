@@ -677,9 +677,11 @@ app.post('/api/admin/accounts/update-status', (req, res) => {
     return;
   }
 
-  if (status === 'PASSED') {
+  const targetStatus = (status || '').toUpperCase();
+
+  if (targetStatus === 'PASSED') {
     RuleEngine.handlePhasePass(acc, immediate !== false);
-  } else if (status === 'FUNDED') {
+  } else if (targetStatus === 'FUNDED') {
     acc.status = 'FUNDED';
     acc.phase = 1;
     acc.is_funded = true;
@@ -687,7 +689,7 @@ app.post('/api/admin/accounts/update-status', (req, res) => {
     acc.rules.profit_target_percent = 0;
     acc.plan_name = `$${acc.account_size.toLocaleString()} Funded Account`;
   } else {
-    acc.status = status;
+    acc.status = targetStatus as any;
   }
 
   db.audit_logs.push({

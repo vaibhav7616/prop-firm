@@ -86,11 +86,14 @@ export function DashboardPayouts() {
     loadData();
   }, [user]);
 
-  const fundedAccounts = accounts.filter((a) => a.status === 'FUNDED' || a.status === 'PAYOUT_PENDING');
+  const fundedAccounts = accounts.filter(
+    (a) => a.is_funded || (a.status || '').toUpperCase() === 'FUNDED' || (a.status || '').toUpperCase() === 'PAYOUT_PENDING'
+  );
 
   const handleOpenPayoutModal = (acc: any) => {
     const profit = acc.current_balance - acc.starting_balance;
-    if (acc.status !== 'FUNDED' && acc.status !== 'PAYOUT_PENDING') {
+    const isFunded = acc.is_funded || (acc.status || '').toUpperCase() === 'FUNDED' || (acc.status || '').toUpperCase() === 'PAYOUT_PENDING';
+    if (!isFunded) {
       toast.error('Only active Funded accounts are eligible for profit payouts.');
       return;
     }

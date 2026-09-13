@@ -178,7 +178,8 @@ export function DashboardObjectives() {
 
   const isInstant =
     (selected?.challenge_type || selected?.challenge?.type || '').toLowerCase().includes('instant') ||
-    selected?.status === 'funded';
+    (selected?.status || '').toLowerCase() === 'funded' ||
+    selected?.is_funded;
   const isPhase2 = selected?.phase === 2;
 
   const profitTargetPct =
@@ -230,7 +231,8 @@ export function DashboardObjectives() {
           const accRules = account.rules || {};
           const isAccInstant =
             (account.challenge_type || account.challenge?.type || '').toLowerCase().includes('instant') ||
-            account.status === 'funded';
+            (account.status || '').toLowerCase() === 'funded' ||
+            account.is_funded;
           const accProfitTargetPct =
             accRules.profit_target ??
             (accRules as any)?.profit_target_percent ??
