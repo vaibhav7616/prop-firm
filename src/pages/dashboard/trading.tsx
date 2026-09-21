@@ -1120,55 +1120,37 @@ export function DashboardTrading() {
               )}
             </div>
 
-            {/* 1. Dotted Horizontal Line across the chart connecting to the Live Market Price Level */}
+            {/* Dotted Horizontal Line across the chart connecting to the Ask/Bid Level (matching first screenshot) */}
             <div 
-              className="absolute left-0 right-[125px] border-t border-dotted pointer-events-none z-20 transition-all duration-300 ease-out"
+              className="absolute left-0 right-[120px] border-t border-dotted border-[#10b981]/70 pointer-events-none z-20 transition-all duration-300 ease-out"
               style={{
                 top: `${priceYPercent}%`,
-                borderColor: priceTrend === 'UP' ? 'rgba(8, 153, 129, 0.75)' : 'rgba(242, 54, 69, 0.75)',
               }}
             />
 
-            {/* 2. Dotted Horizontal Line across the chart connecting to the Ask Level */}
-            <div 
-              className="absolute left-0 right-[125px] border-t border-dotted border-[#089981]/50 pointer-events-none z-20 transition-all duration-300 ease-out"
-              style={{
-                top: `calc(${priceYPercent}% - 14px)`,
-              }}
-            />
-
-            {/* 3. Right Axis: Authentic Live Price, Ask and Bid Price Scale Badges (matching image.png) */}
+            {/* Right Axis: Ask and Bid Price Scale Badges (strictly matching first screenshot) */}
             <div 
               className="absolute right-0 z-30 flex flex-col items-end pointer-events-none pr-0.5 select-none transition-all duration-300 ease-out"
               style={{
-                top: `calc(${priceYPercent}% - 22px)`,
+                top: `calc(${priceYPercent}% - 14px)`,
               }}
             >
-              {/* LIVE MARKET LAST PRICE BADGE (Red when tick down, Green when tick up, exactly like 85,795.04 in user image) */}
-              <div className="flex items-center shadow-xl rounded-[2px] overflow-hidden leading-none text-right mb-[2px]">
-                <span className={`text-white font-mono font-black text-[11px] px-2 py-[3px] tracking-tight transition-colors ${
-                  priceTrend === 'UP' ? 'bg-[#089981]' : 'bg-[#f23645]'
-                }`}>
-                  {formatPrice((activeQuote as any).price || activeQuote.bid, activeMeta.digits)}
-                </span>
-              </div>
-
               {/* ASK BADGE */}
-              <div className="flex items-center shadow-lg rounded-[2px] overflow-hidden leading-none text-right">
-                <span className="bg-[#0d3b33] text-[#00e5a3] font-sans text-[10px] font-bold px-1.5 py-[3px] lowercase border-r border-[#00e5a3]/25">
+              <div className="flex items-center shadow-md rounded-t-[3px] overflow-hidden leading-none text-right">
+                <span className="bg-[#133832] text-[#5eead4] font-sans text-[10px] font-semibold px-2 py-[3px] lowercase border-r border-[#104f45]">
                   ask
                 </span>
-                <span className="bg-[#089981] text-white font-mono font-extrabold text-[11px] px-2 py-[3px] tracking-tight">
+                <span className="bg-[#104f45] text-[#e6fffa] font-mono font-bold text-[11px] px-2.5 py-[3px] tracking-tight min-w-[72px] text-right">
                   {formatPrice(activeQuote.ask, activeMeta.digits)}
                 </span>
               </div>
 
-              {/* BID BADGE */}
-              <div className="flex items-center shadow-lg rounded-[2px] overflow-hidden leading-none text-right mt-[2px]">
-                <span className="bg-[#18202c] text-[#8e9eb3] font-sans text-[10px] font-bold px-1.5 py-[3px] lowercase border-r border-slate-700/40">
+              {/* BID BADGE (Contiguous right below ask) */}
+              <div className="flex items-center shadow-md rounded-b-[3px] overflow-hidden leading-none text-right border-t border-[#0b1320]/40">
+                <span className="bg-[#1c2633] text-[#94a3b8] font-sans text-[10px] font-semibold px-2 py-[3px] lowercase border-r border-[#263342]">
                   bid
                 </span>
-                <span className="bg-[#2a3240] text-slate-100 font-mono font-extrabold text-[11px] px-2 py-[3px] tracking-tight">
+                <span className="bg-[#263342] text-[#f8fafc] font-mono font-bold text-[11px] px-2.5 py-[3px] tracking-tight min-w-[72px] text-right">
                   {formatPrice(activeQuote.bid, activeMeta.digits)}
                 </span>
               </div>
