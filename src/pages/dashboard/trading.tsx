@@ -282,6 +282,21 @@ export function DashboardTrading() {
     };
   }, [quotes, selectedSymbol, activeMeta]);
 
+  // Real-time market price direction & trend
+  const priceTrend = quoteHistory[selectedSymbol] || 'DOWN';
+
+  // Dynamic vertical price position on the chart canvas (tracks live price movements relative to 24h range)
+  const priceYPercent = useMemo(() => {
+    const high = activeQuote.high || (activeQuote.ask * 1.002);
+    const low = activeQuote.low || (activeQuote.bid * 0.998);
+    const range = Math.max(0.00001, high - low);
+    const current = (activeQuote as any).price || activeQuote.bid;
+    // Higher price is closer to the top of chart (lower percentage)
+    const ratio = Math.max(0, Math.min(1, (high - current) / range));
+    // Scale smoothly inside the active candle region between 20% and 68%
+    return 20 + ratio * 48;
+  }, [activeQuote]);
+
   // Filtered Quotes for Watchlist
   const filteredQuotes = useMemo(() => {
     return SYMBOL_REGISTRY.filter((item) => {
@@ -935,15 +950,30 @@ export function DashboardTrading() {
 
               <div className="h-4 w-[1px] bg-slate-800 hidden sm:block" />
 
-              {/* Live Bid / Ask prices */}
+              {/* Live Bid / Ask / Last prices */}
               <div className="flex items-center gap-2 font-mono text-xs">
+                {/* LIVE MARKET PRICE */}
+                <div className={`border px-2 py-0.5 rounded flex items-center gap-1.5 transition-colors ${
+                  priceTrend === 'UP' ? 'bg-[#089981]/20 border-[#089981]/50 text-emerald-400' : 'bg-[#f23645]/20 border-[#f23645]/50 text-rose-400'
+                }`}>
+                  <span className="h-1.5 w-1.5 rounded-full animate-ping bg-current" />
+                  <span className="text-[10px] font-sans font-semibold text-slate-300">LIVE</span>
+                  <span className="font-bold">{formatPrice((activeQuote as any).price || activeQuote.bid, activeMeta.digits)}</span>
+                </div>
+
                 <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-400 font-sans font-semibold">BID</span>
                   <span className="text-slate-200 font-bold">{formatPrice(activeQuote.bid, activeMeta.digits)}</span>
                 </div>
+
                 <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-400 font-sans font-semibold">ASK</span>
                   <span className="text-emerald-400 font-bold">{formatPrice(activeQuote.ask, activeMeta.digits)}</span>
+                </div>
+
+                <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded hidden md:flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400 font-sans font-semibold">SPREAD</span>
+                  <span className="text-amber-400 font-bold font-mono">{activeQuote.spread || activeMeta.baseSpread} pips</span>
                 </div>
               </div>
             </div>
@@ -1090,11 +1120,39 @@ export function DashboardTrading() {
               )}
             </div>
 
-            {/* Dotted Horizontal Line across the chart connecting to the Ask Level */}
-            <div className="absolute top-[calc(29%+8px)] left-0 right-[125px] border-t border-dotted border-[#089981]/50 pointer-events-none z-20" />
+            {/* 1. Dotted Horizontal Line across the chart connecting to the Live Market Price Level */}
+            <div 
+              className="absolute left-0 right-[125px] border-t border-dotted pointer-events-none z-20 transition-all duration-300 ease-out"
+              style={{
+                top: `${priceYPercent}%`,
+                borderColor: priceTrend === 'UP' ? 'rgba(8, 153, 129, 0.75)' : 'rgba(242, 54, 69, 0.75)',
+              }}
+            />
 
-            {/* Right Axis: Authentic Ask and Bid Price Scale Badges (matching image.png) */}
-            <div className="absolute top-[29%] right-0 z-30 flex flex-col items-end pointer-events-none pr-0.5 select-none">
+            {/* 2. Dotted Horizontal Line across the chart connecting to the Ask Level */}
+            <div 
+              className="absolute left-0 right-[125px] border-t border-dotted border-[#089981]/50 pointer-events-none z-20 transition-all duration-300 ease-out"
+              style={{
+                top: `calc(${priceYPercent}% - 14px)`,
+              }}
+            />
+
+            {/* 3. Right Axis: Authentic Live Price, Ask and Bid Price Scale Badges (matching image.png) */}
+            <div 
+              className="absolute right-0 z-30 flex flex-col items-end pointer-events-none pr-0.5 select-none transition-all duration-300 ease-out"
+              style={{
+                top: `calc(${priceYPercent}% - 22px)`,
+              }}
+            >
+              {/* LIVE MARKET LAST PRICE BADGE (Red when tick down, Green when tick up, exactly like 85,795.04 in user image) */}
+              <div className="flex items-center shadow-xl rounded-[2px] overflow-hidden leading-none text-right mb-[2px]">
+                <span className={`text-white font-mono font-black text-[11px] px-2 py-[3px] tracking-tight transition-colors ${
+                  priceTrend === 'UP' ? 'bg-[#089981]' : 'bg-[#f23645]'
+                }`}>
+                  {formatPrice((activeQuote as any).price || activeQuote.bid, activeMeta.digits)}
+                </span>
+              </div>
+
               {/* ASK BADGE */}
               <div className="flex items-center shadow-lg rounded-[2px] overflow-hidden leading-none text-right">
                 <span className="bg-[#0d3b33] text-[#00e5a3] font-sans text-[10px] font-bold px-1.5 py-[3px] lowercase border-r border-[#00e5a3]/25">

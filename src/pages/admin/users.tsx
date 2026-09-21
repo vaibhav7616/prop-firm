@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Search, UserCheck, Shield, ShieldAlert, Plus, Wallet, Mail } from 'lucide-react';
+import { Search, UserCheck, Shield, ShieldAlert, Plus, Wallet, Mail, CheckCircle2 } from 'lucide-react';
 import { formatDate } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { fetchAdminStatsApi } from '@/lib/api-client';
+import { fetchAdminStatsApi, issueManualAccountApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function AdminUsers() {
@@ -12,6 +13,14 @@ export function AdminUsers() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Give Account Modal state
+  const [targetUser, setTargetUser] = useState<any | null>(null);
+  const [issueSize, setIssueSize] = useState(5000);
+  const [issueStage, setIssueStage] = useState<'funded' | 'step_1' | 'step_2'>('funded');
+  const [issueType, setIssueType] = useState('instant_funding');
+  const [issuePlatform, setIssuePlatform] = useState('fundedshift_terminal');
+  const [issuing, setIssuing] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -146,6 +155,20 @@ export function AdminUsers() {
                       {/* Admin Quick Action Controls */}
                       <div className="flex items-center gap-1.5">
                         <button
+                          onClick={() => {
+                            setTargetUser(user);
+                            setIssueSize(5000);
+                            setIssueStage('funded');
+                            setIssueType('instant_funding');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-gold-400/15 hover:bg-gold-400/25 text-gold-400 text-xs font-semibold flex items-center gap-1.5 transition-all border border-gold-400/30 shadow-sm"
+                          title="Give / Assign Trading Account"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Give Account
+                        </button>
+
+                        <button
                           onClick={() => handleToggleRole(user.id, user.role)}
                           className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold text-foreground transition-colors border border-border/50"
                           title="Change Role"
@@ -173,6 +196,125 @@ export function AdminUsers() {
           })}
         </div>
       )}
+
+      {/* Give Account to User Dialog */}
+      <Dialog open={!!targetUser} onOpenChange={(open) => !open && setTargetUser(null)}>
+        <DialogContent className="max-w-md glass border-border/50">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-gold-400" />
+              Give Account to {targetUser?.full_name || targetUser?.email}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Directly issue an institutional trading account with instant login credentials.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Account Size</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[5000, 10000, 25000, 50000, 100000, 200000].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => setIssueSize(size)}
+                    className={cn(
+                      'py-2 px-3 rounded-xl border text-xs font-mono font-bold transition-all',
+                      issueSize === size
+                        ? 'border-gold-400 bg-gold-400/20 text-gold-400 shadow-sm'
+                        : 'border-border/50 bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    )}
+                  >
+                    ${size >= 1000 ? `${size / 1000}K` : size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Account Stage / Tier</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: 'funded', label: 'Funded (Live)', desc: 'Direct Live Payouts' },
+                  { key: 'step_1', label: 'Step 1 Challenge', desc: 'Evaluation Phase' },
+                  { key: 'step_2', label: 'Step 2 Challenge', desc: 'Verification Phase' },
+                ].map((st) => (
+                  <button
+                    key={st.key}
+                    type="button"
+                    onClick={() => setIssueStage(st.key as any)}
+                    className={cn(
+                      'p-2 rounded-xl border text-left transition-all',
+                      issueStage === st.key
+                        ? 'border-gold-400 bg-gold-400/20 text-gold-400'
+                        : 'border-border/50 bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                    )}
+                  >
+                    <p className="text-xs font-bold">{st.label}</p>
+                    <p className="text-[9px] opacity-75 mt-0.5">{st.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-secondary/40 border border-border/40 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">User:</span>
+                <span className="font-medium text-foreground">{targetUser?.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Execution Platform:</span>
+                <span className="font-semibold text-foreground">FundedShift Web Terminal</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">ECN Broker Server:</span>
+                <span className="font-mono text-gold-400 font-bold">FundedShift-Live01</span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <button
+              type="button"
+              onClick={() => setTargetUser(null)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={issuing}
+              onClick={async () => {
+                if (!targetUser) return;
+                setIssuing(true);
+                const calculatedType = issueStage === 'funded' ? 'instant_funding' : issueStage === 'step_2' ? 'two_step' : issueType;
+                const res = await issueManualAccountApi({
+                  email: targetUser.email,
+                  full_name: targetUser.full_name || undefined,
+                  account_size: issueSize,
+                  stage: issueStage,
+                  type: calculatedType,
+                  platform: issuePlatform,
+                  broker: 'FundedShift Direct ECN',
+                });
+                setIssuing(false);
+
+                if (res && res.success) {
+                  toast.success(`Account #${res.account.account_number} issued to ${targetUser.email}!`);
+                  setTargetUser(null);
+                  loadData();
+                } else {
+                  toast.error(res?.error || 'Failed to issue account.');
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-gold-gradient text-black font-bold text-xs hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {issuing ? 'Provisioning...' : 'Confirm & Issue Account'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
