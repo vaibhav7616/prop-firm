@@ -269,8 +269,8 @@
       "type": "two_step",
       "account_size": 25000,
       "starting_balance": 25000,
-      "current_balance": 25000,
-      "current_equity": 25000,
+      "current_balance": 24999.78,
+      "current_equity": 24999.78,
       "highest_balance": 25000,
       "highest_equity": 25000,
       "start_of_day_balance": 25000,
@@ -279,7 +279,7 @@
       "phase": 1,
       "is_funded": true,
       "funded_at": "2026-09-10T10:13:11.101Z",
-      "trading_days": 0,
+      "trading_days": 1,
       "leverage": 100,
       "rules": {
         "profit_target_percent": 0,
@@ -924,6 +924,25 @@
   ],
   "positions": [
     {
+      "id": "pos-1790007807716-pk4d",
+      "account_id": "acc-funded-1789035191101",
+      "user_id": "demo-trader-id-12345",
+      "symbol": "BTCUSD",
+      "type": "BUY",
+      "lot_size": 0.01,
+      "open_price": 85818.03,
+      "margin": 8.58,
+      "floating_pnl": 0,
+      "swap": 0,
+      "commission": 0.06,
+      "status": "CLOSED",
+      "opened_at": "2026-09-21T16:23:27.716Z",
+      "close_price": 85801.69,
+      "closed_at": "2026-09-21T16:23:31.109Z",
+      "close_reason": "MANUAL",
+      "realized_pnl": -0.22
+    },
+    {
       "id": "pos-1789035151371-hpdh",
       "account_id": "acc-step2-1786176040687",
       "user_id": "demo-trader-id-12345",
@@ -984,6 +1003,17 @@
     }
   ],
   "trade_orders": [
+    {
+      "id": "ord-trd-1790007807716",
+      "account_id": "acc-funded-1789035191101",
+      "user_id": "demo-trader-id-12345",
+      "symbol": "BTCUSD",
+      "type": "BUY",
+      "lot_size": 0.01,
+      "price": 85818.03,
+      "status": "EXECUTED",
+      "executed_at": "2026-09-21T16:23:27.716Z"
+    },
     {
       "id": "ord-trd-1789035151371",
       "account_id": "acc-step2-1786176040687",

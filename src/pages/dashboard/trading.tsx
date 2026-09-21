@@ -38,6 +38,7 @@ import {
   closePositionApi,
   fetchAccountPositionsApi,
 } from '@/lib/api-client';
+import { calculateMT5PnL, calculateInstitutionalMargin } from '@/utils/mt5';
 import type { TradingAccount } from '@/types';
 import { toast } from 'sonner';
 
@@ -356,7 +357,7 @@ export function DashboardTrading() {
 
     const width = rect.width;
     const height = rect.height;
-    const priceScaleWidth = 72;
+    const priceScaleWidth = 96;
     const timeScaleHeight = 26;
     const chartWidth = width - priceScaleWidth;
     const chartHeight = height - timeScaleHeight;
@@ -483,24 +484,13 @@ export function DashboardTrading() {
       ctx.stroke();
     }
 
-    // Horizontal Bid Line (Dashed Red) & Ask Line (Dashed Green)
+    // Horizontal Dotted Ask Line (Green) & Bid Line (Slate)
     const bidY = getY(activeQuote.bid);
     const askY = getY(activeQuote.ask);
 
-    // Bid Line
+    // Dotted Ask Line (Green) extending across the chart
     ctx.save();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, bidY);
-    ctx.lineTo(chartWidth, bidY);
-    ctx.stroke();
-    ctx.restore();
-
-    // Ask Line
-    ctx.save();
-    ctx.setLineDash([4, 4]);
+    ctx.setLineDash([2, 3]);
     ctx.strokeStyle = '#10b981';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -509,21 +499,132 @@ export function DashboardTrading() {
     ctx.stroke();
     ctx.restore();
 
-    // Right-Axis Tags for Bid & Ask
-    ctx.fillStyle = '#059669';
-    ctx.fillRect(chartWidth + 1, askY - 9, priceScaleWidth - 3, 18);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9px ui-monospace, SFMono-Regular, monospace';
-    ctx.fillText(`ASK ${activeQuote.ask.toFixed(activeMeta.digits)}`, chartWidth + 4, askY + 3);
-
-    ctx.fillStyle = '#1e2536';
-    ctx.fillRect(chartWidth + 1, bidY - 9, priceScaleWidth - 3, 18);
-    ctx.strokeStyle = '#ef4444';
+    // Dotted Bid Line (Slate/Grey) extending across the chart
+    ctx.save();
+    ctx.setLineDash([2, 3]);
+    ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
-    ctx.strokeRect(chartWidth + 1, bidY - 9, priceScaleWidth - 3, 18);
-    ctx.fillStyle = '#fca5a5';
-    ctx.font = 'bold 9px ui-monospace, SFMono-Regular, monospace';
-    ctx.fillText(`BID ${activeQuote.bid.toFixed(activeMeta.digits)}`, chartWidth + 4, bidY + 3);
+    ctx.beginPath();
+    ctx.moveTo(0, bidY);
+    ctx.lineTo(chartWidth, bidY);
+    ctx.stroke();
+    ctx.restore();
+
+    // Helper: Draw 2-part pill badge exactly matching user screenshot (image.png)
+    const drawPriceBadge = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      label: 'ask' | 'bid',
+      priceStr: string,
+      labelBg: string,
+      labelColor: string,
+      valBg: string,
+      valColor: string,
+      borderColor?: string
+    ) => {
+      const labelW = 28;
+      const valW = w - labelW;
+      const r = 3;
+
+      // 1. Label container (rounded left corners)
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + labelW, y);
+      ctx.lineTo(x + labelW, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fillStyle = labelBg;
+      ctx.fill();
+
+      // 2. Price container (rounded right corners)
+      const vx = x + labelW;
+      ctx.beginPath();
+      ctx.moveTo(vx, y);
+      ctx.lineTo(vx + valW - r, y);
+      ctx.quadraticCurveTo(vx + valW, y, vx + valW, y + r);
+      ctx.lineTo(vx + valW, y + h - r);
+      ctx.quadraticCurveTo(vx + valW, y + h, vx + valW - r, y + h);
+      ctx.lineTo(vx, y + h);
+      ctx.closePath();
+      ctx.fillStyle = valBg;
+      ctx.fill();
+
+      if (borderColor) {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Vertical separator between label and value
+      ctx.beginPath();
+      ctx.moveTo(vx, y);
+      ctx.lineTo(vx, y + h);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 3. Label Text (e.g. "ask" or "bid" in lowercase)
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = labelColor;
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(label, x + labelW / 2, y + h / 2 + 0.5);
+
+      // 4. Value Text (Exact formatted price)
+      ctx.textAlign = 'center';
+      ctx.fillStyle = valColor;
+      ctx.font = 'bold 10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+      ctx.fillText(priceStr, vx + valW / 2, y + h / 2 + 0.5);
+    };
+
+    // Right-Axis Tags for Bid & Ask
+    const badgeH = 18;
+    const badgeW = priceScaleWidth - 4;
+    const badgeX = chartWidth + 2;
+
+    let askBadgeY = askY - badgeH / 2;
+    let bidBadgeY = bidY - badgeH / 2;
+
+    // In tight spreads (or as shown in image.png where ask is neatly stacked on top of bid):
+    if (Math.abs(askBadgeY - bidBadgeY) < badgeH) {
+      const topY = Math.min(askY, bidY);
+      askBadgeY = topY - badgeH;
+      bidBadgeY = topY;
+    }
+
+    // Ask Badge: Dark Teal label + Emerald Green price (exact match with user image.png)
+    drawPriceBadge(
+      badgeX,
+      askBadgeY,
+      badgeW,
+      badgeH,
+      'ask',
+      activeQuote.ask.toFixed(activeMeta.digits),
+      '#0f3f38',  // dark greenish teal label
+      '#5eead4',  // light mint text
+      '#059669',  // vibrant emerald green price
+      '#ffffff'   // bold white price text
+    );
+
+    // Bid Badge: Dark Slate label + Charcoal Dark price (exact match with user image.png)
+    drawPriceBadge(
+      badgeX,
+      bidBadgeY,
+      badgeW,
+      badgeH,
+      'bid',
+      activeQuote.bid.toFixed(activeMeta.digits),
+      '#1e293b',  // dark slate label
+      '#94a3b8',  // light slate text
+      '#0f172a',  // charcoal dark price
+      '#e2e8f0',  // light grey bold text
+      'rgba(51, 65, 85, 0.8)' // subtle border
+    );
 
     // Time Axis labels
     ctx.fillStyle = '#64748b';
@@ -705,9 +806,43 @@ export function DashboardTrading() {
   const startBalance = Number.isFinite(selectedAccount?.starting_balance) ? selectedAccount!.starting_balance! : accountSize;
   const currentBalance = Number.isFinite(selectedAccount?.current_balance) ? selectedAccount!.current_balance! : startBalance;
 
+  // Quote lookup map for real-time MT5 PnL and margin calculations
+  const quoteMap = useMemo(() => {
+    const map = new Map<string, { bid: number; ask: number; price?: number }>();
+    for (const q of quotes) {
+      map.set(q.symbol, { bid: q.bid, ask: q.ask, price: q.price });
+    }
+    return map;
+  }, [quotes]);
+
+  // Real-time MT5 calculated positions with streaming market ticks
+  const livePositions = useMemo(() => {
+    return positions.map((pos) => {
+      if (pos.status !== 'OPEN') return pos;
+      const q = quotes.find((quote) => quote.symbol === pos.symbol);
+      if (!q) return pos;
+      const pnlResult = calculateMT5PnL({
+        symbol: pos.symbol,
+        type: pos.type as 'BUY' | 'SELL',
+        lotSize: pos.lot_size,
+        openPrice: pos.open_price,
+        currentBid: q.bid,
+        currentAsk: q.ask,
+        commission: pos.commission || 0,
+        swap: pos.swap || 0,
+        quoteLookup: (sym) => quoteMap.get(sym),
+      });
+      return {
+        ...pos,
+        current_price: pnlResult.currentPrice,
+        floating_pnl: pnlResult.netPnl,
+      };
+    });
+  }, [positions, quotes, quoteMap]);
+
   // Open & Floating PnL
-  const openPositions = positions.filter((p) => p.status === 'OPEN');
-  const closedPositions = positions.filter((p) => p.status === 'CLOSED');
+  const openPositions = livePositions.filter((p) => p.status === 'OPEN');
+  const closedPositions = livePositions.filter((p) => p.status === 'CLOSED');
   const floatingPnl = openPositions.reduce((sum, p) => sum + (p.floating_pnl || 0), 0);
   const currentEquity = currentBalance + floatingPnl;
 
@@ -741,10 +876,17 @@ export function DashboardTrading() {
   const overallBreachEquity = startBalance - maxLossLimit;
 
   // Margin Calculation
-  const leverage = rules.leverage || 100;
-  const marginRequired = ((lotSize * activeMeta.contractSize * activeQuote.bid) / leverage);
-  const per1PctMove = ((lotSize * activeMeta.contractSize * activeQuote.bid) * 0.01);
-  const freeMargin = Math.max(0, currentEquity - marginRequired);
+  const leverage = rules.leverage || selectedAccount?.leverage || 100;
+  const liveUsedMargin = openPositions.reduce((sum, p) => sum + (p.margin || 0), 0);
+  const freeMargin = Math.max(0, currentEquity - liveUsedMargin);
+  const marginRequired = calculateInstitutionalMargin({
+    symbol: selectedSymbol,
+    lotSize: lotSize || 0,
+    entryPrice: activeQuote.ask > 0 ? activeQuote.ask : (activeQuote.bid || 1),
+    leverage,
+    quoteLookup: (sym) => quoteMap.get(sym),
+  });
+  const per1PctMove = ((lotSize * activeMeta.contractSize * (activeQuote.bid || 1)) * 0.01);
 
   // Lot Stepper Helpers
   const stepLot = (delta: number) => {
@@ -1401,7 +1543,10 @@ export function DashboardTrading() {
                     <tbody className="divide-y divide-slate-800/40">
                       {openPositions.map((pos) => {
                         const isBuy = pos.type === 'BUY';
-                        const currentP = isBuy ? activeQuote.bid : activeQuote.ask;
+                        const posMeta = SYMBOL_REGISTRY.find((s) => s.symbol === pos.symbol);
+                        const digits = posMeta?.digits ?? 2;
+                        const posQuote = quotes.find((q) => q.symbol === pos.symbol);
+                        const currentP = pos.current_price || (posQuote ? (isBuy ? posQuote.bid : posQuote.ask) : pos.open_price);
                         const pnl = pos.floating_pnl ?? 0;
                         return (
                           <tr key={pos.id} className="hover:bg-slate-800/30 text-[11px]">
@@ -1420,8 +1565,8 @@ export function DashboardTrading() {
                               </span>
                             </td>
                             <td className="px-3 py-1.5 text-slate-200">{pos.lot_size}</td>
-                            <td className="px-3 py-1.5 text-slate-300">{Number(pos.open_price).toFixed(activeMeta.digits)}</td>
-                            <td className="px-3 py-1.5 text-slate-300">{currentP.toFixed(activeMeta.digits)}</td>
+                            <td className="px-3 py-1.5 text-slate-300">{Number(pos.open_price).toFixed(digits)}</td>
+                            <td className="px-3 py-1.5 text-slate-300 font-bold">{currentP.toFixed(digits)}</td>
                             <td className="px-3 py-1.5 text-slate-400">{pos.stop_loss || '-'}</td>
                             <td className="px-3 py-1.5 text-slate-400">{pos.take_profit || '-'}</td>
                             <td className={`px-3 py-1.5 text-right font-bold ${pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -1459,26 +1604,30 @@ export function DashboardTrading() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/40">
-                    {closedPositions.map((pos) => (
-                      <tr key={pos.id} className="hover:bg-slate-800/30 text-[11px]">
-                        <td className="px-3 py-1.5 text-slate-400">#{pos.id.slice(-6)}</td>
-                        <td className="px-3 py-1.5 font-bold text-slate-200">{pos.symbol}</td>
-                        <td className="px-3 py-1.5">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                              pos.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
-                            }`}
-                          >
-                            {pos.type}
-                          </span>
-                        </td>
-                        <td className="px-3 py-1.5 text-slate-200">{pos.lot_size}</td>
-                        <td className="px-3 py-1.5 text-slate-300">{Number(pos.close_price || pos.open_price).toFixed(activeMeta.digits)}</td>
-                        <td className={`px-3 py-1.5 text-right font-bold ${(pos.realized_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {(pos.realized_pnl || 0) >= 0 ? `+$${(pos.realized_pnl || 0).toFixed(2)}` : `-$${Math.abs(pos.realized_pnl || 0).toFixed(2)}`}
-                        </td>
-                      </tr>
-                    ))}
+                    {closedPositions.map((pos) => {
+                      const posMeta = SYMBOL_REGISTRY.find((s) => s.symbol === pos.symbol);
+                      const digits = posMeta?.digits ?? 2;
+                      return (
+                        <tr key={pos.id} className="hover:bg-slate-800/30 text-[11px]">
+                          <td className="px-3 py-1.5 text-slate-400">#{pos.id.slice(-6)}</td>
+                          <td className="px-3 py-1.5 font-bold text-slate-200">{pos.symbol}</td>
+                          <td className="px-3 py-1.5">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                pos.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
+                              }`}
+                            >
+                              {pos.type}
+                            </span>
+                          </td>
+                          <td className="px-3 py-1.5 text-slate-200">{pos.lot_size}</td>
+                          <td className="px-3 py-1.5 text-slate-300">{Number(pos.close_price || pos.open_price).toFixed(digits)}</td>
+                          <td className={`px-3 py-1.5 text-right font-bold ${(pos.realized_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {(pos.realized_pnl || 0) >= 0 ? `+$${(pos.realized_pnl || 0).toFixed(2)}` : `-$${Math.abs(pos.realized_pnl || 0).toFixed(2)}`}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
