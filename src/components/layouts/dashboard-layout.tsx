@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 
 const TRADER_NAV = [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Web Terminal', to: '/dashboard/trading', icon: LineChart },
   { label: 'Trading Accounts', to: '/dashboard/accounts', icon: Wallet },
   { label: 'Trading Objectives', to: '/dashboard/objectives', icon: Target },
   { label: 'Trader Leaderboard', to: '/dashboard/leaderboard', icon: Trophy },

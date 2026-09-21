@@ -109,10 +109,13 @@ function AppRoutes() {
       {/* Checkout */}
       <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
 
+      {/* Full-Screen Institutional Web Terminal */}
+      <Route path="/dashboard/trading" element={<ProtectedRoute><DashboardTrading /></ProtectedRoute>} />
+      <Route path="/terminal" element={<ProtectedRoute><DashboardTrading /></ProtectedRoute>} />
+
       {/* Trader Dashboard */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout variant="trader" /></ProtectedRoute>}>
         <Route index element={<DashboardOverview />} />
-        <Route path="trading" element={<DashboardTrading />} />
         <Route path="accounts" element={<DashboardAccounts />} />
         <Route path="progress" element={<Navigate to="/dashboard/objectives" replace />} />
         <Route path="objectives" element={<DashboardObjectives />} />
