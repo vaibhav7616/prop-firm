@@ -12,6 +12,9 @@ import {
   Clock,
   Award,
   ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Maximize2,
   Minimize2,
   Volume2,
@@ -151,7 +154,8 @@ export function DashboardTrading() {
 
   // Order Ticket state
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET');
-  const [lotSize, setLotSize] = useState<number>(0.1);
+  const [lotSize, setLotSize] = useState<number>(0.01);
+  const [quickTradeCollapsed, setQuickTradeCollapsed] = useState(false);
   const [stopLoss, setStopLoss] = useState<string>('');
   const [takeProfit, setTakeProfit] = useState<string>('');
   const [limitPrice, setLimitPrice] = useState<string>('');
@@ -167,6 +171,15 @@ export function DashboardTrading() {
 
   // Positions state
   const [positions, setPositions] = useState<any[]>([]);
+
+  // Open position counts for active symbol
+  const openSellCount = useMemo(() => {
+    return positions.filter((p) => p.symbol === selectedSymbol && p.side === 'SELL').length;
+  }, [positions, selectedSymbol]);
+
+  const openBuyCount = useMemo(() => {
+    return positions.filter((p) => p.symbol === selectedSymbol && p.side === 'BUY').length;
+  }, [positions, selectedSymbol]);
 
   // Current Symbol Meta
   const activeMeta = useMemo(() => {
@@ -971,40 +984,136 @@ export function DashboardTrading() {
               title={`${activeMeta.symbol} Live TradingView Real-Time Chart`}
             />
 
-            {/* Floating Quick Order Ribbon on Chart Top */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-[#0c1426]/95 backdrop-blur-md border border-slate-700/80 rounded-xl px-4 py-2 shadow-2xl flex items-center gap-3 z-30">
-              <button
-                disabled={submittingOrder || isBreached}
-                onClick={() => handleExecuteOrder('SELL')}
-                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/30 transition-all disabled:opacity-50"
-              >
-                <ArrowDownRight className="h-3.5 w-3.5" />
-                <span>SELL</span>
-                <span className="font-mono text-[11px] opacity-90">{formatPrice(activeQuote.bid, activeMeta.digits)}</span>
-              </button>
+            {/* Floating One-Click Trading Desk (Top-Left, matching image.png) */}
+            <div className="absolute top-3 left-3 z-30 pointer-events-auto select-none">
+              {!quickTradeCollapsed ? (
+                <div className="bg-[#0b0e14]/95 backdrop-blur-md border border-[#222736] rounded-[6px] p-1.5 shadow-2xl flex flex-col gap-1">
+                  {/* Upper Row: SELL button | LOT Stepper | BUY button | Collapse Button */}
+                  <div className="flex items-center gap-1">
+                    {/* SELL BUTTON */}
+                    <button
+                      type="button"
+                      disabled={submittingOrder || isBreached}
+                      onClick={() => handleExecuteOrder('SELL')}
+                      className="bg-[#f23645] hover:bg-[#dc2638] active:scale-[0.98] transition-all rounded-[4px] px-3.5 py-1.5 flex flex-col text-left disabled:opacity-50 min-w-[96px] shadow-sm cursor-pointer"
+                      title="Instant Market Sell (Bid Price)"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 leading-none">SELL</span>
+                      <span className="text-base font-extrabold font-mono text-white tracking-tight leading-none mt-1">
+                        {formatPrice(activeQuote.bid, activeMeta.digits)}
+                      </span>
+                    </button>
 
-              <div className="flex items-center gap-1.5 font-mono text-xs text-slate-300">
-                <span className="text-[10px] text-slate-400 font-sans font-semibold">LOTS:</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max="50"
-                  value={lotSize}
-                  onChange={(e) => setLotSize(parseFloat(e.target.value) || 0.01)}
-                  className="w-16 bg-[#16213a] border border-slate-700 rounded px-1.5 py-1 text-center text-white font-bold text-xs focus:outline-none focus:border-brand-500"
-                />
+                    {/* LOT SIZE STEPPER */}
+                    <div className="bg-[#000000] border border-[#222736] rounded-[4px] h-[46px] px-1 flex items-center justify-between gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setLotSize((prev) => Math.max(0.01, parseFloat((prev - 0.01).toFixed(2))))}
+                        className="h-full px-1 text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+                        title="Decrease Lot (-0.01)"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="50"
+                        value={lotSize}
+                        onChange={(e) => setLotSize(parseFloat(e.target.value) || 0.01)}
+                        className="w-12 bg-transparent text-center text-white font-mono font-bold text-xs focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setLotSize((prev) => parseFloat((prev + 0.01).toFixed(2)))}
+                        className="h-full px-1 text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
+                        title="Increase Lot (+0.01)"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {/* BUY BUTTON */}
+                    <button
+                      type="button"
+                      disabled={submittingOrder || isBreached}
+                      onClick={() => handleExecuteOrder('BUY')}
+                      className="bg-[#089981] hover:bg-[#067a67] active:scale-[0.98] transition-all rounded-[4px] px-3.5 py-1.5 flex flex-col text-left disabled:opacity-50 min-w-[96px] shadow-sm cursor-pointer"
+                      title="Instant Market Buy (Ask Price)"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 leading-none">BUY</span>
+                      <span className="text-base font-extrabold font-mono text-white tracking-tight leading-none mt-1">
+                        {formatPrice(activeQuote.ask, activeMeta.digits)}
+                      </span>
+                    </button>
+
+                    {/* COLLAPSE ARROW */}
+                    <button
+                      type="button"
+                      onClick={() => setQuickTradeCollapsed(true)}
+                      className="bg-[#000000]/60 hover:bg-[#161c2b] text-slate-400 hover:text-white border border-[#222736] rounded-[4px] h-[46px] w-6 flex items-center justify-center transition-colors cursor-pointer"
+                      title="Collapse Quick Trade"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Lower Row: SELL status indicator & BUY status indicator */}
+                  <div className="flex items-center justify-between px-1 text-[9px] font-mono select-none">
+                    <div className="flex items-center gap-1.5 text-rose-400/90 font-bold tracking-wider">
+                      <span>SELL</span>
+                      <span className="text-slate-600 font-normal">-----</span>
+                      <span className="text-slate-300 font-semibold">{openSellCount}/4</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-400/90 font-bold tracking-wider">
+                      <span>BUY</span>
+                      <span className="text-slate-600 font-normal">-----</span>
+                      <span className="text-slate-300 font-semibold">{openBuyCount}/4</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Collapsed Mini Pill */
+                <button
+                  type="button"
+                  onClick={() => setQuickTradeCollapsed(false)}
+                  className="bg-[#0b0e14]/90 hover:bg-[#131926] border border-[#222736] rounded-md px-2.5 py-1.5 text-xs font-mono font-bold flex items-center gap-2 shadow-xl text-slate-200 cursor-pointer"
+                  title="Expand Quick Trade"
+                >
+                  <span className="text-rose-400">SELL {formatPrice(activeQuote.bid, activeMeta.digits)}</span>
+                  <span className="text-slate-600">|</span>
+                  <span className="text-emerald-400">BUY {formatPrice(activeQuote.ask, activeMeta.digits)}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+              )}
+            </div>
+
+            {/* Dotted Horizontal Line across the chart connecting to the Ask Level */}
+            <div className="absolute top-[calc(29%+8px)] left-0 right-[125px] border-t border-dotted border-[#089981]/50 pointer-events-none z-20" />
+
+            {/* Right Axis: Authentic Ask and Bid Price Scale Badges (matching image.png) */}
+            <div className="absolute top-[29%] right-0 z-30 flex flex-col items-end pointer-events-none pr-0.5 select-none">
+              {/* ASK BADGE */}
+              <div className="flex items-center shadow-lg rounded-[2px] overflow-hidden leading-none text-right">
+                <span className="bg-[#0d3b33] text-[#00e5a3] font-sans text-[10px] font-bold px-1.5 py-[3px] lowercase border-r border-[#00e5a3]/25">
+                  ask
+                </span>
+                <span className="bg-[#089981] text-white font-mono font-extrabold text-[11px] px-2 py-[3px] tracking-tight">
+                  {formatPrice(activeQuote.ask, activeMeta.digits)}
+                </span>
               </div>
 
-              <button
-                disabled={submittingOrder || isBreached}
-                onClick={() => handleExecuteOrder('BUY')}
-                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 active:scale-95 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all disabled:opacity-50"
-              >
-                <ArrowUpRight className="h-3.5 w-3.5" />
-                <span>BUY</span>
-                <span className="font-mono text-[11px] opacity-90">{formatPrice(activeQuote.ask, activeMeta.digits)}</span>
-              </button>
+              {/* BID BADGE */}
+              <div className="flex items-center shadow-lg rounded-[2px] overflow-hidden leading-none text-right mt-[2px]">
+                <span className="bg-[#18202c] text-[#8e9eb3] font-sans text-[10px] font-bold px-1.5 py-[3px] lowercase border-r border-slate-700/40">
+                  bid
+                </span>
+                <span className="bg-[#2a3240] text-slate-100 font-mono font-extrabold text-[11px] px-2 py-[3px] tracking-tight">
+                  {formatPrice(activeQuote.bid, activeMeta.digits)}
+                </span>
+              </div>
             </div>
           </div>
         </section>
