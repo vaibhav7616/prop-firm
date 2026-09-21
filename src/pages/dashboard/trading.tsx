@@ -285,12 +285,12 @@ export function DashboardTrading() {
   // Real-time market price direction & trend
   const priceTrend = quoteHistory[selectedSymbol] || 'DOWN';
 
-  // Dynamic vertical price position on the chart canvas (tracks live price movements relative to 24h range)
+  // Dynamic vertical price position on the chart canvas (tracks live Ask price)
   const priceYPercent = useMemo(() => {
     const high = activeQuote.high || (activeQuote.ask * 1.002);
     const low = activeQuote.low || (activeQuote.bid * 0.998);
     const range = Math.max(0.00001, high - low);
-    const current = (activeQuote as any).price || activeQuote.bid;
+    const current = activeQuote.ask;
     // Higher price is closer to the top of chart (lower percentage)
     const ratio = Math.max(0, Math.min(1, (high - current) / range));
     // Scale smoothly inside the active candle region between 20% and 68%
@@ -950,27 +950,22 @@ export function DashboardTrading() {
 
               <div className="h-4 w-[1px] bg-slate-800 hidden sm:block" />
 
-              {/* Live Bid / Ask / Last prices */}
+              {/* Live Bid / Ask / Spread prices (No redundant 3rd live price) */}
               <div className="flex items-center gap-2 font-mono text-xs">
-                {/* LIVE MARKET PRICE */}
-                <div className={`border px-2 py-0.5 rounded flex items-center gap-1.5 transition-colors ${
-                  priceTrend === 'UP' ? 'bg-[#089981]/20 border-[#089981]/50 text-emerald-400' : 'bg-[#f23645]/20 border-[#f23645]/50 text-rose-400'
-                }`}>
-                  <span className="h-1.5 w-1.5 rounded-full animate-ping bg-current" />
-                  <span className="text-[10px] font-sans font-semibold text-slate-300">LIVE</span>
-                  <span className="font-bold">{formatPrice((activeQuote as any).price || activeQuote.bid, activeMeta.digits)}</span>
-                </div>
-
+                {/* BID */}
                 <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-400 font-sans font-semibold">BID</span>
                   <span className="text-slate-200 font-bold">{formatPrice(activeQuote.bid, activeMeta.digits)}</span>
                 </div>
 
-                <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded flex items-center gap-1.5">
-                  <span className="text-[10px] text-slate-400 font-sans font-semibold">ASK</span>
-                  <span className="text-emerald-400 font-bold">{formatPrice(activeQuote.ask, activeMeta.digits)}</span>
+                {/* ASK */}
+                <div className="bg-[#0f2e28] border border-[#10b981]/40 px-2 py-0.5 rounded flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full animate-pulse bg-emerald-400" />
+                  <span className="text-[10px] text-emerald-400 font-sans font-semibold">ASK</span>
+                  <span className="text-[#a7f3d0] font-bold">{formatPrice(activeQuote.ask, activeMeta.digits)}</span>
                 </div>
 
+                {/* SPREAD */}
                 <div className="bg-[#121a2f] border border-slate-700/60 px-2 py-0.5 rounded hidden md:flex items-center gap-1.5">
                   <span className="text-[10px] text-slate-400 font-sans font-semibold">SPREAD</span>
                   <span className="text-amber-400 font-bold font-mono">{activeQuote.spread || activeMeta.baseSpread} pips</span>
