@@ -285,18 +285,6 @@ export function DashboardTrading() {
   // Real-time market price direction & trend
   const priceTrend = quoteHistory[selectedSymbol] || 'DOWN';
 
-  // Dynamic vertical price position on the chart canvas (tracks live Ask price)
-  const priceYPercent = useMemo(() => {
-    const high = activeQuote.high || (activeQuote.ask * 1.002);
-    const low = activeQuote.low || (activeQuote.bid * 0.998);
-    const range = Math.max(0.00001, high - low);
-    const current = activeQuote.ask;
-    // Higher price is closer to the top of chart (lower percentage)
-    const ratio = Math.max(0, Math.min(1, (high - current) / range));
-    // Scale smoothly inside the active candle region between 20% and 68%
-    return 20 + ratio * 48;
-  }, [activeQuote]);
-
   // Filtered Quotes for Watchlist
   const filteredQuotes = useMemo(() => {
     return SYMBOL_REGISTRY.filter((item) => {
@@ -1004,7 +992,16 @@ export function DashboardTrading() {
               key={`${activeMeta.tvSymbol}-${timeframe}`}
               src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${encodeURIComponent(
                 activeMeta.tvSymbol
-              )}&interval=${timeframe}&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=0a0f1d&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&locale=en`}
+              )}&interval=${timeframe}&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=0a0f1d&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&locale=en&overrides=${encodeURIComponent(
+                JSON.stringify({
+                  'scalesProperties.showBidAskLabels': true,
+                  'scalesProperties.showSymbolLabels': true,
+                  'mainSeriesProperties.bidAsk.visible': true,
+                  'mainSeriesProperties.bidAsk.lineStyle': 1,
+                  'mainSeriesProperties.bidAsk.askLineColor': '#089981',
+                  'mainSeriesProperties.bidAsk.bidLineColor': '#334155',
+                })
+              )}`}
               className="w-full h-full border-0"
               title={`${activeMeta.symbol} Live TradingView Real-Time Chart`}
             />
@@ -1113,42 +1110,6 @@ export function DashboardTrading() {
                   <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                 </button>
               )}
-            </div>
-
-            {/* Dotted Horizontal Line across the chart connecting to the Ask/Bid Level (matching first screenshot) */}
-            <div 
-              className="absolute left-0 right-[120px] border-t border-dotted border-[#10b981]/70 pointer-events-none z-20 transition-all duration-300 ease-out"
-              style={{
-                top: `${priceYPercent}%`,
-              }}
-            />
-
-            {/* Right Axis: Ask and Bid Price Scale Badges (strictly matching first screenshot) */}
-            <div 
-              className="absolute right-0 z-30 flex flex-col items-end pointer-events-none pr-0.5 select-none transition-all duration-300 ease-out"
-              style={{
-                top: `calc(${priceYPercent}% - 14px)`,
-              }}
-            >
-              {/* ASK BADGE */}
-              <div className="flex items-center shadow-md rounded-t-[3px] overflow-hidden leading-none text-right">
-                <span className="bg-[#133832] text-[#5eead4] font-sans text-[10px] font-semibold px-2 py-[3px] lowercase border-r border-[#104f45]">
-                  ask
-                </span>
-                <span className="bg-[#104f45] text-[#e6fffa] font-mono font-bold text-[11px] px-2.5 py-[3px] tracking-tight min-w-[72px] text-right">
-                  {formatPrice(activeQuote.ask, activeMeta.digits)}
-                </span>
-              </div>
-
-              {/* BID BADGE (Contiguous right below ask) */}
-              <div className="flex items-center shadow-md rounded-b-[3px] overflow-hidden leading-none text-right border-t border-[#0b1320]/40">
-                <span className="bg-[#1c2633] text-[#94a3b8] font-sans text-[10px] font-semibold px-2 py-[3px] lowercase border-r border-[#263342]">
-                  bid
-                </span>
-                <span className="bg-[#263342] text-[#f8fafc] font-mono font-bold text-[11px] px-2.5 py-[3px] tracking-tight min-w-[72px] text-right">
-                  {formatPrice(activeQuote.bid, activeMeta.digits)}
-                </span>
-              </div>
             </div>
           </div>
         </section>
