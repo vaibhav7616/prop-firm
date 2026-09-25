@@ -1,185 +1,417 @@
-import { useState, type FormEvent } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Award, CheckCircle2, Shield, X, Search, Trophy, Sparkles } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  Award,
+  ShieldCheck,
+  Sparkles,
+  CheckCircle2,
+  ArrowRight,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PayoutProofModal, type PayoutProofData } from '@/components/shared/payout-proof-modal';
 
-interface CertificateData {
+interface FundedCertificateItem {
   id: string;
   traderName: string;
+  country: string;
+  flag: string;
   accountType: string;
-  accountSize: number;
-  payoutAmount: number;
+  accountSize: string;
+  payoutAmount: string;
+  profitSplit: string;
   date: string;
   verifiedHash: string;
 }
 
-const SAMPLE_CERTIFICATES: CertificateData[] = [
-  { id: 'SF-94821', traderName: 'Marcus Vance', accountType: '$200k Two-Step Evaluation', accountSize: 200000, payoutAmount: 18450, date: 'July 28, 2026', verifiedHash: '0x8f3a...b41e' },
-  { id: 'SF-94822', traderName: 'Elena Rostova', accountType: '$100k One-Step Challenge', accountSize: 100000, payoutAmount: 12300, date: 'July 29, 2026', verifiedHash: '0x3c2d...a92f' },
-  { id: 'SF-94823', traderName: 'Kenji Takahashi', accountType: '$400k Instant Funded', accountSize: 400000, payoutAmount: 34100, date: 'July 30, 2026', verifiedHash: '0x9a1b...c841' },
+// Payout range strictly from $276 to $1,800 with distinct dates and mixed Indian & foreign traders
+const CERTIFICATES_LIST: FundedCertificateItem[] = [
+  {
+    id: 'FS-PAY-98421',
+    traderName: 'Rajesh Sharma',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,780.00',
+    profitSplit: '90%',
+    date: 'September 24, 2026',
+    verifiedHash: '0x8f3a19b4e7d56c8012aa4f8b9e120c4a7e9b41e',
+  },
+  {
+    id: 'FS-PAY-98422',
+    traderName: 'Marcus Vance',
+    country: 'United Kingdom',
+    flag: '🇬🇧',
+    accountType: '1-Step Challenge',
+    accountSize: '$25,000',
+    payoutAmount: '$1,450.00',
+    profitSplit: '90%',
+    date: 'September 22, 2026',
+    verifiedHash: '0x3b7d12f9e4c8a56b2011ea3f9b8c210d4a6e8c22',
+  },
+  {
+    id: 'FS-PAY-98423',
+    traderName: 'Aarav Patel',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: 'Instant Funded',
+    accountSize: '$10,000',
+    payoutAmount: '$490.00',
+    profitSplit: '80%',
+    date: 'September 20, 2026',
+    verifiedHash: '0x4c8a19f3b7e6d52a8014ca9f3e8b210c6a7e9b44',
+  },
+  {
+    id: 'FS-PAY-98424',
+    traderName: 'Lucas Schneider',
+    country: 'Germany',
+    flag: '🇩🇪',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,620.00',
+    profitSplit: '90%',
+    date: 'September 18, 2026',
+    verifiedHash: '0x6a3f9e18b4c7d52e9014ba7f2e9c110d8a5e4c33',
+  },
+  {
+    id: 'FS-PAY-98425',
+    traderName: 'Priya Nair',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: '1-Step Challenge',
+    accountSize: '$5,000',
+    payoutAmount: '$276.00',
+    profitSplit: '85%',
+    date: 'September 16, 2026',
+    verifiedHash: '0x7e4a19c3f8b5d62e1098ca3f2e1a908b6d4c7a11',
+  },
+  {
+    id: 'FS-PAY-98426',
+    traderName: 'Alexandre Dubois',
+    country: 'France',
+    flag: '🇫🇷',
+    accountType: '2-Step Evaluation',
+    accountSize: '$25,000',
+    payoutAmount: '$980.00',
+    profitSplit: '90%',
+    date: 'September 14, 2026',
+    verifiedHash: '0x992b4e7c1a8f3d6b5021da8f4e9c310b7a6e1a99',
+  },
+  {
+    id: 'FS-PAY-98427',
+    traderName: 'Vikram Malhotra',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: 'Instant Funded',
+    accountSize: '$25,000',
+    payoutAmount: '$1,380.00',
+    profitSplit: '85%',
+    date: 'September 12, 2026',
+    verifiedHash: '0x3c2da92f8b1a4e5d6023ba7e4c9f110d8b5a3c21',
+  },
+  {
+    id: 'FS-PAY-98428',
+    traderName: 'Sofia Martinez',
+    country: 'Spain',
+    flag: '🇪🇸',
+    accountType: '1-Step Challenge',
+    accountSize: '$25,000',
+    payoutAmount: '$1,120.00',
+    profitSplit: '90%',
+    date: 'September 09, 2026',
+    verifiedHash: '0x9a1bc841f3e7d52a8019ca4f2e8b210c5a6e7b19',
+  },
+  {
+    id: 'FS-PAY-98429',
+    traderName: 'Ananya Roy',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: '2-Step Evaluation',
+    accountSize: '$10,000',
+    payoutAmount: '$615.00',
+    profitSplit: '90%',
+    date: 'September 07, 2026',
+    verifiedHash: '0x5b3c2e19a4f8d76c9012ea4b8c9e120f4a7d9b55',
+  },
+  {
+    id: 'FS-PAY-98430',
+    traderName: 'Elena Rostova',
+    country: 'Estonia',
+    flag: '🇪🇪',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,690.00',
+    profitSplit: '90%',
+    date: 'September 04, 2026',
+    verifiedHash: '0x2e4a8b7c1d3f56a9018fa7b2c9e110d4a5e6c77',
+  },
+  {
+    id: 'FS-PAY-98431',
+    traderName: 'Rohan Verma',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: 'Instant Funded',
+    accountSize: '$5,000',
+    payoutAmount: '$385.50',
+    profitSplit: '80%',
+    date: 'September 01, 2026',
+    verifiedHash: '0x8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b',
+  },
+  {
+    id: 'FS-PAY-98432',
+    traderName: 'David Miller',
+    country: 'United States',
+    flag: '🇺🇸',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,800.00',
+    profitSplit: '90%',
+    date: 'August 29, 2026',
+    verifiedHash: '0x7c4d1e2f3a5b6c8d9e0f1a2b3c4d5e6f7a8b9c0d',
+  },
+  {
+    id: 'FS-PAY-98433',
+    traderName: 'Sneha Kulkarni',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: '1-Step Challenge',
+    accountSize: '$25,000',
+    payoutAmount: '$1,250.00',
+    profitSplit: '90%',
+    date: 'August 26, 2026',
+    verifiedHash: '0x1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c',
+  },
+  {
+    id: 'FS-PAY-98434',
+    traderName: 'Oliver Smith',
+    country: 'Canada',
+    flag: '🇨🇦',
+    accountType: 'Instant Funded',
+    accountSize: '$25,000',
+    payoutAmount: '$890.00',
+    profitSplit: '85%',
+    date: 'August 23, 2026',
+    verifiedHash: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
+  },
+  {
+    id: 'FS-PAY-98435',
+    traderName: 'Deepak Joshi',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,570.00',
+    profitSplit: '90%',
+    date: 'August 20, 2026',
+    verifiedHash: '0x9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b',
+  },
+  {
+    id: 'FS-PAY-98436',
+    traderName: 'Kenji Takahashi',
+    country: 'Japan',
+    flag: '🇯🇵',
+    accountType: '1-Step Challenge',
+    accountSize: '$25,000',
+    payoutAmount: '$1,340.00',
+    profitSplit: '90%',
+    date: 'August 17, 2026',
+    verifiedHash: '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
+  },
+  {
+    id: 'FS-PAY-98437',
+    traderName: 'Sunita Patil',
+    country: 'India',
+    flag: '🇮🇳',
+    accountType: 'Instant Funded',
+    accountSize: '$10,000',
+    payoutAmount: '$740.00',
+    profitSplit: '85%',
+    date: 'August 14, 2026',
+    verifiedHash: '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
+  },
+  {
+    id: 'FS-PAY-98438',
+    traderName: 'Liam O\'Connor',
+    country: 'Australia',
+    flag: '🇦🇺',
+    accountType: '2-Step Evaluation',
+    accountSize: '$50,000',
+    payoutAmount: '$1,750.00',
+    profitSplit: '90%',
+    date: 'August 10, 2026',
+    verifiedHash: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
+  },
 ];
 
 export function CertificateModal() {
-  const [selectedCert, setSelectedCert] = useState<CertificateData | null>(null);
-  const [verifyId, setVerifyId] = useState('');
-  const [verifyResult, setVerifyResult] = useState<CertificateData | null | 'not_found'>(null);
+  const [selectedPayout, setSelectedPayout] = useState<PayoutProofData | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const handleVerify = (e: FormEvent) => {
-    e.preventDefault();
-    const found = SAMPLE_CERTIFICATES.find(c => c.id.toLowerCase() === verifyId.trim().toLowerCase());
-    if (found) {
-      setVerifyResult(found);
-    } else {
-      setVerifyResult('not_found');
-    }
+  const openCertificate = (cert: FundedCertificateItem) => {
+    setSelectedPayout({
+      id: cert.id,
+      traderName: cert.traderName,
+      country: cert.country,
+      accountSize: cert.accountSize,
+      payoutAmount: cert.payoutAmount,
+      profitSplit: cert.profitSplit,
+      issueDate: cert.date,
+      challengeType: cert.accountType,
+      txHash: cert.verifiedHash,
+    });
   };
 
   return (
-    <section className="section-pad bg-secondary/20 border-b border-border">
-      <div className="container-page">
-        <div className="max-w-3xl mx-auto text-center space-y-4">
-          <span className="badge-brand">Verified Credentials</span>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-foreground">
-            Official Trader Funded Certificates
-          </h2>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Every successful trader receives a cryptographic, verified certificate upon passing evaluation or completing payouts.
-          </p>
-        </div>
+    <section className="section-pad bg-gradient-to-b from-secondary/10 via-brand-50/20 to-secondary/20 border-b border-border overflow-hidden relative">
+      {/* Decorative background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-brand-500/5 blur-3xl pointer-events-none" />
 
-        {/* Certificate Cards */}
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {SAMPLE_CERTIFICATES.map((cert) => (
-            <div
-              key={cert.id}
-              onClick={() => setSelectedCert(cert)}
-              className="group cursor-pointer rounded-2xl border border-brand-200/60 bg-gradient-to-b from-card via-card to-brand-50/30 p-6 shadow-soft hover:shadow-soft-lg hover:border-brand-500 transition-all relative overflow-hidden"
+      <div className="container-page mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-xs font-semibold">
+              <ShieldCheck className="h-3.5 w-3.5 text-brand-600" />
+              <span>Verified Institutional Credentials</span>
+            </div>
+            <h2 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-foreground tracking-tight">
+              Official Trader Funded Certificates
+            </h2>
+            <p className="text-muted-foreground text-xs sm:text-sm max-w-2xl">
+              Authentic cryptographically verifiable certificates issued to funded traders globally upon completing evaluation target milestones and verified profit distributions.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5 bg-card/80 border border-border px-3 py-1.5 rounded-full shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Auto-Sliding Proofs · Hover to Inspect
+            </span>
+            <Link
+              to="/proof-of-payout"
+              className="text-xs font-semibold text-brand-600 hover:text-brand-700 inline-flex items-center gap-1 transition-colors"
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-brand-500/10 rounded-full blur-xl group-hover:bg-brand-500/20 transition-all pointer-events-none" />
+              <span>Explore All</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      </div>
 
-              <div className="flex items-center justify-between mb-4">
-                <Award className="h-8 w-8 text-brand-600" />
-                <span className="text-[10px] font-mono font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded">
+      {/* Infinite Right-to-Left Animated Certificate Slider */}
+      <div
+        className="relative w-full overflow-hidden py-3"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
+        {/* Soft edge blur overlays */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-r from-background via-background/80 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-28 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none" />
+
+        <motion.div
+          animate={isPaused ? {} : { x: ['0%', '-50%'] }}
+          transition={{
+            duration: 48,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+          className="flex gap-5 w-max"
+        >
+          {[...CERTIFICATES_LIST, ...CERTIFICATES_LIST].map((cert, index) => (
+            <div
+              key={`${cert.id}-${index}`}
+              onClick={() => openCertificate(cert)}
+              className="group cursor-pointer w-[340px] sm:w-[370px] shrink-0 rounded-2xl border-2 border-brand-200/80 hover:border-brand-500 bg-card p-5 sm:p-6 shadow-soft hover:shadow-soft-xl transition-all duration-300 relative overflow-hidden flex flex-col justify-between"
+            >
+              {/* Certificate Inner Double-Border Guilloche Styling */}
+              <div className="absolute inset-1.5 border border-dashed border-brand-200/60 rounded-xl pointer-events-none group-hover:border-brand-400/80 transition-colors" />
+
+              {/* Top Foil Header */}
+              <div className="relative z-1 flex items-center justify-between mb-3 pb-3 border-b border-border/70">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-brand-50 border border-brand-200/90 flex items-center justify-center text-brand-600 shadow-xs">
+                    <Award className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-brand-700 leading-none">
+                      FundedShift Treasury
+                    </p>
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5">
+                      Official Payout Certificate
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold bg-brand-100/80 text-brand-700 px-2 py-0.5 rounded border border-brand-200">
                   {cert.id}
                 </span>
               </div>
 
-              <p className="font-display font-bold text-xl text-foreground">{cert.traderName}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{cert.accountType}</p>
-
-              <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Payout Approved</p>
-                  <p className="font-display font-bold text-lg text-emerald-600 font-mono">
-                    {formatCurrency(cert.payoutAmount)}
-                  </p>
+              {/* Certificate Body */}
+              <div className="relative z-1 py-1 space-y-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                  This certifies that
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl leading-none">{cert.flag}</span>
+                    <h3 className="font-display font-extrabold text-xl text-foreground tracking-tight group-hover:text-brand-600 transition-colors">
+                      {cert.traderName}
+                    </h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">{cert.country}</span>
                 </div>
-                <button className="text-xs font-semibold text-brand-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                  View <Sparkles className="h-3.5 w-3.5" />
+                <p className="text-xs text-muted-foreground">
+                  completed profit milestone on{' '}
+                  <strong className="text-foreground font-semibold">{cert.accountSize}</strong> ({cert.accountType})
+                </p>
+
+                {/* Big Payout Highlight Box */}
+                <div className="mt-3 p-3 rounded-xl bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-brand-50/30 border border-emerald-200/70 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                      Disbursed Payout
+                    </span>
+                    <span className="font-display font-black text-2xl text-emerald-600 font-mono tracking-tight">
+                      {cert.payoutAmount}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="h-3 w-3" /> Dispatched
+                    </span>
+                    <span className="text-[10px] text-muted-foreground block mt-1">
+                      Split: {cert.profitSplit}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Meta */}
+              <div className="relative z-1 mt-4 pt-3 border-t border-border/70 flex items-center justify-between text-[11px]">
+                <div className="text-muted-foreground">
+                  <span className="block text-[9px] uppercase font-bold tracking-wider text-slate-400">
+                    Issued
+                  </span>
+                  <span className="font-medium text-foreground text-xs">{cert.date}</span>
+                </div>
+                <button
+                  type="button"
+                  className="font-semibold text-brand-600 group-hover:text-brand-700 inline-flex items-center gap-1 text-xs group-hover:translate-x-0.5 transition-transform"
+                >
+                  <span>View Official Proof</span>
+                  <Sparkles className="h-3.5 w-3.5 text-brand-500" />
                 </button>
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Certificate Verification Input Bar */}
-        <div className="mt-10 max-w-xl mx-auto rounded-2xl border border-border bg-card p-4 shadow-soft">
-          <form onSubmit={handleVerify} className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Enter Certificate ID (e.g. SF-94821)..."
-                value={verifyId}
-                onChange={(e) => { setVerifyId(e.target.value); setVerifyResult(null); }}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-secondary/30 text-xs text-foreground focus:outline-none focus:border-brand-500"
-              />
-            </div>
-            <button type="submit" className="btn-primary text-xs py-2.5 px-5">
-              Verify ID
-            </button>
-          </form>
-
-          {verifyResult === 'not_found' && (
-            <p className="text-xs text-destructive mt-3 text-center">
-              No certificate found with ID "{verifyId}". Try SF-94821 or SF-94822.
-            </p>
-          )}
-
-          {verifyResult && verifyResult !== 'not_found' && (
-            <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs space-y-1">
-              <p className="font-bold flex items-center gap-1.5 text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" /> Certificate Verified Authenticity
-              </p>
-              <p>Trader: <strong>{verifyResult.traderName}</strong></p>
-              <p>Account: <strong>{verifyResult.accountType}</strong></p>
-              <p>Payout: <strong>{formatCurrency(verifyResult.payoutAmount)}</strong> ({verifyResult.date})</p>
-            </div>
-          )}
-        </div>
+        </motion.div>
       </div>
 
-      {/* Modal Lightbox for Certificate View */}
-      <AnimatePresence>
-        {selectedCert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-2xl rounded-3xl border-2 border-brand-500 bg-card p-8 shadow-soft-2xl text-foreground overflow-hidden"
-            >
-              <button
-                onClick={() => setSelectedCert(null)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-5 w-5" />
-              </button>
-
-              {/* Certificate Design Frame */}
-              <div className="border-4 border-double border-brand-300 rounded-2xl p-6 sm:p-8 text-center bg-gradient-to-b from-card via-brand-50/10 to-card relative">
-                <div className="flex justify-center mb-3">
-                  <div className="h-12 w-12 rounded-full bg-brand-100 flex items-center justify-center border border-brand-300">
-                    <Trophy className="h-6 w-6 text-brand-600" />
-                  </div>
-                </div>
-
-                <p className="text-xs uppercase font-bold tracking-widest text-brand-600">
-                  Certificate of Achievement & Funding
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">FundedShift Proprietary Trading Firm</p>
-
-                <div className="my-6 space-y-2">
-                  <p className="text-xs text-muted-foreground">This is to officially certify that</p>
-                  <p className="font-display font-extrabold text-3xl text-foreground">{selectedCert.traderName}</p>
-                  <p className="text-xs text-muted-foreground">has successfully completed evaluation and received a payout of</p>
-                  <p className="font-display font-bold text-3xl text-emerald-600 font-mono">
-                    {formatCurrency(selectedCert.payoutAmount)}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-xs text-left pt-4 border-t border-border">
-                  <div>
-                    <span className="text-muted-foreground block text-[10px]">Certificate ID</span>
-                    <strong className="font-mono text-foreground">{selectedCert.id}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block text-[10px]">Date Issued</span>
-                    <strong className="text-foreground">{selectedCert.date}</strong>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1 text-emerald-600 font-semibold">
-                    <Shield className="h-3 w-3" /> Cryptographically Verified
-                  </span>
-                  <span className="font-mono">{selectedCert.verifiedHash}</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Payout Proof High-Definition Modal */}
+      <PayoutProofModal
+        isOpen={!!selectedPayout}
+        onClose={() => setSelectedPayout(null)}
+        payout={selectedPayout}
+      />
     </section>
   );
 }

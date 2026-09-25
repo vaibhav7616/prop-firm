@@ -14,7 +14,7 @@ const FAQS = [
     { q: 'What is the difference between One Step and Two Step?', a: 'One Step requires you to pass a single evaluation phase. Two Step requires two phases, but typically has a lower profit target in the second phase. Both lead to a funded account.' },
     { q: 'What is Instant Funding?', a: 'Instant Funding skips the evaluation entirely. You pay an upfront fee and receive a funded account immediately. The profit split is 70/30 with 7 minimum trading days.' },
     { q: 'Is there a time limit to pass?', a: 'No. There is no time limit on any of our challenges. You can take as long as you need to meet the profit target.' },
-    { q: 'Can I trade news events?', a: 'Yes, news trading is allowed on One Step and Instant Funding challenges. Two Step challenges restrict trading during high-impact news events.' },
+    { q: 'Can I trade news events?', a: 'Yes, news trading is allowed on One Step and Two Step challenges. Instant Funding does not allow news trading during high-impact news events to manage risk on live capital.' },
   ]},
   { category: 'Payouts', items: [
     { q: 'When can I request my first payout?', a: 'Once you are funded, you can request your first payout after meeting the minimum trading days requirement. Payouts are processed within 7 days.' },

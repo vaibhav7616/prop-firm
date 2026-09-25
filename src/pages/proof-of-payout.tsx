@@ -2,26 +2,17 @@ import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   ShieldCheck,
-  DollarSign,
-  Search,
   CheckCircle2,
-  Share2,
+  DollarSign,
   Clock,
   Users,
+  Search,
+  Share2,
   Eye,
-  ArrowRight,
-  TrendingUp,
-  Sparkles,
-  Award,
-  Wallet,
-  Building,
-  CreditCard,
-  Lock,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { PayoutProofModal } from '@/components/shared/payout-proof-modal';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { PayoutProofModal } from '@/components/shared/payout-proof-modal';
 
 export interface PayoutRecord {
   id: string;
@@ -30,12 +21,12 @@ export interface PayoutRecord {
   country: string;
   countryCode: string;
   flag: string;
-  avatar: string;
+  avatarBg: string;
   amount: number;
   accountSize: string;
   accountTier: number;
-  challengeType: '1-Step Evaluation' | '2-Step Evaluation' | 'Instant Funding';
-  payoutMethod: 'Crypto (USDT)' | 'Crypto (USDC)' | 'Bank Transfer' | 'UPI' | 'Razorpay';
+  challengeType: string;
+  payoutMethod: string;
   payoutDate: string;
   timeAgo: string;
   profitSplit: string;
@@ -49,17 +40,17 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
   {
     id: 'FS-PAY-9941',
     txHash: '0x8f3c2a19b4e7d56c8012aa4f8b9e120c4a7e9b31',
-    traderName: 'Rajesh Sharma',
+    traderName: 'Arjun Deshmukh',
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-indigo-500 to-purple-600',
     amount: 14250.00,
     accountSize: '$200,000',
     accountTier: 200000,
     challengeType: '2-Step Evaluation',
     payoutMethod: 'Bank Transfer',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 24, 2026',
     timeAgo: '4 mins ago',
     profitSplit: '90%',
     tradingDays: 19,
@@ -74,13 +65,13 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'France',
     countryCode: 'FR',
     flag: '🇫🇷',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-blue-600 to-cyan-600',
     amount: 8940.50,
     accountSize: '$100,000',
     accountTier: 100000,
     challengeType: '1-Step Evaluation',
     payoutMethod: 'Crypto (USDT)',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 23, 2026',
     timeAgo: '12 mins ago',
     profitSplit: '90%',
     tradingDays: 14,
@@ -91,17 +82,17 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
   {
     id: 'FS-PAY-9939',
     txHash: '0x12a9f4c3b8e7d26a5019fa7b4e8c110d9a5e4b18',
-    traderName: 'Vikram Mehta',
+    traderName: 'Vikram Malhotra',
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-emerald-500 to-teal-700',
     amount: 5420.00,
     accountSize: '$50,000',
     accountTier: 50000,
     challengeType: 'Instant Funding',
     payoutMethod: 'UPI',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 23, 2026',
     timeAgo: '28 mins ago',
     profitSplit: '80%',
     tradingDays: 22,
@@ -116,13 +107,13 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'United Kingdom',
     countryCode: 'GB',
     flag: '🇬🇧',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-slate-700 to-slate-900',
     amount: 18790.00,
     accountSize: '$200,000',
     accountTier: 200000,
     challengeType: '2-Step Evaluation',
     payoutMethod: 'Crypto (USDC)',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 22, 2026',
     timeAgo: '45 mins ago',
     profitSplit: '90%',
     tradingDays: 26,
@@ -133,17 +124,17 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
   {
     id: 'FS-PAY-9937',
     txHash: '0x992b4e7c1a8f3d6b5021da8f4e9c310b7a6e1a99',
-    traderName: 'Ananya Roy',
+    traderName: 'Priya Nair',
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-rose-500 to-pink-600',
     amount: 3890.00,
     accountSize: '$50,000',
     accountTier: 50000,
     challengeType: '1-Step Evaluation',
     payoutMethod: 'Razorpay',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 22, 2026',
     timeAgo: '1 hour ago',
     profitSplit: '90%',
     tradingDays: 12,
@@ -158,13 +149,13 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'Germany',
     countryCode: 'DE',
     flag: '🇩🇪',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
     amount: 9350.00,
     accountSize: '$100,000',
     accountTier: 100000,
     challengeType: '2-Step Evaluation',
     payoutMethod: 'Bank Transfer',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 21, 2026',
     timeAgo: '2 hours ago',
     profitSplit: '90%',
     tradingDays: 18,
@@ -175,17 +166,17 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
   {
     id: 'FS-PAY-9935',
     txHash: '0x2d9e4a18b7c3f56a9012ea8f1b4c910d5a6e8b77',
-    traderName: 'Aarav Patel',
+    traderName: 'Kabir Sen',
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-violet-600 to-indigo-800',
     amount: 850.00,
     accountSize: '$10,000',
     accountTier: 10000,
     challengeType: '1-Step Evaluation',
     payoutMethod: 'UPI',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 21, 2026',
     timeAgo: '3 hours ago',
     profitSplit: '90%',
     tradingDays: 8,
@@ -200,13 +191,13 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'Spain',
     countryCode: 'ES',
     flag: '🇪🇸',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-red-500 to-amber-600',
     amount: 11200.00,
     accountSize: '$100,000',
     accountTier: 100000,
     challengeType: 'Instant Funding',
     payoutMethod: 'Crypto (USDT)',
-    payoutDate: 'August 22, 2026',
+    payoutDate: 'September 20, 2026',
     timeAgo: '3 hours ago',
     profitSplit: '85%',
     tradingDays: 21,
@@ -221,13 +212,13 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-teal-500 to-cyan-700',
     amount: 6780.00,
     accountSize: '$100,000',
     accountTier: 100000,
     challengeType: '2-Step Evaluation',
     payoutMethod: 'Bank Transfer',
-    payoutDate: 'August 21, 2026',
+    payoutDate: 'September 20, 2026',
     timeAgo: '5 hours ago',
     profitSplit: '90%',
     tradingDays: 16,
@@ -242,18 +233,144 @@ export const VERIFIED_PAYOUTS_DATA: PayoutRecord[] = [
     country: 'India',
     countryCode: 'IN',
     flag: '🇮🇳',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    avatarBg: 'bg-gradient-to-br from-fuchsia-600 to-purple-800',
     amount: 15640.00,
     accountSize: '$200,000',
     accountTier: 200000,
     challengeType: '2-Step Evaluation',
     payoutMethod: 'Crypto (USDC)',
-    payoutDate: 'August 21, 2026',
+    payoutDate: 'September 19, 2026',
     timeAgo: '6 hours ago',
     profitSplit: '90%',
     tradingDays: 24,
     favoriteSymbol: 'XAUUSD',
     winRate: 78.9,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9931',
+    txHash: '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
+    traderName: 'Liam O\'Connor',
+    country: 'Australia',
+    countryCode: 'AU',
+    flag: '🇦🇺',
+    avatarBg: 'bg-gradient-to-br from-sky-500 to-indigo-600',
+    amount: 17200.00,
+    accountSize: '$200,000',
+    accountTier: 200000,
+    challengeType: '2-Step Evaluation',
+    payoutMethod: 'Bank Wire',
+    payoutDate: 'September 18, 2026',
+    timeAgo: '7 hours ago',
+    profitSplit: '90%',
+    tradingDays: 20,
+    favoriteSymbol: 'AUDUSD',
+    winRate: 73.1,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9930',
+    txHash: '0x1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c',
+    traderName: 'Deepak Joshi',
+    country: 'India',
+    countryCode: 'IN',
+    flag: '🇮🇳',
+    avatarBg: 'bg-gradient-to-br from-blue-700 to-slate-800',
+    amount: 4320.00,
+    accountSize: '$50,000',
+    accountTier: 50000,
+    challengeType: '1-Step Evaluation',
+    payoutMethod: 'UPI',
+    payoutDate: 'September 17, 2026',
+    timeAgo: '8 hours ago',
+    profitSplit: '85%',
+    tradingDays: 15,
+    favoriteSymbol: 'USDJPY',
+    winRate: 66.4,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9929',
+    txHash: '0x7c4d1e2f3a5b6c8d9e0f1a2b3c4d5e6f7a8b9c0d',
+    traderName: 'David Miller',
+    country: 'United States',
+    countryCode: 'US',
+    flag: '🇺🇸',
+    avatarBg: 'bg-gradient-to-br from-blue-600 to-slate-900',
+    amount: 19800.00,
+    accountSize: '$200,000',
+    accountTier: 200000,
+    challengeType: '2-Step Evaluation',
+    payoutMethod: 'Crypto (USDT)',
+    payoutDate: 'September 16, 2026',
+    timeAgo: '9 hours ago',
+    profitSplit: '90%',
+    tradingDays: 27,
+    favoriteSymbol: 'NAS100',
+    winRate: 77.2,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9928',
+    txHash: '0x2e4a8b7c1d3f56a9018fa7b2c9e110d4a5e6c77',
+    traderName: 'Kenji Takahashi',
+    country: 'Japan',
+    countryCode: 'JP',
+    flag: '🇯🇵',
+    avatarBg: 'bg-gradient-to-br from-rose-600 to-red-800',
+    amount: 24600.00,
+    accountSize: '$200,000',
+    accountTier: 200000,
+    challengeType: 'Instant Funding',
+    payoutMethod: 'Crypto (USDC)',
+    payoutDate: 'September 15, 2026',
+    timeAgo: '11 hours ago',
+    profitSplit: '85%',
+    tradingDays: 29,
+    favoriteSymbol: 'USDJPY',
+    winRate: 81.5,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9927',
+    txHash: '0x3c2da92f8b1a4e5d6023ba7e4c9f110d8b5a3c21',
+    traderName: 'Sunita Patil',
+    country: 'India',
+    countryCode: 'IN',
+    flag: '🇮🇳',
+    avatarBg: 'bg-gradient-to-br from-emerald-600 to-cyan-700',
+    amount: 2840.00,
+    accountSize: '$25,000',
+    accountTier: 25000,
+    challengeType: 'Instant Funding',
+    payoutMethod: 'UPI',
+    payoutDate: 'September 14, 2026',
+    timeAgo: '12 hours ago',
+    profitSplit: '80%',
+    tradingDays: 11,
+    favoriteSymbol: 'XAUUSD',
+    winRate: 63.9,
+    verified: true,
+  },
+  {
+    id: 'FS-PAY-9926',
+    txHash: '0x8a9b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b',
+    traderName: 'Oliver Smith',
+    country: 'Canada',
+    countryCode: 'CA',
+    flag: '🇨🇦',
+    avatarBg: 'bg-gradient-to-br from-red-600 to-rose-700',
+    amount: 11450.00,
+    accountSize: '$100,000',
+    accountTier: 100000,
+    challengeType: '2-Step Evaluation',
+    payoutMethod: 'Bank Transfer',
+    payoutDate: 'September 13, 2026',
+    timeAgo: '14 hours ago',
+    profitSplit: '90%',
+    tradingDays: 17,
+    favoriteSymbol: 'USDCAD',
+    winRate: 70.8,
     verified: true,
   },
 ];
@@ -295,7 +412,7 @@ export function ProofOfPayoutPage() {
   const handleShareOnX = (payout: PayoutRecord) => {
     const text = encodeURIComponent(
       `🎉 Verified Payout Proof on @FundedShift!\n\n` +
-      `👤 Trader: ${payout.traderName} (${payout.flag})\n` +
+      `👤 Trader: ${payout.traderName} (${payout.country})\n` +
       `💰 Payout: $${payout.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}\n` +
       `⚡ Account: ${payout.accountSize} | ${payout.profitSplit} Profit Split\n` +
       `🔗 Verification: https://fundedshift.com/proof-of-payout#${payout.id}\n\n` +
@@ -343,7 +460,7 @@ export function ProofOfPayoutPage() {
               <div className="h-10 w-10 mx-auto rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-600 mb-2">
                 <Clock className="h-5 w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">18 Minutes</p>
+              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">1 Hour</p>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Average Payout Dispatch Time</p>
             </motion.div>
 
@@ -439,102 +556,115 @@ export function ProofOfPayoutPage() {
 
         {/* Payout Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredPayouts.map((payout) => (
-            <motion.div
-              key={payout.id}
-              whileHover={{ y: -4 }}
-              className="bg-card border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div className="space-y-4">
-                {/* Header: Trader & Country */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={payout.avatar}
-                      alt={payout.traderName}
-                      className="h-11 w-11 rounded-full object-cover border-2 border-brand-200"
-                    />
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="font-bold text-sm text-slate-900">{payout.traderName}</h4>
-                        <span className="text-base" title={payout.country}>{payout.flag}</span>
+          {filteredPayouts.map((payout) => {
+            const initials = payout.traderName
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
+
+            return (
+              <motion.div
+                key={payout.id}
+                whileHover={{ y: -4 }}
+                className="bg-card border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  {/* Header: Trader & Country */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {/* Premium trader initial monogram avatar with dynamic gradient */}
+                      <div
+                        className={cn(
+                          'h-11 w-11 rounded-full flex items-center justify-center text-white font-display font-black text-sm shadow-xs border-2 border-white ring-2 ring-slate-100 shrink-0 select-none',
+                          payout.avatarBg
+                        )}
+                      >
+                        {initials}
                       </div>
-                      <span className="text-xs text-slate-500 font-mono">{payout.id}</span>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-sm text-slate-900">{payout.traderName}</h4>
+                          <span className="text-xs text-slate-500 font-medium">· {payout.country}</span>
+                        </div>
+                        <span className="text-xs text-slate-500 font-mono">{payout.id}</span>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      <CheckCircle2 className="h-3 w-3" /> VERIFIED
+                    </span>
+                  </div>
+
+                  {/* Amount & Account Size */}
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                        PAYOUT AMOUNT
+                      </span>
+                      <span className="text-xl font-black font-mono text-emerald-600">
+                        ${payout.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                        ACCOUNT SIZE
+                      </span>
+                      <span className="text-sm font-bold font-mono text-slate-900">
+                        {payout.accountSize}
+                      </span>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    <CheckCircle2 className="h-3 w-3" /> VERIFIED
-                  </span>
-                </div>
 
-                {/* Amount & Account Size */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      PAYOUT AMOUNT
-                    </span>
-                    <span className="text-xl font-black font-mono text-emerald-600">
-                      ${payout.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
+                  {/* Meta stats */}
+                  <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600 pt-1">
+                    <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Method:</span>
+                      <span className="font-bold text-slate-800">{payout.payoutMethod}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">Split:</span>
+                      <span className="font-bold text-brand-600">{payout.profitSplit}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-slate-500">Top Asset:</span>
+                      <span className="font-bold font-mono text-slate-800">{payout.favoriteSymbol}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-slate-500">Win Rate:</span>
+                      <span className="font-bold text-emerald-600">{payout.winRate}%</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      ACCOUNT SIZE
-                    </span>
-                    <span className="text-sm font-bold font-mono text-slate-900">
-                      {payout.accountSize}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Meta stats */}
-                <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-600 pt-1">
-                  <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Method:</span>
-                    <span className="font-bold text-slate-800">{payout.payoutMethod}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Split:</span>
-                    <span className="font-bold text-brand-600">{payout.profitSplit}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-slate-500">Top Asset:</span>
-                    <span className="font-bold font-mono text-slate-800">{payout.favoriteSymbol}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-slate-500">Win Rate:</span>
-                    <span className="font-bold text-emerald-600">{payout.winRate}%</span>
+                  {/* Blockchain & Verification Hash */}
+                  <div className="bg-slate-100/70 rounded-lg p-2 font-mono text-[11px] text-slate-500 flex items-center justify-between overflow-hidden">
+                    <span className="truncate max-w-[200px]">Tx: {payout.txHash}</span>
+                    <span className="text-emerald-600 font-bold uppercase text-[10px] shrink-0">On-Chain</span>
                   </div>
                 </div>
 
-                {/* Blockchain & Verification Hash */}
-                <div className="bg-slate-100/70 rounded-lg p-2 font-mono text-[11px] text-slate-500 flex items-center justify-between overflow-hidden">
-                  <span className="truncate max-w-[200px]">Tx: {payout.txHash}</span>
-                  <span className="text-emerald-600 font-bold uppercase text-[10px] shrink-0">On-Chain</span>
+                {/* Footer Actions */}
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-slate-400 font-medium">{payout.timeAgo}</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleShareOnX(payout)}
+                      title="Share on X (Twitter)"
+                      className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedCertificateTrader(payout)}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View Certificate
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-400 font-medium">{payout.timeAgo}</span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleShareOnX(payout)}
-                    title="Share on X (Twitter)"
-                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setSelectedCertificateTrader(payout)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
-                  >
-                    <Eye className="h-3.5 w-3.5" /> View Certificate
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Payout Assurance Banner */}

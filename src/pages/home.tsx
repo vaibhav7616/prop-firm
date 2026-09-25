@@ -24,8 +24,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { cn } from '@/lib/utils';
 import { LivePayoutTicker } from '@/components/home/payout-ticker';
 import { PayoutCalculator } from '@/components/home/payout-calculator';
-import { ScalingRoadmap } from '@/components/home/scaling-roadmap';
-import { InstrumentsPreview } from '@/components/home/instruments-preview';
 import { CertificateModal } from '@/components/home/certificate-modal';
 import { Hero3DPreview } from '@/components/home/hero-3d';
 import { RevealOnScroll } from '@/components/motion/reveal-on-scroll';
@@ -235,6 +233,7 @@ const COMPARISON = [
   { feature: 'Max Drawdown', one: '10%', two: '10%', instant: '10%' },
   { feature: 'Min Trading Days', one: '0', two: '3', instant: '0' },
   { feature: 'Time Limit', one: 'None', two: 'None', instant: 'None' },
+  { feature: 'News Trading', one: 'Allowed', two: 'Allowed', instant: 'Not Allowed' },
   { feature: 'Profit Split', one: 'Up to 90%', two: 'Up to 90%', instant: '50%' },
   { feature: 'Scaling Plan', one: 'Yes', two: 'Yes', instant: 'No' },
   { feature: 'Fee Refund', one: 'Yes', two: 'Yes', instant: 'No' },
@@ -246,13 +245,13 @@ const RULES_ACCORDION = [
   { rule: 'Maximum Drawdown', desc: 'The total maximum loss from your starting balance, set at 10%. This is a hard limit that cannot be exceeded at any point.' },
   { rule: 'Minimum Trading Days', desc: 'Some challenge types require a minimum number of active trading days before you can pass. One Step has no minimum.' },
   { rule: 'Consistency Rule', desc: 'No single trading day should account for more than 40% of your total profit, ensuring consistent trading behavior.' },
-  { rule: 'News Trading', desc: 'One Step and Instant Funding allow trading during high-impact news. Two Step restricts it to encourage disciplined trading.' },
+  { rule: 'News Trading', desc: 'One Step and Two Step allow trading during high-impact news events. Instant Funding does not allow news trading to manage risk on live capital.' },
 ];
 
 const TESTIMONIALS = [
-  { name: 'James Carter', role: 'Funded Trader', location: 'United Kingdom', text: 'Funded Shift gave me the opportunity I needed. The process was smooth, the rules are fair, and I received my first payout in just 5 days.', rating: 5 },
-  { name: 'Priya Sharma', role: 'Forex Trader', location: 'India', text: 'The instant funding option is a game changer. I skipped the evaluation and started trading real capital immediately.', rating: 5 },
-  { name: 'Marcus Weber', role: 'Swing Trader', location: 'Germany', text: 'I failed my first challenge but the support team helped me understand where I went wrong. Passed on my second attempt.', rating: 5 },
+  { name: 'James Carter', location: 'United Kingdom', text: 'Funded Shift gave me the opportunity I needed. The process was smooth, the rules are fair, and I received my first payout in just 5 days.', rating: 5 },
+  { name: 'Priya Sharma', location: 'India', text: 'The instant funding option is a game changer. I skipped the evaluation and started trading real capital immediately.', rating: 5 },
+  { name: 'Marcus Weber', location: 'Germany', text: 'I failed my first challenge but the support team helped me understand where I went wrong. Passed on my second attempt.', rating: 5 },
 ];
 
 const FAQS = [
@@ -373,8 +372,10 @@ export function HomePage() {
                 <TiltCard
                   maxTilt={4}
                   className={cn(
-                    'card-elevated p-7 flex flex-col h-full',
-                    program.highlight && 'ring-2 ring-brand-500 shadow-soft-lg'
+                    'p-7 flex flex-col h-full rounded-3xl border-2 transition-all duration-300 bg-white',
+                    program.highlight
+                      ? 'border-brand-500 shadow-soft-lg ring-2 ring-brand-500/20'
+                      : 'border-slate-200 hover:border-brand-400 shadow-soft'
                   )}
                 >
                   {program.highlight && (
@@ -461,9 +462,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ===== FUNDED SHIFT SCALE CAPITAL ROADMAP ===== */}
-      <ScalingRoadmap />
-
       {/* ===== SECTION 5: Why Funded Shift ===== */}
       <section className="section-pad">
         <div className="container-page">
@@ -494,29 +492,6 @@ export function HomePage() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ===== RAW SPREADS & INSTRUMENTS PREVIEW ===== */}
-      <InstrumentsPreview />
-
-      {/* ===== SECTION 6: Dashboard Preview ===== */}
-      <section className="section-pad bg-secondary/30 border-y border-border">
-        <div className="container-page">
-          <SectionHeading
-            eyebrow="Trading Dashboard"
-            title="Professional Tools, Real Data"
-            subtitle="Track your performance with institutional-grade analytics. Every metric you need, in one place."
-          />
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mt-14 rounded-2xl border border-border bg-card shadow-float overflow-hidden"
-          >
-            <DashboardPreviewLarge />
-          </motion.div>
         </div>
       </section>
 
@@ -786,7 +761,7 @@ export function HomePage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.role} · {t.location}</p>
+                    <p className="text-xs text-muted-foreground">{t.location}</p>
                   </div>
                 </div>
               </motion.div>
@@ -864,196 +839,6 @@ export function HomePage() {
           </motion.div>
         </div>
       </section>
-    </div>
-  );
-}
-
-/* ---------- Large Dashboard Preview (Section 6) ---------- */
-function DashboardPreviewLarge() {
-  const [activeTab, setActiveTab] = useState('performance');
-
-  const orders = [
-    { pair: 'EUR/USD', type: 'Buy', size: '2.5', entry: '1.0845', pnl: '+$1,250.00', positive: true },
-    { pair: 'GBP/USD', type: 'Sell', size: '1.0', entry: '1.2732', pnl: '+$680.50', positive: true },
-    { pair: 'XAU/USD', type: 'Buy', size: '0.5', entry: '2,034.50', pnl: '-$210.00', positive: false },
-    { pair: 'USD/JPY', type: 'Sell', size: '3.0', entry: '149.85', pnl: '+$940.00', positive: true },
-  ];
-
-  const metrics = [
-    { label: 'Win Rate', value: '68%', sub: '42 wins / 62 trades' },
-    { label: 'Profit Factor', value: '2.4', sub: 'Above average' },
-    { label: 'Avg Win', value: '+$890', sub: 'Per trade' },
-    { label: 'Avg Loss', value: '-$340', sub: 'Per trade' },
-  ];
-
-  const chartData = [30, 45, 38, 55, 48, 62, 58, 72, 68, 81, 75, 88, 82, 95];
-  const chartMax = Math.max(...chartData);
-
-  const tabs = [
-    { id: 'performance', label: 'Performance' },
-    { id: 'orders', label: 'Orders' },
-    { id: 'history', label: 'History' },
-  ];
-
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-secondary/30">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <BarChart3 className="h-4 w-4 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Account #FS-100425</p>
-            <p className="text-xs text-muted-foreground">Two Step · $100,000 · Phase 1</p>
-          </div>
-        </div>
-        <span className="badge-brand">Active</span>
-      </div>
-
-      <div className="p-6">
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-border">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'px-4 py-2 text-sm font-medium transition-colors relative',
-                activeTab === tab.id
-                  ? 'text-brand-700'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="dashTabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {activeTab === 'performance' && (
-            <motion.div
-              key="performance"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-6"
-            >
-              {/* Metrics */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {metrics.map((m) => (
-                  <div key={m.label} className="rounded-xl border border-border bg-secondary/20 p-4">
-                    <p className="text-xs text-muted-foreground">{m.label}</p>
-                    <p className="font-display text-xl font-bold mt-1">{m.value}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{m.sub}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Chart */}
-              <div className="rounded-xl border border-border p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-semibold">Profit Growth</p>
-                    <p className="text-xs text-muted-foreground">Last 14 trading days</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-success">+$4,250.00</p>
-                    <p className="text-xs text-success">+4.25%</p>
-                  </div>
-                </div>
-                <div className="flex items-end gap-2 h-32">
-                  {chartData.map((v, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${(v / chartMax) * 100}%` }}
-                        transition={{ duration: 0.4, delay: i * 0.02 }}
-                        className="w-full rounded-t-md bg-gradient-to-t from-brand-100 to-brand-500 hover:brightness-110 transition-all"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'orders' && (
-            <motion.div
-              key="orders"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-3 text-xs font-semibold text-muted-foreground">Pair</th>
-                      <th className="text-left py-3 px-3 text-xs font-semibold text-muted-foreground">Type</th>
-                      <th className="text-left py-3 px-3 text-xs font-semibold text-muted-foreground">Size</th>
-                      <th className="text-left py-3 px-3 text-xs font-semibold text-muted-foreground">Entry</th>
-                      <th className="text-right py-3 px-3 text-xs font-semibold text-muted-foreground">P/L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((o, i) => (
-                      <tr key={i} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
-                        <td className="py-3 px-3 text-sm font-medium">{o.pair}</td>
-                        <td className="py-3 px-3">
-                          <span className={cn('text-xs px-2 py-0.5 rounded-md font-medium', o.type === 'Buy' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive')}>
-                            {o.type}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-sm text-muted-foreground">{o.size}</td>
-                        <td className="py-3 px-3 text-sm text-muted-foreground font-mono">{o.entry}</td>
-                        <td className={cn('py-3 px-3 text-sm text-right font-medium font-mono', o.positive ? 'text-success' : 'text-destructive')}>
-                          {o.pnl}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'history' && (
-            <motion.div
-              key="history"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-3"
-            >
-              {orders.map((o, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border bg-secondary/20">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('h-9 w-9 rounded-lg flex items-center justify-center', o.positive ? 'bg-success/10' : 'bg-destructive/10')}>
-                      <span className={cn('text-xs font-bold', o.positive ? 'text-success' : 'text-destructive')}>{o.type === 'Buy' ? 'B' : 'S'}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{o.pair}</p>
-                      <p className="text-xs text-muted-foreground">{o.size} lots @ {o.entry}</p>
-                    </div>
-                  </div>
-                  <span className={cn('text-sm font-medium font-mono', o.positive ? 'text-success' : 'text-destructive')}>{o.pnl}</span>
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }

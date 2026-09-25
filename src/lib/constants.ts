@@ -36,18 +36,10 @@ export const ADDONS: Addon[] = [
 
 export const PAYMENT_METHODS: { id: PaymentMethod; label: string; group: string }[] = [
   { id: 'upi', label: 'UPI', group: 'UPI' },
-  { id: 'razorpay', label: 'Razorpay', group: 'Cards & Wallets' },
-  { id: 'stripe', label: 'Stripe', group: 'Cards & Wallets' },
-  { id: 'visa', label: 'Visa', group: 'Cards & Wallets' },
-  { id: 'mastercard', label: 'MasterCard', group: 'Cards & Wallets' },
-  { id: 'rupay', label: 'RuPay', group: 'Cards & Wallets' },
-  { id: 'gpay', label: 'Google Pay', group: 'Wallets' },
-  { id: 'phonepe', label: 'PhonePe', group: 'Wallets' },
-  { id: 'paytm', label: 'Paytm', group: 'Wallets' },
+  { id: 'usdt', label: 'USDT', group: 'Crypto' },
   { id: 'bitcoin', label: 'Bitcoin', group: 'Crypto' },
-  { id: 'ethereum', label: 'Ethereum', group: 'Crypto' },
-  { id: 'usdt_trc20', label: 'USDT (TRC20)', group: 'Crypto' },
-  { id: 'usdt_erc20', label: 'USDT (ERC20)', group: 'Crypto' },
+  { id: 'card', label: 'Card Option', group: 'Cards & Wallets' },
+  { id: 'crypto', label: 'Crypto Option', group: 'Crypto' },
 ];
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

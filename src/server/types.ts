@@ -30,6 +30,10 @@ export type PayoutStatus =
 
 export type PaymentMethod =
   | 'upi'
+  | 'usdt'
+  | 'bitcoin'
+  | 'card'
+  | 'crypto'
   | 'razorpay'
   | 'stripe'
   | 'visa'
@@ -38,7 +42,6 @@ export type PaymentMethod =
   | 'gpay'
   | 'phonepe'
   | 'paytm'
-  | 'bitcoin'
   | 'ethereum'
   | 'usdt_trc20'
   | 'usdt_erc20';

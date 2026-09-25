@@ -12,6 +12,10 @@ export type AccountStatus = 'pending' | 'active' | 'passed' | 'failed' | 'breach
 export type UserRole = 'trader' | 'admin';
 export type PaymentMethod =
   | 'upi'
+  | 'usdt'
+  | 'bitcoin'
+  | 'card'
+  | 'crypto'
   | 'razorpay'
   | 'stripe'
   | 'visa'
@@ -20,7 +24,6 @@ export type PaymentMethod =
   | 'gpay'
   | 'phonepe'
   | 'paytm'
-  | 'bitcoin'
   | 'ethereum'
   | 'usdt_trc20'
   | 'usdt_erc20';

@@ -83,8 +83,8 @@ export function ChallengesPage() {
                   className={cn(
                     'relative rounded-2xl p-6 text-left transition-all duration-200 cursor-pointer select-none overflow-hidden',
                     active
-                      ? 'border-2 border-brand-500 bg-brand-50/80 shadow-md'
-                      : 'border border-border bg-card shadow-sm hover:border-brand-300'
+                      ? 'border-2 border-brand-600 bg-brand-50/90 shadow-md ring-2 ring-brand-500/20'
+                      : 'border-2 border-slate-200 bg-white shadow-xs hover:border-brand-300 hover:shadow-sm'
                   )}
                 >
                   {active && (
@@ -120,13 +120,13 @@ export function ChallengesPage() {
                   <TiltCard
                     key={challenge.id}
                     maxTilt={4}
-                    className="card-elevated p-6 flex flex-col h-full border border-slate-200/90 shadow-sm"
+                    className="p-6 sm:p-7 flex flex-col h-full rounded-3xl border-2 border-slate-200 hover:border-brand-500 bg-white shadow-sm hover:shadow-xl transition-all duration-300 relative group overflow-hidden"
                   >
                     <div className="flex items-baseline justify-between mb-1">
                       <h3 className="font-display text-2xl font-bold text-foreground">
                         {formatAccountSize(challenge.account_size)}
                       </h3>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                         {CHALLENGE_TYPE_LABELS[challenge.type]}
                       </span>
                     </div>
@@ -137,7 +137,7 @@ export function ChallengesPage() {
                       </p>
                     </TiltDepthLayer>
 
-                    <div className="space-y-2.5 mb-6 flex-1">
+                    <div className="space-y-1 mb-6 flex-1 bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
                       <RuleRow label="Profit Target" value={`${rules.profit_target}%`} />
                       <RuleRow label="Daily Drawdown" value={`${rules.daily_drawdown}%`} />
                       <RuleRow label="Max Drawdown" value={`${rules.max_drawdown}%`} />
@@ -174,9 +174,9 @@ export function ChallengesPage() {
 
 function RuleRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="flex items-center justify-between text-xs py-1.5 border-b border-slate-200/60 last:border-b-0">
+      <span className="text-slate-500 font-medium">{label}</span>
+      <span className="font-semibold text-slate-800">{value}</span>
     </div>
   );
 }

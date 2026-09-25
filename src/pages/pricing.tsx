@@ -69,7 +69,7 @@ export function PricingPage() {
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                   {typeChallenges.map((c) => (
-                    <div key={c.id} className="card-elevated p-5 text-center">
+                    <div key={c.id} className="rounded-2xl border-2 border-slate-200 hover:border-brand-500 bg-white shadow-xs hover:shadow-md p-5 text-center transition-all duration-200">
                       <p className="font-display text-xl font-bold mb-1">{formatAccountSize(c.account_size)}</p>
                       <p className="text-2xl font-display font-bold text-brand-600 mb-3">{formatCurrency(c.price)}</p>
                       <div className="text-xs text-muted-foreground space-y-1 mb-4">

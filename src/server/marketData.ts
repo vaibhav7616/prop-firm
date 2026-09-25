@@ -42,13 +42,87 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
   private ws: WebSocket | null = null;
   private wsSessionId: string = '';
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private binanceWs: WebSocket | null = null;
+  private binanceReconnectTimeout: NodeJS.Timeout | null = null;
   private httpPollTimer: NodeJS.Timeout | null = null;
   private isDestroyed: boolean = false;
 
   constructor() {
     this.initBaseQuotes();
+    this.initBinanceWebSocket();
     this.initTradingViewWebSocket();
     this.startHttpFallbackPoller();
+  }
+
+  /**
+   * Official Direct Exchange Real-Time Binance WebSocket Stream
+   * Streams genuine second-to-second and sub-second real exchange order book ticks.
+   */
+  private initBinanceWebSocket() {
+    if (this.isDestroyed) return;
+
+    try {
+      this.binanceWs = new WebSocket(
+        'wss://stream.binance.com:9443/ws/btcusdt@bookTicker/ethusdt@bookTicker/solusdt@bookTicker/btcusdt@ticker/ethusdt@ticker/solusdt@ticker'
+      );
+
+      this.binanceWs.on('message', (raw: WebSocket.Data) => {
+        try {
+          const data = JSON.parse(raw.toString());
+          if (data.s && data.b && data.a) {
+            const symMap: Record<string, { symbol: string; precision: number; spread: number }> = {
+              BTCUSDT: { symbol: 'BTCUSD', precision: 2, spread: 8.58 },
+              ETHUSDT: { symbol: 'ETHUSD', precision: 2, spread: 0.32 },
+              SOLUSDT: { symbol: 'SOLUSD', precision: 3, spread: 0.018 },
+            };
+            const target = symMap[data.s];
+            if (target) {
+              const rawBid = parseFloat(data.b);
+              const rawAsk = parseFloat(data.a);
+              if (rawBid > 0 && rawAsk > 0) {
+                this.handleTvTick(target.symbol, target.precision, target.spread, {
+                  lp: (rawBid + rawAsk) / 2,
+                  bid: rawBid,
+                  ask: rawAsk,
+                });
+              }
+            }
+          } else if (data.s && data.c && data.h && data.l) {
+            const symMap: Record<string, string> = {
+              BTCUSDT: 'BTCUSD',
+              ETHUSDT: 'ETHUSD',
+              SOLUSDT: 'SOLUSD',
+            };
+            const symbol = symMap[data.s];
+            if (symbol) {
+              const existing = this.quotes.get(symbol);
+              if (existing) {
+                existing.high = parseFloat(data.h);
+                existing.low = parseFloat(data.l);
+                existing.change24h = parseFloat(data.P);
+              }
+            }
+          }
+        } catch (_) {}
+      });
+
+      this.binanceWs.on('error', (err) => {
+        console.warn('Binance WebSocket error:', err.message);
+      });
+
+      this.binanceWs.on('close', () => {
+        if (!this.isDestroyed) {
+          if (!this.binanceReconnectTimeout) {
+            this.binanceReconnectTimeout = setTimeout(() => {
+              this.binanceReconnectTimeout = null;
+              this.initBinanceWebSocket();
+            }, 3000);
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to initialize Binance WebSocket:', (err as Error).message);
+    }
   }
 
   public checkIsMarketOpen(symbol: string): boolean {

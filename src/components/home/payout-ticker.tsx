@@ -13,29 +13,41 @@ interface PayoutItem {
   accountSize: string;
 }
 
-const INDIAN_PAYOUTS_POOL: PayoutItem[] = [
+const GLOBAL_PAYOUTS_POOL: PayoutItem[] = [
   { id: '1', trader: 'Rajesh S.', country: 'India', flag: '🇮🇳', amount: '$7,250.00', method: 'Bank Transfer', timeAgo: '2m ago', accountSize: '$200,000' },
-  { id: '2', trader: 'Aarav P.', country: 'India', flag: '🇮🇳', amount: '$380.00', method: 'UPI', timeAgo: '5m ago', accountSize: '$5,000' },
-  { id: '3', trader: 'Vikram M.', country: 'India', flag: '🇮🇳', amount: '$1,850.00', method: 'Crypto (USDT)', timeAgo: '9m ago', accountSize: '$25,000' },
-  { id: '4', trader: 'Ananya R.', country: 'India', flag: '🇮🇳', amount: '$3,420.00', method: 'Bank Transfer', timeAgo: '14m ago', accountSize: '$50,000' },
-  { id: '5', trader: 'Rohan V.', country: 'India', flag: '🇮🇳', amount: '$5,890.00', method: 'Razorpay', timeAgo: '18m ago', accountSize: '$100,000' },
-  { id: '6', trader: 'Sneha K.', country: 'India', flag: '🇮🇳', amount: '$7,360.00', method: 'Crypto (USDC)', timeAgo: '23m ago', accountSize: '$200,000' },
-  { id: '7', trader: 'Priya N.', country: 'India', flag: '🇮🇳', amount: '$820.00', method: 'UPI', timeAgo: '28m ago', accountSize: '$10,000' },
-  { id: '8', trader: 'Suresh M.', country: 'India', flag: '🇮🇳', amount: '$2,940.00', method: 'Bank Transfer', timeAgo: '35m ago', accountSize: '$50,000' },
-  { id: '9', trader: 'Arjun D.', country: 'India', flag: '🇮🇳', amount: '$1,420.00', method: 'Crypto (USDT)', timeAgo: '41m ago', accountSize: '$25,000' },
-  { id: '10', trader: 'Amit J.', country: 'India', flag: '🇮🇳', amount: '$4,980.00', method: 'Razorpay', timeAgo: '48m ago', accountSize: '$100,000' },
-  { id: '11', trader: 'Kavya R.', country: 'India', flag: '🇮🇳', amount: '$240.00', method: 'UPI', timeAgo: '52m ago', accountSize: '$5,000' },
-  { id: '12', trader: 'Deepak K.', country: 'India', flag: '🇮🇳', amount: '$7,150.00', method: 'Crypto (USDC)', timeAgo: '1h ago', accountSize: '$200,000' },
-  { id: '13', trader: 'Aditya G.', country: 'India', flag: '🇮🇳', amount: '$3,150.00', method: 'Bank Transfer', timeAgo: '1h ago', accountSize: '$50,000' },
-  { id: '14', trader: 'Pooja I.', country: 'India', flag: '🇮🇳', amount: '$1,920.00', method: 'UPI', timeAgo: '1h ago', accountSize: '$25,000' },
-  { id: '15', trader: 'Rahul D.', country: 'India', flag: '🇮🇳', amount: '$750.00', method: 'Razorpay', timeAgo: '2h ago', accountSize: '$10,000' },
-  { id: '16', trader: 'Vivek M.', country: 'India', flag: '🇮🇳', amount: '$6,120.00', method: 'Crypto (USDT)', timeAgo: '2h ago', accountSize: '$100,000' },
-  { id: '17', trader: 'Neha C.', country: 'India', flag: '🇮🇳', amount: '$6,980.00', method: 'Bank Transfer', timeAgo: '2h ago', accountSize: '$200,000' },
-  { id: '18', trader: 'Sunita P.', country: 'India', flag: '🇮🇳', amount: '$410.00', method: 'UPI', timeAgo: '3h ago', accountSize: '$5,000' },
+  { id: '2', trader: 'Marcus Vance', country: 'United Kingdom', flag: '🇬🇧', amount: '$18,450.00', method: 'Crypto (USDC)', timeAgo: '4m ago', accountSize: '$200,000' },
+  { id: '3', trader: 'Aarav P.', country: 'India', flag: '🇮🇳', amount: '$380.00', method: 'UPI', timeAgo: '7m ago', accountSize: '$5,000' },
+  { id: '4', trader: 'Alexandre Dubois', country: 'France', flag: '🇫🇷', amount: '$8,940.50', method: 'Crypto (USDT)', timeAgo: '11m ago', accountSize: '$100,000' },
+  { id: '5', trader: 'Vikram M.', country: 'India', flag: '🇮🇳', amount: '$1,850.00', method: 'Crypto (USDT)', timeAgo: '15m ago', accountSize: '$25,000' },
+  { id: '6', trader: 'Lucas Schneider', country: 'Germany', flag: '🇩🇪', amount: '$9,350.00', method: 'Bank Transfer', timeAgo: '19m ago', accountSize: '$100,000' },
+  { id: '7', trader: 'Ananya R.', country: 'India', flag: '🇮🇳', amount: '$3,420.00', method: 'Bank Transfer', timeAgo: '23m ago', accountSize: '$50,000' },
+  { id: '8', trader: 'Sofia Martinez', country: 'Spain', flag: '🇪🇸', amount: '$11,200.00', method: 'Crypto (USDT)', timeAgo: '27m ago', accountSize: '$100,000' },
+  { id: '9', trader: 'Rohan V.', country: 'India', flag: '🇮🇳', amount: '$5,890.00', method: 'Razorpay', timeAgo: '32m ago', accountSize: '$100,000' },
+  { id: '10', trader: 'Liam O\'Connor', country: 'Australia', flag: '🇦🇺', amount: '$22,400.00', method: 'Wire Transfer', timeAgo: '36m ago', accountSize: '$200,000' },
+  { id: '11', trader: 'Sneha K.', country: 'India', flag: '🇮🇳', amount: '$7,360.00', method: 'Crypto (USDC)', timeAgo: '41m ago', accountSize: '$200,000' },
+  { id: '12', trader: 'David Miller', country: 'United States', flag: '🇺🇸', amount: '$16,800.00', method: 'Crypto (USDT)', timeAgo: '45m ago', accountSize: '$200,000' },
+  { id: '13', trader: 'Priya N.', country: 'India', flag: '🇮🇳', amount: '$820.00', method: 'UPI', timeAgo: '49m ago', accountSize: '$10,000' },
+  { id: '14', trader: 'Elena Rostova', country: 'Estonia', flag: '🇪🇪', amount: '$12,300.00', method: 'Wise Transfer', timeAgo: '53m ago', accountSize: '$100,000' },
+  { id: '15', trader: 'Suresh M.', country: 'India', flag: '🇮🇳', amount: '$2,940.00', method: 'Bank Transfer', timeAgo: '58m ago', accountSize: '$50,000' },
+  { id: '16', trader: 'Kenji Takahashi', country: 'Japan', flag: '🇯🇵', amount: '$34,100.00', method: 'Crypto (USDC)', timeAgo: '1h ago', accountSize: '$400,000' },
+  { id: '17', trader: 'Arjun D.', country: 'India', flag: '🇮🇳', amount: '$1,420.00', method: 'Crypto (USDT)', timeAgo: '1h ago', accountSize: '$25,000' },
+  { id: '18', trader: 'Oliver Smith', country: 'Canada', flag: '🇨🇦', amount: '$14,600.00', method: 'Bank Transfer', timeAgo: '1h ago', accountSize: '$100,000' },
+  { id: '19', trader: 'Amit J.', country: 'India', flag: '🇮🇳', amount: '$4,980.00', method: 'Razorpay', timeAgo: '2h ago', accountSize: '$100,000' },
+  { id: '20', trader: 'Sophia Müller', country: 'Switzerland', flag: '🇨🇭', amount: '$19,250.00', method: 'Bank Wire', timeAgo: '2h ago', accountSize: '$200,000' },
+  { id: '21', trader: 'Deepak K.', country: 'India', flag: '🇮🇳', amount: '$7,150.00', method: 'Crypto (USDC)', timeAgo: '2h ago', accountSize: '$200,000' },
+  { id: '22', trader: 'Matteo Rossi', country: 'Italy', flag: '🇮🇹', amount: '$13,400.00', method: 'Revolut Pay', timeAgo: '2h ago', accountSize: '$100,000' },
+  { id: '23', trader: 'Aditya G.', country: 'India', flag: '🇮🇳', amount: '$3,150.00', method: 'Bank Transfer', timeAgo: '3h ago', accountSize: '$50,000' },
+  { id: '24', trader: 'Lars Lindqvist', country: 'Sweden', flag: '🇸🇪', amount: '$7,850.00', method: 'Crypto (USDT)', timeAgo: '3h ago', accountSize: '$50,000' },
+  { id: '25', trader: 'Pooja I.', country: 'India', flag: '🇮🇳', amount: '$1,920.00', method: 'UPI', timeAgo: '3h ago', accountSize: '$25,000' },
+  { id: '26', trader: 'Tariq Al-Mansoor', country: 'UAE', flag: '🇦🇪', amount: '$28,900.00', method: 'Bank Wire', timeAgo: '3h ago', accountSize: '$300,000' },
+  { id: '27', trader: 'Rahul D.', country: 'India', flag: '🇮🇳', amount: '$750.00', method: 'Razorpay', timeAgo: '4h ago', accountSize: '$10,000' },
+  { id: '28', trader: 'Chloe Lefebvre', country: 'France', flag: '🇫🇷', amount: '$15,100.00', method: 'Bank Transfer', timeAgo: '4h ago', accountSize: '$200,000' },
+  { id: '29', trader: 'Vivek M.', country: 'India', flag: '🇮🇳', amount: '$6,120.00', method: 'Crypto (USDT)', timeAgo: '4h ago', accountSize: '$100,000' },
+  { id: '30', trader: 'Sunita P.', country: 'India', flag: '🇮🇳', amount: '$410.00', method: 'UPI', timeAgo: '5h ago', accountSize: '$5,000' },
 ];
 
 export function LivePayoutTicker() {
-  const [items, setItems] = useState<PayoutItem[]>(INDIAN_PAYOUTS_POOL);
+  const [items, setItems] = useState<PayoutItem[]>(GLOBAL_PAYOUTS_POOL);
 
   // Periodically rotate payout items so names and values shift dynamically
   useEffect(() => {

@@ -6,13 +6,12 @@ import { Logo } from '@/components/shared/logo';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { label: 'Challenges', to: '/challenges' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'Trading Rules', to: '/rules' },
   { label: 'Leaderboard', to: '/leaderboard' },
   { label: 'Proof of Payout', to: '/proof-of-payout' },
-  { label: 'Affiliates', to: '/affiliates' },
   { label: 'FAQ', to: '/faq' },
 ];
 
@@ -22,6 +21,10 @@ export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const navLinks = user
+    ? [...BASE_NAV_LINKS, { label: 'Affiliates', to: '/dashboard/affiliate' }]
+    : BASE_NAV_LINKS;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -34,8 +37,8 @@ export function Header() {
   }, [location.pathname]);
 
   const isActive = (to: string) => {
-    if (to === '/challenges') return location.pathname === '/challenges' || location.pathname === '/pricing';
-    return location.pathname === to;
+    if (to === '/') return location.pathname === '/';
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
   };
 
   return (
@@ -52,20 +55,23 @@ export function Header() {
           <Logo />
 
           <nav className="hidden lg:flex items-center gap-7">
-            {NAV_LINKS.map((link) => {
+            {navLinks.map((link) => {
               const active = isActive(link.to);
               return (
                 <Link
                   key={link.label}
                   to={link.to}
-                  className={cn('nav-link relative py-1', active && 'active')}
+                  className={cn(
+                    'relative py-1 text-sm font-medium transition-colors select-none',
+                    active ? 'text-brand-600 font-semibold' : 'text-slate-600 hover:text-slate-900'
+                  )}
                 >
                   {link.label}
                   {active && (
                     <motion.div
                       layoutId="activeNavIndicator"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600 rounded-full"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-brand-600 rounded-full"
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                     />
                   )}
                 </Link>
@@ -125,7 +131,7 @@ export function Header() {
               className="lg:hidden overflow-hidden pb-5 pt-2 border-t border-slate-200 bg-white"
             >
               <nav className="flex flex-col gap-1">
-                {NAV_LINKS.map((link) => (
+                {navLinks.map((link) => (
                   <Link
                     key={link.label}
                     to={link.to}

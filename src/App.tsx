@@ -15,7 +15,6 @@ import { ChallengesPage } from '@/pages/challenges';
 import { PricingPage } from '@/pages/pricing';
 import { RulesPage } from '@/pages/rules';
 import { FaqPage } from '@/pages/faq';
-import { AffiliatesPage } from '@/pages/affiliates';
 import { AboutPage } from '@/pages/about';
 import { ContactPage } from '@/pages/contact';
 import { BlogPage } from '@/pages/blog';
@@ -90,7 +89,6 @@ function AppRoutes() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/faq" element={<FaqPage />} />
-        <Route path="/affiliates" element={<AffiliatesPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/blog" element={<BlogPage />} />
@@ -108,6 +106,7 @@ function AppRoutes() {
 
       {/* Checkout */}
       <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+      <Route path="/affiliates" element={<ProtectedRoute><Navigate to="/dashboard/affiliate" replace /></ProtectedRoute>} />
 
       {/* Full-Screen Institutional Web Terminal */}
       <Route path="/dashboard/trading" element={<ProtectedRoute><DashboardTrading /></ProtectedRoute>} />

@@ -18,7 +18,6 @@ const FOOTER_LINKS = {
     { label: 'Trading Rules', to: '/rules' },
     { label: 'Leaderboard', to: '/leaderboard' },
     { label: 'Proof of Payout', to: '/proof-of-payout' },
-    { label: 'Affiliates', to: '/affiliates' },
   ],
   Resources: [
     { label: 'FAQ', to: '/faq' },

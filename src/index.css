@@ -200,11 +200,7 @@
     @apply relative text-sm font-medium text-muted-foreground transition-colors hover:text-foreground;
   }
   .nav-link.active {
-    @apply text-foreground;
-  }
-  .nav-link.active::after {
-    content: '';
-    @apply absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-brand-500;
+    @apply text-foreground font-semibold;
   }
 }
 
