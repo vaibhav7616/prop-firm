@@ -128,7 +128,8 @@ export function AdminKyc() {
                       )}
                     </td>
                   </tr>
-                ))}
+                ))
+              )}
               </tbody>
             </table>
           </div>
