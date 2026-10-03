@@ -2,8 +2,11 @@ import type { TradingAccount, Order, Notification, Platform, ChallengeRules } fr
 
 export async function fetchUserAccounts(userId: string): Promise<TradingAccount[]> {
   try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: Record<string, string> = { 'x-user-id': userId };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch('/api/accounts', {
-      headers: { 'x-user-id': userId },
+      headers,
     });
     if (res.ok) {
       const data = await res.json();
@@ -440,4 +443,379 @@ export async function processAdminAffiliateWithdrawalApi(params: {
     return { success: false, error: err.message || 'Failed to process withdrawal action.' };
   }
 }
+
+// -------------------------------------------------------------
+// DIFFERENTIATED PROP FIRM API CLIENT HELPERS
+// -------------------------------------------------------------
+export async function partialClosePositionApi(params: {
+  userId: string;
+  accountId: string;
+  positionId: string;
+  lotsToClose: number;
+}) {
+  try {
+    const res = await fetch('/api/trading/partial-close', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': params.userId,
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Partial close failed.' };
+  }
+}
+
+export async function simulateTradeApi(params: {
+  accountId: string;
+  symbol: string;
+  type: 'BUY' | 'SELL';
+  lotSize: number;
+  stopLoss?: number;
+  takeProfit?: number;
+}) {
+  try {
+    const res = await fetch('/api/trading/simulate-trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Trade simulation failed.' };
+  }
+}
+
+export async function fetchViolationsExplainApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/accounts/${accountId}/violations/explain`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch breach explanation:', err);
+  }
+  return [];
+}
+
+export async function fetchRiskProfileApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/trader/risk-profile/${accountId}`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch risk profile:', err);
+  }
+  return null;
+}
+
+export async function fetchHealthScoreApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/trader/health-score/${accountId}`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch health score:', err);
+  }
+  return null;
+}
+
+export async function fetchStrategyFingerprintApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/trader/strategy-fingerprint/${accountId}`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch strategy fingerprint:', err);
+  }
+  return null;
+}
+
+export async function fetchTimelineApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/accounts/${accountId}/timeline`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch timeline:', err);
+  }
+  return [];
+}
+
+export async function fetchRecoveryOptionsApi(accountId: string) {
+  try {
+    const res = await fetch(`/api/accounts/${accountId}/recovery-options`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch recovery options:', err);
+  }
+  return null;
+}
+
+export async function executeRecoveryResetApi(accountId: string, userId: string) {
+  try {
+    const res = await fetch(`/api/accounts/${accountId}/recovery-reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId,
+      },
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Recovery reset failed.' };
+  }
+}
+
+export async function fetchAdminAuditLogsApi(params?: { search?: string; limit?: number }) {
+  try {
+    const query = new URLSearchParams();
+    if (params?.search) query.set('search', params.search);
+    if (params?.limit) query.set('limit', String(params.limit));
+    const res = await fetch(`/api/admin/audit-logs?${query.toString()}`);
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch audit logs:', err);
+  }
+  return { total: 0, logs: [] };
+}
+
+export async function registerUserApi(params: {
+  email: string;
+  password: string;
+  full_name?: string;
+  country?: string;
+  phone?: string;
+}) {
+  const res = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to register account.');
+  }
+  return data;
+}
+
+export async function loginUserApi(params: {
+  email: string;
+  password: string;
+}) {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Invalid email or password.');
+  }
+  return data;
+}
+
+// -------------------------------------------------------------
+// ADMIN USER MANAGEMENT API
+// -------------------------------------------------------------
+export async function updateUserRoleApi(userId: string, role: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch(`/api/admin/users/${userId}/update-role`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+      body: JSON.stringify({ role }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update user role.' };
+  }
+}
+
+export async function toggleUserStatusApi(userId: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch(`/api/admin/users/${userId}/toggle-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to toggle user status.' };
+  }
+}
+
+// -------------------------------------------------------------
+// KYC & IDENTITY VERIFICATION API
+// -------------------------------------------------------------
+export async function fetchKycStatusApi(userId?: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/kyc/status', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'x-user-id': userId } : {}),
+      },
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch KYC status:', err);
+  }
+  return { is_verified: false, submission: null };
+}
+
+export async function submitKycApi(params: {
+  userId?: string;
+  document_type: string;
+  document_number?: string;
+  country?: string;
+}) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/kyc/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(params.userId ? { 'x-user-id': params.userId } : {}),
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to submit KYC.' };
+  }
+}
+
+export async function fetchAdminKycSubmissionsApi() {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/admin/kyc/submissions', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch admin KYC submissions:', err);
+  }
+  return [];
+}
+
+export async function reviewKycSubmissionApi(params: {
+  submissionId: string;
+  status: 'VERIFIED' | 'REJECTED';
+  rejection_reason?: string;
+}) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/admin/kyc/review', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to review KYC submission.' };
+  }
+}
+
+// -------------------------------------------------------------
+// SUPPORT TICKETS API
+// -------------------------------------------------------------
+export async function fetchUserSupportTicketsApi(userId?: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/support/tickets', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'x-user-id': userId } : {}),
+      },
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch support tickets:', err);
+  }
+  return [];
+}
+
+export async function createSupportTicketApi(params: {
+  userId?: string;
+  subject: string;
+  category?: string;
+  priority?: string;
+  message: string;
+}) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/support/tickets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(params.userId ? { 'x-user-id': params.userId } : {}),
+      },
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to create support ticket.' };
+  }
+}
+
+export async function replySupportTicketApi(ticketId: string, message: string, userId?: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('auth_token')) : null;
+    const res = await fetch(`/api/support/tickets/${ticketId}/reply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'x-user-id': userId } : (!token ? { 'x-user-id': 'admin-vaibhav-id-999' } : {})),
+      },
+      body: JSON.stringify({ message }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to reply to ticket.' };
+  }
+}
+
+export async function fetchAdminSupportTicketsApi() {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/admin/support/tickets', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('Failed to fetch admin support tickets:', err);
+  }
+  return [];
+}
+
+export async function adminUpdateSupportTicketStatusApi(ticketId: string, status: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+    const res = await fetch(`/api/admin/support/tickets/${ticketId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+      },
+      body: JSON.stringify({ status }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to update ticket status.' };
+  }
+}
+
 

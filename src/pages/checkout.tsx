@@ -42,7 +42,16 @@ export function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    const challengeId = searchParams.get('challenge');
+    let challengeId = searchParams.get('challenge');
+    const sizeParam = searchParams.get('account_size');
+    const typeParam = searchParams.get('type');
+
+    if (!challengeId && sizeParam && typeParam) {
+      const typePrefix = typeParam === 'one_step' ? 'ch-one-' : typeParam === 'two_step' ? 'ch-two-' : 'ch-inst-';
+      const sizeK = Number(sizeParam) / 1000;
+      challengeId = `${typePrefix}${sizeK}k`;
+    }
+
     if (!challengeId) {
       navigate('/challenges');
       return;

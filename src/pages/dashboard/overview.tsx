@@ -83,12 +83,19 @@ export function DashboardOverview() {
         setOrders(userOrds);
         setNotifications(DEFAULT_NOTIFICATIONS);
       } catch (_) {
-        setAccounts(DEFAULT_ACCOUNTS);
-        if (DEFAULT_ACCOUNTS.length > 0) {
-          setSelectedAccountId(DEFAULT_ACCOUNTS[0].id);
+        if (user.id === 'demo-trader-id-12345') {
+          setAccounts(DEFAULT_ACCOUNTS);
+          if (DEFAULT_ACCOUNTS.length > 0) {
+            setSelectedAccountId(DEFAULT_ACCOUNTS[0].id);
+          }
+          setOrders(DEFAULT_ORDERS);
+          setNotifications(DEFAULT_NOTIFICATIONS);
+        } else {
+          setAccounts([]);
+          setSelectedAccountId('');
+          setOrders([]);
+          setNotifications([]);
         }
-        setOrders(DEFAULT_ORDERS);
-        setNotifications(DEFAULT_NOTIFICATIONS);
       } finally {
         setLoading(false);
       }

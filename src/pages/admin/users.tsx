@@ -4,7 +4,7 @@ import { formatDate } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { fetchAdminStatsApi } from '@/lib/api-client';
+import { fetchAdminStatsApi, updateUserRoleApi, toggleUserStatusApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function AdminUsers() {
@@ -27,21 +27,33 @@ export function AdminUsers() {
     loadData();
   }, []);
 
-  const handleToggleRole = (userId: string, currentRole: string) => {
+  const handleToggleRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'ADMIN' || currentRole === 'admin' ? 'USER' : 'ADMIN';
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
     );
-    toast.success(`User role updated to ${newRole}`);
+    const res = await updateUserRoleApi(userId, newRole);
+    if (res && res.success) {
+      toast.success(`User role updated to ${newRole}`);
+    } else {
+      toast.error(res?.error || 'Failed to update user role on server');
+      loadData();
+    }
   };
 
-  const handleToggleStatus = (userId: string) => {
+  const handleToggleStatus = async (userId: string) => {
     setUsers((prev) =>
       prev.map((u) =>
         u.id === userId ? { ...u, is_active: u.is_active === false } : u
       )
     );
-    toast.success('User status updated');
+    const res = await toggleUserStatusApi(userId);
+    if (res && res.success) {
+      toast.success('User status updated');
+    } else {
+      toast.error(res?.error || 'Failed to update user status on server');
+      loadData();
+    }
   };
 
   const getUserAccountCount = (userId: string) => {

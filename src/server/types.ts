@@ -288,8 +288,10 @@ export interface AuditLogEntity {
   actor_role: string;
   action: string;
   target_id?: string;
+  entity_type?: string;
   details: string;
   ip_address?: string;
+  metadata?: Record<string, any>;
   created_at: string;
 }
 
@@ -327,4 +329,220 @@ export interface AffiliateWithdrawalEntity {
   updated_at: string;
   reviewed_at?: string;
 }
+
+// -------------------------------------------------------------
+// DIFFERENTIATED PROP FIRM FEATURES INTERFACES
+// -------------------------------------------------------------
+
+export interface ExplainableBreach {
+  id: string;
+  account_id: string;
+  rule_violated: 'DAILY_LOSS' | 'MAX_LOSS' | 'MAX_LOT' | 'RESTRICTED_SYMBOL' | 'WEEKEND_HOLDING' | 'NEWS_RESTRICTION' | 'CONSISTENCY';
+  threshold_amount: number;
+  threshold_percent: number;
+  actual_loss_amount: number;
+  actual_loss_percent: number;
+  breach_time: string;
+  timezone: string;
+  triggering_trade_id?: string;
+  symbol?: string;
+  balance_at_breach: number;
+  equity_at_breach: number;
+  start_of_day_baseline: number;
+  starting_balance: number;
+  drawdown_percent: number;
+  math_explanation: string;
+  recommendations: string[];
+}
+
+export interface TradeSimulationRequest {
+  accountId: string;
+  symbol: string;
+  type: OrderType;
+  lotSize: number;
+  stopLoss?: number;
+  takeProfit?: number;
+}
+
+export interface TradeSimulationResult {
+  symbol: string;
+  type: OrderType;
+  lotSize: number;
+  currentBid: number;
+  currentAsk: number;
+  estimatedEntryPrice: number;
+  requiredMargin: number;
+  availableMarginBefore: number;
+  availableMarginAfter: number;
+  estimatedCommission: number;
+  riskAtStopLoss: number | null;
+  rewardAtTakeProfit: number | null;
+  riskRewardRatio: number | null;
+  currentDailyLoss: number;
+  maxDailyAllowedLoss: number;
+  projectedDailyLossIfStoppedOut: number | null;
+  remainingDailyLossAllowance: number;
+  wouldBreachDaily: boolean;
+  currentOverallLoss: number;
+  maxOverallAllowedLoss: number;
+  projectedOverallLossIfStoppedOut: number | null;
+  remainingOverallLossAllowance: number;
+  wouldBreachMax: boolean;
+  maxSafeLotSize: number;
+  safetyAdvice: string;
+}
+
+export interface TraderRiskProfile {
+  accountId: string;
+  userId: string;
+  totalTrades: number;
+  closedTrades: number;
+  openPositions: number;
+  winRate: number;
+  profitFactor: number;
+  averageWin: number;
+  averageLoss: number;
+  riskRewardRatio: number;
+  maxDrawdownExperienced: number;
+  maxDrawdownPercent: number;
+  longestWinStreak: number;
+  longestLossStreak: number;
+  currentStreak: { type: 'WIN' | 'LOSS' | 'NONE'; count: number };
+  averageHoldingTimeMinutes: number;
+  holdingStyle: 'SCALPER' | 'DAY_TRADER' | 'SWING_TRADER';
+  symbolConcentration: Array<{ symbol: string; tradesCount: number; percentage: number }>;
+  overtradingScore: 'LOW' | 'NORMAL' | 'ELEVATED' | 'HIGH';
+  revengeTradingDetected: boolean;
+  revengeTradingEvents: number;
+  currentNetExposureUSD: number;
+  maxHistoricalExposureUSD: number;
+  riskRating: 'CONSERVATIVE' | 'BALANCED' | 'AGGRESSIVE' | 'HIGH_RISK';
+}
+
+export interface TraderHealthScore {
+  accountId: string;
+  overallScore: number; // 0 - 100
+  tier: 'INSTITUTIONAL' | 'PROFESSIONAL' | 'MODERATE' | 'NEEDS_DISCIPLINE';
+  breakdown: {
+    drawdownControl: { score: number; max: 30; label: string };
+    riskRewardDiscipline: { score: number; max: 20; label: string };
+    positionSizingDiscipline: { score: number; max: 20; label: string };
+    ruleAdherence: { score: number; max: 20; label: string };
+    tradingPacing: { score: number; max: 10; label: string };
+  };
+  strengths: string[];
+  vulnerabilities: string[];
+  recommendations: string[];
+}
+
+export interface StrategyFingerprint {
+  accountId: string;
+  primaryStyle: 'SCALPER' | 'DAY_TRADER' | 'SWING_TRADER';
+  tradeStyleConfidence: number; // %
+  attributes: {
+    isNewsTrader: boolean;
+    isHighFrequency: boolean;
+    hasMartingaleBehavior: boolean;
+    isGridTrader: boolean;
+    isSingleInstrumentSpecialist: boolean;
+    prefersStopLoss: boolean;
+    stopLossUsageRate: number; // %
+  };
+  primaryAssetsTraded: string[];
+  sessionPreference: 'ASIAN' | 'LONDON' | 'NEW_YORK' | 'CROSS_SESSION';
+  consistencyScore: number; // %
+}
+
+export interface DynamicRiskShieldConfig {
+  enabled: boolean;
+  warningThresholdPercent: number; // e.g. 70% of daily DD
+  restrictHighRiskThresholdPercent: number; // e.g. 85% of daily DD
+  reducedMaxLotMultiplier: number; // e.g. 0.5 (cuts max lot by 50%)
+  requireStopLossUnderPressure: boolean;
+  autoCloseAtPercent: number; // e.g. 98% of daily DD (safety barrier)
+}
+
+export interface RiskShieldStatus {
+  accountId: string;
+  shieldActive: boolean;
+  currentDailyDDRatio: number;
+  currentMaxDDRatio: number;
+  state: 'NORMAL' | 'ELEVATED_WATCH' | 'SHIELD_ENGAGED' | 'RESTRICTED';
+  warnings: string[];
+  allowedMaxLot: number;
+  stopLossEnforced: boolean;
+}
+
+export interface PerformanceTimelineEvent {
+  id: string;
+  accountId: string;
+  eventType:
+    | 'ACCOUNT_PROVISIONED'
+    | 'TRADE_OPENED'
+    | 'TRADE_CLOSED'
+    | 'PROFIT_MILESTONE'
+    | 'DRAWDOWN_WARNING'
+    | 'RULE_BREACH'
+    | 'PHASE_PASSED'
+    | 'FUNDED_ACTIVE'
+    | 'PAYOUT_REQUESTED'
+    | 'PAYOUT_APPROVED'
+    | 'PAYOUT_REJECTED';
+  title: string;
+  description: string;
+  severity: 'info' | 'success' | 'warning' | 'error';
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+export interface RecoveryProgramOption {
+  accountId: string;
+  accountNumber: string;
+  accountSize: number;
+  type: ChallengeType;
+  isEligible: boolean;
+  discountPercent: number;
+  resetPrice: number;
+  reason: string;
+  conditions: string[];
+}
+
+export interface KycSubmissionEntity {
+  id: string;
+  user_id: string;
+  trader_name: string;
+  email: string;
+  document_type: 'PASSPORT' | 'DRIVERS_LICENSE' | 'NATIONAL_ID';
+  document_number?: string;
+  country: string;
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  rejection_reason?: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  sender: 'user' | 'admin' | 'support';
+  sender_name: string;
+  message: string;
+  created_at: string;
+}
+
+export interface SupportTicketEntity {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  subject: string;
+  category: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  messages: SupportTicketMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+
 

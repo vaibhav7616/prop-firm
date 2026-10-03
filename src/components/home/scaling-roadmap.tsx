@@ -39,34 +39,34 @@ export function ScalingRoadmap() {
         />
 
         {/* Timeline Stage Buttons */}
-        <div className="mt-12 overflow-x-auto pb-4">
-          <div className="flex items-center gap-3 min-w-[720px] justify-between">
+        <div className="mt-8 sm:mt-12 overflow-x-auto pb-4 touch-pan-x">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-[740px] lg:min-w-0 lg:w-full justify-between">
             {SCALING_STAGES.map((s, idx) => {
               const active = activeStage === s.stage;
               return (
                 <button
                   key={s.stage}
                   onClick={() => setActiveStage(s.stage)}
-                  className={`flex-1 p-4 rounded-2xl border text-left transition-all relative ${
+                  className={`flex-1 min-w-[110px] p-3 sm:p-4 rounded-2xl border text-left transition-all relative ${
                     active
-                      ? 'border-brand-500 bg-brand-50/80 shadow-soft-md scale-[1.03] z-10'
+                      ? 'border-brand-500 bg-brand-50/80 shadow-soft-md scale-[1.02] sm:scale-[1.03] z-10'
                       : 'border-border bg-card hover:border-brand-200'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-wider truncate">
                       {s.months}
                     </span>
                     {s.badge && (
-                      <span className="text-[9px] font-bold bg-brand-600 text-white px-1.5 py-0.5 rounded-md">
+                      <span className="text-[8px] sm:text-[9px] font-bold bg-brand-600 text-white px-1.5 py-0.5 rounded-md shrink-0">
                         {s.badge}
                       </span>
                     )}
                   </div>
-                  <p className="font-display font-bold text-base sm:text-lg text-foreground">
+                  <p className="font-display font-bold text-sm sm:text-base lg:text-lg text-foreground">
                     {formatCurrency(s.capital)}
                   </p>
-                  <p className="text-[11px] text-muted-foreground mt-1">
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1">
                     {s.profitSplit} Split
                   </p>
                   {idx < SCALING_STAGES.length - 1 && (
@@ -84,51 +84,51 @@ export function ScalingRoadmap() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="mt-6 card-elevated p-6 sm:p-8 border-2 border-brand-500/20 bg-gradient-to-br from-card via-brand-50/20 to-card"
+          className="mt-6 card-elevated p-5 sm:p-8 border-2 border-brand-500/20 bg-gradient-to-br from-card via-brand-50/20 to-card"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
             <div className="lg:col-span-7 space-y-4">
               <div className="flex items-center gap-2">
                 <span className="badge-brand text-xs">Stage {activeLevel.stage} Scale</span>
                 <span className="text-xs text-muted-foreground">• {activeLevel.months} Timeline</span>
               </div>
 
-              <h3 className="font-display font-bold text-2xl sm:text-3xl text-foreground">
+              <h3 className="font-display font-bold text-xl sm:text-2xl md:text-3xl text-foreground">
                 Managed Capital: <span className="text-brand-600">{formatCurrency(activeLevel.capital)}</span>
               </h3>
 
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Reach a cumulative return of 10% across 3 consecutive months to automatically scale your funded account. No complicated applications or re-evaluations required.
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                <div className="rounded-xl border border-border bg-card p-3">
-                  <p className="text-[11px] text-muted-foreground">Profit Split</p>
-                  <p className="font-display font-bold text-lg text-brand-600">{activeLevel.profitSplit}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-2">
+                <div className="rounded-xl border border-border bg-card p-2.5 sm:p-3">
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Profit Split</p>
+                  <p className="font-display font-bold text-base sm:text-lg text-brand-600">{activeLevel.profitSplit}</p>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-3">
-                  <p className="text-[11px] text-muted-foreground">Max Drawdown</p>
-                  <p className="font-display font-bold text-lg text-foreground">{activeLevel.drawdown}</p>
+                <div className="rounded-xl border border-border bg-card p-2.5 sm:p-3">
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Max Drawdown</p>
+                  <p className="font-display font-bold text-base sm:text-lg text-foreground">{activeLevel.drawdown}</p>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-3">
-                  <p className="text-[11px] text-muted-foreground">Payout Frequency</p>
-                  <p className="font-display font-bold text-lg text-emerald-600">{activeLevel.payoutCycle}</p>
+                <div className="rounded-xl border border-border bg-card p-2.5 sm:p-3">
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Payout Frequency</p>
+                  <p className="font-display font-bold text-base sm:text-lg text-emerald-600">{activeLevel.payoutCycle}</p>
                 </div>
-                <div className="rounded-xl border border-border bg-card p-3">
-                  <p className="text-[11px] text-muted-foreground">Account Status</p>
-                  <p className="font-display font-bold text-lg text-foreground">Funded</p>
+                <div className="rounded-xl border border-border bg-card p-2.5 sm:p-3">
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground">Account Status</p>
+                  <p className="font-display font-bold text-base sm:text-lg text-foreground">Funded</p>
                 </div>
               </div>
             </div>
 
             {/* Visual Capital Progress Bar */}
-            <div className="lg:col-span-5 rounded-2xl border border-border bg-secondary/30 p-6 space-y-5">
+            <div className="lg:col-span-5 rounded-2xl border border-border bg-secondary/30 p-4 sm:p-6 space-y-4 sm:space-y-5">
               <div className="flex items-center justify-between text-xs font-semibold">
                 <span>Scaling Progress</span>
                 <span className="text-brand-600 font-bold">{Math.round((activeLevel.capital / 4000000) * 100)}% of Max $4M</span>
               </div>
 
-              <div className="h-4 rounded-full bg-secondary overflow-hidden border border-border p-0.5">
+              <div className="h-3.5 sm:h-4 rounded-full bg-secondary overflow-hidden border border-border p-0.5">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.max(5, Math.min(100, (activeLevel.capital / 4000000) * 100))}%` }}
@@ -137,19 +137,19 @@ export function ScalingRoadmap() {
                 />
               </div>
 
-              <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+              <div className="flex justify-between text-[10px] sm:text-[11px] font-mono text-muted-foreground">
                 <span>$100,000</span>
                 <span>$1,000,000</span>
                 <span className="font-bold text-foreground">$4,000,000</span>
               </div>
 
-              <div className="pt-2 border-t border-border/80 flex items-center justify-between text-xs text-muted-foreground">
+              <div className="pt-2 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5 text-foreground font-medium">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
                   100% Fee Refunded
                 </span>
                 <span className="flex items-center gap-1 text-brand-600 font-semibold cursor-pointer hover:underline">
-                  View Scaling Terms <ArrowUpRight className="h-3.5 w-3.5" />
+                  View Scaling Terms <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
                 </span>
               </div>
             </div>

@@ -343,7 +343,7 @@ export function ProofOfPayoutPage() {
               <div className="h-10 w-10 mx-auto rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-600 mb-2">
                 <Clock className="h-5 w-5" />
               </div>
-              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">18 Minutes</p>
+              <p className="text-2xl sm:text-3xl font-black font-display text-slate-900">4 Hours</p>
               <p className="text-xs text-slate-500 mt-0.5 font-medium">Average Payout Dispatch Time</p>
             </motion.div>
 

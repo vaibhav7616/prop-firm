@@ -59,7 +59,7 @@ import { AdminCoupons } from '@/pages/admin/coupons';
 import { AdminAffiliates } from '@/pages/admin/affiliates';
 import { AdminKyc } from '@/pages/admin/kyc';
 import { AdminSettings } from '@/pages/admin/settings';
-import { AdminPlaceholder } from '@/pages/admin/placeholder';
+import { AdminSupport } from '@/pages/admin/support';
 import { AdminLoginPage } from '@/pages/admin/login';
 
 const queryClient = new QueryClient({
@@ -141,7 +141,7 @@ function AppRoutes() {
         <Route path="affiliates" element={<AdminAffiliates />} />
         <Route path="kyc" element={<AdminKyc />} />
         <Route path="payouts" element={<AdminPayouts />} />
-        <Route path="support" element={<AdminPlaceholder title="Support" description="Manage support tickets across the platform." />} />
+        <Route path="support" element={<AdminSupport />} />
         <Route path="settings" element={<AdminSettings />} />
       </Route>
 

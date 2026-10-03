@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Download, Eye, Printer, X, ShieldCheck } from 'lucide-react';
@@ -38,12 +39,20 @@ export function DashboardInvoices() {
             setInvoices(userInvoices);
             setLoading(false);
             return;
+          } else if (user.id === 'demo-trader-id-12345') {
+            setInvoices(DEFAULT_INVOICES);
+            setLoading(false);
+            return;
           }
         } catch (err) {
           console.warn('Failed to load user orders for invoices:', err);
         }
       }
-      setInvoices(DEFAULT_INVOICES);
+      if (user?.id === 'demo-trader-id-12345') {
+        setInvoices(DEFAULT_INVOICES);
+      } else {
+        setInvoices([]);
+      }
       setLoading(false);
     };
     loadInvoices();
@@ -290,7 +299,7 @@ export function DashboardInvoices() {
     }, 250);
   };
 
-  const displayInvoices = invoices.length > 0 ? invoices : DEFAULT_INVOICES;
+  const displayInvoices = invoices;
 
   if (loading) {
     return (
@@ -309,6 +318,22 @@ export function DashboardInvoices() {
         <p className="text-muted-foreground text-sm mt-1">Download and print official receipts for your prop challenge purchases.</p>
       </div>
 
+      {displayInvoices.length === 0 ? (
+        <Card className="glass border-border/50 text-center py-12">
+          <CardContent className="space-y-3">
+            <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <p className="text-base font-semibold text-foreground">No Invoices Yet</p>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              You don't have any purchase invoices yet. Invoices and official receipts are automatically generated when you purchase a challenge evaluation.
+            </p>
+            <Link to="/challenges">
+              <Button size="sm" className="mt-2">
+                Browse Challenges
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
       <div className="space-y-3">
         {displayInvoices.map((invoice, idx) => (
           <motion.div
@@ -350,6 +375,7 @@ export function DashboardInvoices() {
           </motion.div>
         ))}
       </div>
+      )}
 
       {/* Invoice Modal Preview */}
       {typeof document !== 'undefined' && createPortal(

@@ -23,13 +23,12 @@ const ACCOUNT_SIZES = [
   { value: 50000, label: '$50,000' },
   { value: 100000, label: '$100,000' },
   { value: 200000, label: '$200,000' },
-  { value: 400000, label: '$400,000' },
 ];
 
 const EVAL_STEPS = [
   { id: 'one_step', name: '1-Step Evaluation', profitTarget: '8%', basePriceMult: 0.8 },
   { id: 'two_step', name: '2-Step Evaluation', profitTarget: '8% / 5%', basePriceMult: 1.0 },
-  { id: 'instant', name: 'Instant Funding', profitTarget: 'Direct', basePriceMult: 2.2 },
+  { id: 'instant_funding', name: 'Instant Funding', profitTarget: 'Direct', basePriceMult: 2.2 },
 ];
 
 const PLATFORMS = ['FundedShift Web Terminal'];
@@ -37,8 +36,8 @@ const PLATFORMS = ['FundedShift Web Terminal'];
 export function PayoutCalculator() {
   const [accountSize, setAccountSize] = useState<number>(100000);
   const [evalStep, setEvalStep] = useState<string>('two_step');
-  const [monthlyReturn, setMonthlyReturn] = useState<number>(8); // % gain
   const [profitSplit, setProfitSplit] = useState<number>(85); // %
+  const monthlyReturn = 8; // % standard target evaluation gain
   const [selectedPlatform, setSelectedPlatform] = useState<string>('FundedShift Web Terminal');
   const [addons, setAddons] = useState<{ [key: string]: boolean }>({
     split90: true,
@@ -54,7 +53,6 @@ export function PayoutCalculator() {
     50000: 199,
     100000: 349,
     200000: 649,
-    400000: 1299,
   };
 
   const currentStepObj = EVAL_STEPS.find((s) => s.id === evalStep) || EVAL_STEPS[1];
@@ -78,6 +76,9 @@ export function PayoutCalculator() {
   const toggleAddon = (key: string) => {
     setAddons((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const challengePrefix = evalStep === 'one_step' ? 'ch-one-' : evalStep === 'two_step' ? 'ch-two-' : 'ch-inst-';
+  const challengeId = `${challengePrefix}${accountSize / 1000}k`;
 
   return (
     <section className="section-pad bg-secondary/30 border-y border-border relative overflow-hidden">
@@ -105,7 +106,7 @@ export function PayoutCalculator() {
                   {formatCurrency(accountSize)} Capital
                 </span>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {ACCOUNT_SIZES.map((size) => {
                   const active = accountSize === size.value;
                   return (
@@ -180,39 +181,11 @@ export function PayoutCalculator() {
               </div>
             </div>
 
-            {/* 4. Estimated Monthly Return % Slider */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-brand-600" />
-                  4. Projected Monthly Return
-                </label>
-                <span className="text-xs font-bold font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                  {monthlyReturn}% / month ({formatCurrency(totalMonthlyGainDollars)})
-                </span>
-              </div>
-              <input
-                type="range"
-                min={3}
-                max={25}
-                step={1}
-                value={monthlyReturn}
-                onChange={(e) => setMonthlyReturn(Number(e.target.value))}
-                className="w-full accent-brand-600 cursor-pointer h-2 bg-secondary rounded-lg"
-              />
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                <span>3% (Conservative)</span>
-                <span>8% (Target)</span>
-                <span>15% (Aggressive)</span>
-                <span>25% (Pro)</span>
-              </div>
-            </div>
-
-            {/* 5. Custom Add-ons */}
+            {/* 4. Custom Add-ons */}
             <div>
               <label className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
                 <Sliders className="h-4 w-4 text-brand-600" />
-                5. Customize Add-ons
+                4. Customize Add-ons
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <button
@@ -339,7 +312,7 @@ export function PayoutCalculator() {
                   </span>
                 </div>
 
-                <Link to={`/checkout?account_size=${accountSize}&type=${evalStep}&platform=${selectedPlatform.toLowerCase()}`}>
+                <Link to={`/checkout?challenge=${challengeId}&account_size=${accountSize}&type=${evalStep}&platform=${selectedPlatform.toLowerCase()}`}>
                   <button className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-brand-950 font-bold text-sm shadow-soft-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2">
                     Start {formatCurrency(accountSize)} Challenge
                     <ArrowRight className="h-4 w-4" />

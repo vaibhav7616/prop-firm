@@ -133,22 +133,23 @@ export class RuleEngine {
     const warnings: string[] = [];
 
     // 1. DAILY LOSS LIMIT EVALUATION
-    // Start of day baseline balance / equity with defensive fallbacks
+    // Start of day baseline balance / equity with defensive fallbacks (00:00 UTC rollover)
     const sodBal = account.start_of_day_balance && account.start_of_day_balance > 0 ? account.start_of_day_balance : account.starting_balance;
     const sodEq = account.start_of_day_equity && account.start_of_day_equity > 0 ? account.start_of_day_equity : account.starting_balance;
     const startOfDayBaseline = Math.max(sodBal, sodEq);
     const maxDailyAllowedLoss = (rules.daily_loss_limit_percent / 100) * startOfDayBaseline;
-    const currentDailyLoss = startOfDayBaseline - currentEquity;
+    const currentDailyLoss = Math.max(0, startOfDayBaseline - currentEquity);
 
     // Warning triggers
     if (currentDailyLoss > 0 && maxDailyAllowedLoss > 0) {
       const dailyRatio = currentDailyLoss / maxDailyAllowedLoss;
       if (dailyRatio >= 0.8 && dailyRatio < 1.0) {
-        warnings.push(`Warning: You have reached ${(dailyRatio * 100).toFixed(0)}% of your Daily Loss Limit.`);
+        warnings.push(`Warning: You have reached ${(dailyRatio * 100).toFixed(0)}% of your Daily Loss Limit ($${currentDailyLoss.toFixed(2)} / $${maxDailyAllowedLoss.toFixed(2)}).`);
       }
     }
 
     if (currentDailyLoss >= maxDailyAllowedLoss && maxDailyAllowedLoss > 0) {
+      const explainDetails = `Daily loss limit of $${maxDailyAllowedLoss.toFixed(2)} (${rules.daily_loss_limit_percent}%) exceeded. Day baseline was $${startOfDayBaseline.toFixed(2)}, current equity dropped to $${currentEquity.toFixed(2)}, resulting in a daily loss of $${currentDailyLoss.toFixed(2)} (${((currentDailyLoss / startOfDayBaseline) * 100).toFixed(2)}%).`;
       const violation: RuleViolationEntity = {
         id: `viol-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
         account_id: account.id,
@@ -158,8 +159,8 @@ export class RuleEngine {
         actual_value: currentDailyLoss,
         balance_at_breach: account.current_balance,
         equity_at_breach: currentEquity,
-        drawdown_at_breach: (currentDailyLoss / startOfDayBaseline) * 100,
-        details: `Daily loss limit of $${maxDailyAllowedLoss.toFixed(2)} (${rules.daily_loss_limit_percent}%) exceeded. Current loss: $${currentDailyLoss.toFixed(2)}.`,
+        drawdown_at_breach: Number(((currentDailyLoss / startOfDayBaseline) * 100).toFixed(2)),
+        details: explainDetails,
         created_at: new Date().toISOString(),
       };
       violations.push(violation);
@@ -168,20 +169,21 @@ export class RuleEngine {
     // 2. MAXIMUM LOSS / DRAWDOWN EVALUATION
     const initialBalance = account.starting_balance;
     const maxOverallAllowedLoss = (rules.max_loss_limit_percent / 100) * initialBalance;
-    let currentOverallLoss = initialBalance - currentEquity;
+    let currentOverallLoss = Math.max(0, initialBalance - currentEquity);
 
     if (rules.drawdown_model === 'TRAILING') {
-      currentOverallLoss = account.highest_equity - currentEquity;
+      currentOverallLoss = Math.max(0, account.highest_equity - currentEquity);
     }
 
     if (currentOverallLoss > 0 && maxOverallAllowedLoss > 0) {
       const maxRatio = currentOverallLoss / maxOverallAllowedLoss;
       if (maxRatio >= 0.8 && maxRatio < 1.0) {
-        warnings.push(`Warning: You have reached ${(maxRatio * 100).toFixed(0)}% of your Maximum Drawdown Limit.`);
+        warnings.push(`Warning: You have reached ${(maxRatio * 100).toFixed(0)}% of your Maximum Drawdown Limit ($${currentOverallLoss.toFixed(2)} / $${maxOverallAllowedLoss.toFixed(2)}).`);
       }
     }
 
     if (currentOverallLoss >= maxOverallAllowedLoss && maxOverallAllowedLoss > 0) {
+      const explainDetails = `Maximum loss limit of $${maxOverallAllowedLoss.toFixed(2)} (${rules.max_loss_limit_percent}%) exceeded under ${rules.drawdown_model} model. Starting balance: $${initialBalance.toFixed(2)}, current equity: $${currentEquity.toFixed(2)}, overall drawdown: $${currentOverallLoss.toFixed(2)} (${((currentOverallLoss / initialBalance) * 100).toFixed(2)}%).`;
       const violation: RuleViolationEntity = {
         id: `viol-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
         account_id: account.id,
@@ -191,11 +193,32 @@ export class RuleEngine {
         actual_value: currentOverallLoss,
         balance_at_breach: account.current_balance,
         equity_at_breach: currentEquity,
-        drawdown_at_breach: (currentOverallLoss / initialBalance) * 100,
-        details: `Maximum loss limit of $${maxOverallAllowedLoss.toFixed(2)} (${rules.max_loss_limit_percent}%) exceeded. Current overall loss: $${currentOverallLoss.toFixed(2)}.`,
+        drawdown_at_breach: Number(((currentOverallLoss / initialBalance) * 100).toFixed(2)),
+        details: explainDetails,
         created_at: new Date().toISOString(),
       };
       violations.push(violation);
+    }
+
+    // 3. WEEKEND HOLDING ENFORCEMENT
+    if (rules.weekend_holding_allowed === false && openPositions.length > 0) {
+      const hasClosedMarketPosition = openPositions.some((p) => marketDataService.checkIsMarketOpen(p.symbol) === false);
+      if (hasClosedMarketPosition) {
+        const violation: RuleViolationEntity = {
+          id: `viol-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
+          account_id: account.id,
+          user_id: account.user_id,
+          rule_type: 'WEEKEND_HOLDING',
+          threshold_value: 0,
+          actual_value: openPositions.length,
+          balance_at_breach: account.current_balance,
+          equity_at_breach: currentEquity,
+          drawdown_at_breach: Number(((currentOverallLoss / initialBalance) * 100).toFixed(2)),
+          details: 'Weekend holding rule breached: Open positions held while underlying forex/commodity/index markets were closed over the weekend.',
+          created_at: new Date().toISOString(),
+        };
+        violations.push(violation);
+      }
     }
 
     // HANDLE BREACH IF VIOLATIONS EXIST
@@ -203,7 +226,7 @@ export class RuleEngine {
       account.status = 'BREACHED';
       account.breached_at = new Date().toISOString();
 
-      // Automatically close all open positions
+      // Automatically liquidate all open positions
       for (const pos of openPositions) {
         if (pos.status === 'OPEN') {
           pos.status = 'CLOSED';
@@ -247,7 +270,7 @@ export class RuleEngine {
       return { hasBreached: true, violations, passedTarget: false, warnings };
     }
 
-    // 3. PROFIT TARGET EVALUATION
+    // 4. PROFIT TARGET EVALUATION
     let passedTarget = false;
     if (rules.profit_target_percent > 0 && account.status === 'ACTIVE') {
       const profitTargetAmount = (rules.profit_target_percent / 100) * initialBalance;
@@ -267,6 +290,52 @@ export class RuleEngine {
 
     DBEngine.saveDB();
     return { hasBreached: false, violations: [], passedTarget, warnings };
+  }
+
+  /**
+   * Generates a detailed Explainable Rule Breach report for an account
+   */
+  public static getExplainableBreachReport(accountId: string): any[] {
+    const db = DBEngine.getDB();
+    const account = db.accounts.find((a) => a.id === accountId);
+    const violations = db.rule_violations.filter((v) => v.account_id === accountId);
+
+    if (!account || violations.length === 0) {
+      return [];
+    }
+
+    return violations.map((v) => {
+      const ruleLabel = v.rule_type === 'DAILY_LOSS' ? 'Daily Loss Limit' : v.rule_type === 'MAX_LOSS' ? 'Maximum Drawdown Limit' : v.rule_type;
+      const startOfDay = Math.max(account.start_of_day_balance || account.starting_balance, account.start_of_day_equity || account.starting_balance);
+
+      return {
+        id: v.id,
+        account_id: v.account_id,
+        account_number: account.account_number,
+        rule_violated: v.rule_type,
+        rule_name: ruleLabel,
+        threshold_amount: v.threshold_value,
+        actual_loss_amount: v.actual_value,
+        breach_time: v.created_at,
+        server_timezone: 'UTC (00:00 Rollover)',
+        balance_at_breach: v.balance_at_breach,
+        equity_at_breach: v.equity_at_breach,
+        drawdown_percent: v.drawdown_at_breach,
+        start_of_day_baseline: startOfDay,
+        starting_balance: account.starting_balance,
+        details: v.details,
+        math_explanation:
+          v.rule_type === 'DAILY_LOSS'
+            ? `Baseline ($${startOfDay.toFixed(2)}) - Equity ($${v.equity_at_breach.toFixed(2)}) = $${v.actual_value.toFixed(2)} loss, exceeding threshold of $${v.threshold_value.toFixed(2)}.`
+            : `Starting Balance ($${account.starting_balance.toFixed(2)}) - Equity ($${v.equity_at_breach.toFixed(2)}) = $${v.actual_value.toFixed(2)} loss, exceeding maximum drawdown limit of $${v.threshold_value.toFixed(2)}.`,
+        recovery_eligible: true,
+        recommendations: [
+          'Always set a Stop Loss on entry to cap single-trade exposure.',
+          'Scale down lot sizes during high market volatility.',
+          'Consider our Account Recovery / Reset program to resume trading with a fresh balance.',
+        ],
+      };
+    });
   }
 
   /**

@@ -17,6 +17,16 @@ export class PayoutEngine {
       return { eligible: false, profit: 0, reason: 'Only active Funded accounts are eligible for payouts.' };
     }
 
+    // Check for open positions: Institutional rule requires flat positions
+    const openPositions = db.positions.filter((p) => p.account_id === accountId && p.status === 'OPEN');
+    if (openPositions.length > 0) {
+      return {
+        eligible: false,
+        profit: 0,
+        reason: 'Cannot request payout while positions are still open. Please close all open positions first.',
+      };
+    }
+
     // Check for breaches
     const breaches = db.rule_violations.filter((v) => v.account_id === accountId);
     if (breaches.length > 0) {
@@ -24,9 +34,19 @@ export class PayoutEngine {
     }
 
     // Calculate total net profit
-    const netProfit = account.current_balance - account.starting_balance;
+    const netProfit = Number((account.current_balance - account.starting_balance).toFixed(2));
     if (netProfit <= 0) {
       return { eligible: false, profit: 0, reason: 'Account currently has no realized profits.' };
+    }
+
+    // Minimum payout threshold ($100)
+    const MIN_PAYOUT_AMOUNT = 100;
+    if (netProfit < MIN_PAYOUT_AMOUNT) {
+      return {
+        eligible: false,
+        profit: netProfit,
+        reason: `Minimum payout threshold is $${MIN_PAYOUT_AMOUNT}. Current realized profit is $${netProfit.toFixed(2)}.`,
+      };
     }
 
     // Check for pending payout requests
@@ -36,6 +56,24 @@ export class PayoutEngine {
 
     if (existingPending) {
       return { eligible: false, profit: netProfit, reason: 'A payout request for this account is already in progress.' };
+    }
+
+    // Check 14-day payout cooldown if previously paid
+    const lastPaid = db.payout_requests
+      .filter((p) => p.account_id === accountId && p.status === 'PAID' && p.paid_at)
+      .sort((a, b) => new Date(b.paid_at!).getTime() - new Date(a.paid_at!).getTime())[0];
+
+    if (lastPaid && lastPaid.paid_at) {
+      const daysSinceLastPayout = (Date.now() - new Date(lastPaid.paid_at).getTime()) / (1000 * 60 * 60 * 24);
+      const COOLDOWN_DAYS = 14;
+      if (daysSinceLastPayout < COOLDOWN_DAYS) {
+        const daysLeft = Math.ceil(COOLDOWN_DAYS - daysSinceLastPayout);
+        return {
+          eligible: false,
+          profit: netProfit,
+          reason: `Payout cooldown period active. Next payout eligible in ${daysLeft} day${daysLeft > 1 ? 's' : ''}.`,
+        };
+      }
     }
 
     return { eligible: true, profit: netProfit };

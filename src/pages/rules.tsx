@@ -1,4 +1,4 @@
-import { Target, TrendingDown, Calendar, Gauge, Percent, Newspaper, Moon, BarChart3, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { Target, TrendingDown, Calendar, Gauge, Percent, Newspaper, Moon, BarChart3, ShieldCheck } from 'lucide-react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -13,7 +13,6 @@ const RULES = [
   { icon: Newspaper, name: 'News Trading', desc: 'Whether you are allowed to hold positions during high-impact news events. One Step and Instant Funding allow news trading.', detail: 'One Step & Instant: Allowed' },
   { icon: Moon, name: 'Weekend Holding', desc: 'Whether you can hold positions over the weekend. Instant Funding allows weekend holding by default; other types can add it.', detail: 'Instant: Allowed · Others: Add-on' },
   { icon: BarChart3, name: 'Consistency Rule', desc: 'No single trading day should account for more than 40% of your total profit. This ensures consistent trading behavior.', detail: 'Max 40% per day' },
-  { icon: ArrowUpRight, name: 'Scaling Plan', desc: 'Successfully funded traders can scale their account up to $2M by meeting profit targets over consecutive payout cycles.', detail: 'Scale up to $2M' },
 ];
 
 export function RulesPage() {

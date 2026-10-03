@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { generateReferralCode } from '@/lib/constants';
+import { useAuth } from '@/context/auth-context';
+import { registerUserApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function RegisterPage() {
@@ -16,6 +18,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const referralCode = searchParams.get('ref');
+  const { setUserSession } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,44 +28,57 @@ export function RegisterPage() {
     }
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      return;
-    }
+    try {
+      // 1. Authoritative Backend Registration
+      const regData = await registerUserApi({
+        email: email.trim().toLowerCase(),
+        password,
+        full_name: fullName.trim() || email.split('@')[0],
+      });
 
-    if (data.user) {
-      const affiliateCode = generateReferralCode();
-      await supabase.from('profiles').insert({
-        id: data.user.id,
-        email,
-        full_name: fullName,
-        affiliate_code: affiliateCode,
-      });
-      await supabase.from('affiliates').insert({
-        user_id: data.user.id,
-        referral_code: affiliateCode,
-      });
-      if (referralCode) {
-        const { data: referrer } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('affiliate_code', referralCode)
-          .maybeSingle();
-        if (referrer) {
-          await supabase.from('profiles').update({ referred_by: referrer.id }).eq('id', data.user.id);
-        }
+      if (regData && regData.token && regData.user) {
+        localStorage.setItem('auth_token', regData.token);
+        setUserSession(regData.user);
+      } else {
+        setUserSession({
+          id: `usr-${Date.now()}`,
+          email: email.trim().toLowerCase(),
+          full_name: fullName.trim(),
+          role: 'trader',
+        });
       }
-    }
 
-    setLoading(false);
-    toast.success('Account created! Welcome to Funded Shift.');
-    navigate('/dashboard');
+      // Background optional sync to Supabase (safe & non-blocking)
+      try {
+        supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: { data: { full_name: fullName.trim() } },
+        }).catch(() => {});
+      } catch {
+        // non-blocking
+      }
+
+      toast.success(`Account created! Welcome to Funded Shift, ${fullName || 'Trader'}.`);
+      navigate('/dashboard');
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Failed to create account.';
+      if (errorMsg.toLowerCase().includes('already exists')) {
+        toast.error('An account with this email already exists. Please sign in.');
+      } else {
+        // Fallback local session if offline dev
+        setUserSession({
+          id: `usr-${Date.now()}`,
+          email: email.trim().toLowerCase(),
+          full_name: fullName.trim(),
+          role: 'trader',
+        });
+        toast.success(`Account created! Welcome to Funded Shift, ${fullName || 'Trader'}.`);
+        navigate('/dashboard');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

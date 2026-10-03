@@ -58,7 +58,7 @@ export function DashboardAccounts() {
   useEffect(() => {
     const load = async () => {
       if (!user) {
-        setAccounts(DEFAULT_ACCOUNTS);
+        setAccounts([]);
         setLoading(false);
         return;
       }
@@ -66,11 +66,17 @@ export function DashboardAccounts() {
         const userAccs = await fetchUserAccounts(user.id);
         if (userAccs && userAccs.length > 0) {
           setAccounts(userAccs);
-        } else {
+        } else if (user.id === 'demo-trader-id-12345') {
           setAccounts(DEFAULT_ACCOUNTS);
+        } else {
+          setAccounts([]);
         }
       } catch (_) {
-        setAccounts(DEFAULT_ACCOUNTS);
+        if (user.id === 'demo-trader-id-12345') {
+          setAccounts(DEFAULT_ACCOUNTS);
+        } else {
+          setAccounts([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -283,7 +289,20 @@ Investor Pass:    ${invPass}
       </div>
 
       {/* Accounts List */}
-      {filteredAccounts.length === 0 ? (
+      {accounts.length === 0 ? (
+        <div className="bg-card border border-border/80 rounded-2xl p-12 text-center shadow-sm">
+          <Wallet className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+          <h3 className="font-display font-semibold text-lg text-foreground">No Trading Accounts Yet</h3>
+          <p className="text-muted-foreground text-xs mt-1 max-w-md mx-auto">
+            You don't have any active trading accounts yet. Choose a challenge evaluation plan to get credentials and start trading.
+          </p>
+          <Link to="/challenges">
+            <Button size="sm" className="mt-4 gap-2">
+              <PlusCircle className="h-4 w-4" /> Browse Challenges
+            </Button>
+          </Link>
+        </div>
+      ) : filteredAccounts.length === 0 ? (
         <div className="bg-card border border-border/80 rounded-2xl p-12 text-center shadow-sm">
           <Wallet className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
           <h3 className="font-display font-semibold text-lg text-foreground">No matching accounts found</h3>

@@ -16,6 +16,8 @@ import type {
   AffiliateWithdrawalEntity,
   SymbolConfig,
   AccountPlan,
+  KycSubmissionEntity,
+  SupportTicketEntity,
 } from './types';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -37,6 +39,8 @@ export interface DatabaseSchema {
   notifications: NotificationEntity[];
   audit_logs: AuditLogEntity[];
   promo_codes: PromoCodeEntity[];
+  kyc_submissions: KycSubmissionEntity[];
+  support_tickets: SupportTicketEntity[];
 }
 
 export function hashPassword(password: string): string {
@@ -669,6 +673,29 @@ export const DEFAULT_PLANS: AccountPlan[] = [
     },
     is_active: true,
   },
+  {
+    id: 'plan-instant-200k',
+    name: '$200,000 Instant Funded',
+    type: 'instant_funding',
+    account_size: 200000,
+    price: 1699,
+    rules: {
+      profit_target_percent: 0,
+      daily_loss_limit_percent: 5,
+      max_loss_limit_percent: 10,
+      drawdown_model: 'STATIC',
+      min_trading_days: 7,
+      max_trading_days: null,
+      leverage: 50,
+      profit_split_percent: 70,
+      max_lot_size: 100,
+      max_open_positions: 30,
+      news_trading_allowed: true,
+      weekend_holding_allowed: false,
+      ea_trading_allowed: true,
+    },
+    is_active: true,
+  },
 ];
 
 export class DBEngine {
@@ -848,6 +875,8 @@ export class DBEngine {
           { id: 'promo-3', code: 'PROP50', discount_type: 'FIXED', discount_value: 50, usage_count: 5, max_uses: 100, is_active: true, created_at: new Date().toISOString() },
           { id: 'promo-4', code: 'VAIBHAV100', discount_type: 'PERCENTAGE', discount_value: 100, usage_count: 3, max_uses: 50, is_active: true, created_at: new Date().toISOString() },
         ],
+        kyc_submissions: [],
+        support_tickets: [],
       };
 
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2));
@@ -870,6 +899,12 @@ export class DBEngine {
       }
       if (!loaded.affiliate_withdrawals) {
         loaded.affiliate_withdrawals = [];
+      }
+      if (!loaded.kyc_submissions) {
+        loaded.kyc_submissions = [];
+      }
+      if (!loaded.support_tickets) {
+        loaded.support_tickets = [];
       }
       // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true
       if (loaded.accounts && Array.isArray(loaded.accounts)) {
@@ -907,6 +942,8 @@ export class DBEngine {
           { id: 'promo-1', code: 'PROPFIRM20', discount_type: 'PERCENTAGE', discount_value: 20, usage_count: 14, max_uses: 500, is_active: true, created_at: new Date().toISOString() },
           { id: 'promo-2', code: 'WELCOME10', discount_type: 'PERCENTAGE', discount_value: 10, usage_count: 32, max_uses: 1000, is_active: true, created_at: new Date().toISOString() },
         ],
+        kyc_submissions: [],
+        support_tickets: [],
       };
     }
   }

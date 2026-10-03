@@ -33,6 +33,8 @@ import {
 } from '@/lib/api-client';
 import type { TradingAccount, OrderType } from '@/types';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { calculateMT5PnL, calculateInstitutionalMargin } from '@/utils/mt5';
 import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
 
@@ -68,6 +70,7 @@ export function DashboardTrading() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [closingAll, setClosingAll] = useState<boolean>(false);
   const [loadingAccounts, setLoadingAccounts] = useState<boolean>(true);
+
 
   // Load Accounts
   useEffect(() => {
@@ -314,19 +317,21 @@ export function DashboardTrading() {
   const totalFloatingPnl = openPositions.reduce((sum, p) => sum + (p.floating_pnl || 0), 0);
 
   // Live Account Financial Metrics
-  const startingBalance = selectedAccount?.starting_balance || selectedAccount?.account_size || 100000;
-  const currentBalance = selectedAccount?.current_balance ?? startingBalance;
-  const liveEquity = currentBalance + totalFloatingPnl;
+  const startingBalance = selectedAccount ? (selectedAccount.starting_balance || selectedAccount.account_size || 0) : 0;
+  const currentBalance = selectedAccount ? selectedAccount.current_balance : 0;
+  const liveEquity = selectedAccount ? currentBalance + totalFloatingPnl : 0;
 
-  const startOfDayBaseline = Math.max(
-    selectedAccount?.start_of_day_balance || startingBalance,
-    selectedAccount?.start_of_day_equity || startingBalance
-  );
+  const startOfDayBaseline = selectedAccount
+    ? Math.max(
+        selectedAccount.start_of_day_balance || startingBalance,
+        selectedAccount.start_of_day_equity || startingBalance
+      )
+    : 0;
 
   const dailyLimitPercent = selectedAccount?.rules?.daily_loss_limit_percent ?? selectedAccount?.rules?.daily_drawdown ?? 5;
-  const maxDailyAllowedLoss = (dailyLimitPercent / 100) * startOfDayBaseline;
-  const currentDailyLoss = Math.max(0, startOfDayBaseline - liveEquity);
-  const dailyLossLeft = Math.max(0, maxDailyAllowedLoss - currentDailyLoss);
+  const maxDailyAllowedLoss = selectedAccount ? (dailyLimitPercent / 100) * startOfDayBaseline : 0;
+  const currentDailyLoss = selectedAccount ? Math.max(0, startOfDayBaseline - liveEquity) : 0;
+  const dailyLossLeft = selectedAccount ? Math.max(0, maxDailyAllowedLoss - currentDailyLoss) : 0;
 
   const openPositionsForSymbol = openPositions.filter((p) => p.symbol === selectedSymbol);
   const liveUsedMargin = openPositions.reduce((sum, p) => sum + (p.margin || 0), 0);
@@ -377,6 +382,28 @@ export function DashboardTrading() {
           )}
         </div>
       </div>
+
+      {/* 0-Account Locked Empty State Banner */}
+      {!loadingAccounts && accounts.length === 0 && (
+        <div className="bg-gradient-to-r from-amber-500/15 via-gold-400/10 to-amber-500/15 border border-amber-500/30 p-6 sm:p-8 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm text-center sm:text-left">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+              <Lock className="h-7 w-7" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">No Active Trading Account Found</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                You do not currently have an active challenge or funded account. Purchase an evaluation challenge to begin live market execution and profit payouts.
+              </p>
+            </div>
+          </div>
+          <Link to="/challenges">
+            <Button className="bg-gold-gradient text-black font-semibold whitespace-nowrap shadow-sm">
+              Start Evaluation Challenge
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Passed Account Global Notification Banner */}
       {selectedAccount?.status === 'PASSED' && (
@@ -780,7 +807,18 @@ export function DashboardTrading() {
                   />
                 </div>
 
-                {selectedAccount?.status === 'PASSED' ? (
+                {!selectedAccount || accounts.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-2">
+                    <p className="text-[11px] text-amber-500 font-semibold">
+                      No active trading account.
+                    </p>
+                    <Link to="/challenges" className="block">
+                      <Button size="sm" className="w-full bg-gold-gradient text-black font-bold text-xs">
+                        Buy Challenge
+                      </Button>
+                    </Link>
+                  </div>
+                ) : selectedAccount?.status === 'PASSED' ? (
                   <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 dark:text-amber-200 space-y-2.5">
                     <div className="flex items-center gap-2 font-bold text-xs text-amber-600 dark:text-amber-400">
                       <Lock className="h-4 w-4" />

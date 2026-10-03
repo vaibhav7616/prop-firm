@@ -1,22 +1,39 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { DBEngine, hashPassword, verifyPassword } from './src/server/db';
+import { ArchitecturePdfGenerator } from './src/server/generateArchitecturePdf';
 import { marketDataService } from './src/server/marketData';
 import { RuleEngine } from './src/server/ruleEngine';
 import { tradeExecutionEngine } from './src/server/tradeEngine';
 import { PayoutEngine } from './src/server/payoutEngine';
 import { paymentService } from './src/server/paymentEngine';
 import { ScheduledJobsEngine } from './src/server/auditJobs';
+import { requireAuth, requireAdmin, createRateLimiter, generateToken, sanitizeUser } from './src/server/auth';
+import { TraderRiskIntelligenceEngine } from './src/server/riskIntelligence';
+import { TradeSimulatorEngine } from './src/server/simulator';
+import { TraderTimelineEngine } from './src/server/timeline';
+import { runAutomatedVerificationTests } from './tests/verification-suite';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 app.use(express.json());
 
-// Initialize DB and background jobs
+// Initialize DB, background jobs, and generate Architecture PDF
 DBEngine.getDB();
 ScheduledJobsEngine.startJobs();
+try {
+  ArchitecturePdfGenerator.saveToFile();
+} catch (e) {
+  console.warn('PDF Generator initialization notice:', e);
+}
+
+// Rate Limiters
+const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 40, message: 'Too many authentication attempts. Please try again later.' });
+const tradingRateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 60, message: 'Order submission rate limit exceeded. Please wait a moment.' });
+const checkoutRateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, message: 'Too many checkout attempts. Please try again shortly.' });
 
 // -------------------------------------------------------------
 // HEALTH & STATUS ENDPOINT
@@ -25,40 +42,63 @@ app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
     system: 'FundedShift Prop Firm Backend & Simulated Trading Engine v2.0',
+    version: '2.0.0',
+    features: [
+      'Institutional MT5 Execution Engine',
+      'Dynamic Risk Shield',
+      'Trader Risk Intelligence & Health Score',
+      'Strategy Fingerprint',
+      'What-If Rule Simulator',
+      'Explainable Rule Breach',
+      'Account Recovery Program',
+      'Performance Timeline',
+    ],
     timestamp: new Date().toISOString(),
   });
 });
 
 // -------------------------------------------------------------
+// SYSTEM ARCHITECTURE DOCUMENTATION & PDF DOWNLOAD
+// -------------------------------------------------------------
+app.get('/api/docs/architecture.pdf', (_req, res) => {
+  const pdfPath = path.join(process.cwd(), 'FundedShift_Architecture_Guide.pdf');
+  if (!fs.existsSync(pdfPath)) {
+    ArchitecturePdfGenerator.saveToFile(pdfPath);
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="FundedShift_Architecture_Guide.pdf"');
+  res.sendFile(pdfPath);
+});
+
+app.get('/api/generate-pdf', (_req, res) => {
+  try {
+    const pdfPath = ArchitecturePdfGenerator.saveToFile();
+    res.json({ success: true, message: 'Architecture PDF generated successfully.', path: pdfPath });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
 // AUTHENTICATION ROUTES
 // -------------------------------------------------------------
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', authRateLimiter, (req, res) => {
   const { email, password } = req.body;
   const db = DBEngine.getDB();
 
   const user = db.users.find((u) => u.email.toLowerCase() === (email || '').trim().toLowerCase());
 
   if (!user) {
-    // Auto-register demo trader if first time logging in
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      email: email || 'trader@propfirm.com',
-      password_hash: hashPassword(password || 'Trader123!'),
-      full_name: email ? email.split('@')[0] : 'Prop Trader',
-      role: 'USER' as const,
-      country: 'United States',
-      phone: '+1 555-0192',
-      affiliate_code: `FS${Math.floor(100 + Math.random() * 900)}`,
-      is_verified: true,
-      is_2fa_enabled: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    db.users.push(newUser);
-    DBEngine.saveDB();
-
-    const { password_hash, ...safeUser } = newUser;
-    res.json({ token: `jwt-${newUser.id}`, user: safeUser });
+    // If demo user is requested or dev environment demo login
+    if (!email || email.toLowerCase() === 'trader@propfirm.com') {
+      const demoTrader = db.users.find((u) => u.id === 'demo-trader-id-12345');
+      if (demoTrader) {
+        const token = generateToken(demoTrader);
+        res.json({ token, user: sanitizeUser(demoTrader) });
+        return;
+      }
+    }
+    res.status(401).json({ error: 'Invalid email or password. Please verify your credentials or register.' });
     return;
   }
 
@@ -68,26 +108,36 @@ app.post('/api/auth/login', (req, res) => {
     return;
   }
 
-  const { password_hash, ...safeUser } = user;
-  res.json({ token: `jwt-${user.id}`, user: safeUser });
+  const token = generateToken(user);
+  res.json({ token, user: sanitizeUser(user) });
 });
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', authRateLimiter, (req, res) => {
   const { email, password, full_name, country, phone } = req.body;
   const db = DBEngine.getDB();
 
-  let existing = db.users.find((u) => u.email.toLowerCase() === (email || '').trim().toLowerCase());
+  if (!email || !email.includes('@')) {
+    res.status(400).json({ error: 'A valid email address is required.' });
+    return;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  let existing = db.users.find((u) => u.email.toLowerCase() === cleanEmail);
   if (existing) {
-    const { password_hash, ...safeUser } = existing;
-    res.json({ token: `jwt-${existing.id}`, user: safeUser });
+    if (password && !verifyPassword(password, existing.password_hash)) {
+      res.status(400).json({ error: 'An account with this email already exists. Please sign in.' });
+      return;
+    }
+    const token = generateToken(existing);
+    res.json({ token, user: sanitizeUser(existing) });
     return;
   }
 
   const newUser = {
     id: `usr-${Date.now()}`,
-    email: email || `trader_${Date.now()}@propfirm.com`,
+    email: cleanEmail,
     password_hash: hashPassword(password || 'Trader123!'),
-    full_name: full_name || 'New Prop Trader',
+    full_name: full_name || cleanEmail.split('@')[0],
     role: 'USER' as const,
     country: country || 'United States',
     phone: phone || '',
@@ -99,14 +149,26 @@ app.post('/api/auth/register', (req, res) => {
   };
 
   db.users.push(newUser);
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: newUser.id,
+    actor_role: 'USER',
+    action: 'USER_REGISTERED',
+    target_id: newUser.id,
+    entity_type: 'USER',
+    details: `Trader registered account with email: ${newUser.email}`,
+    created_at: new Date().toISOString(),
+  });
+
   DBEngine.saveDB();
 
-  const { password_hash, ...safeUser } = newUser;
-  res.json({ token: `jwt-${newUser.id}`, user: safeUser });
+  const token = generateToken(newUser);
+  res.json({ token, user: sanitizeUser(newUser) });
 });
 
 // Admin Authentication
-app.post('/api/auth/admin-login', (req, res) => {
+app.post('/api/auth/admin-login', authRateLimiter, (req, res) => {
   const { username, email, password } = req.body;
   const adminUserEnv = process.env.ADMIN_USERNAME || 'vaibhav7616';
   const adminPassEnv = process.env.ADMIN_PASSWORD || '9545884016aA@';
@@ -120,24 +182,48 @@ app.post('/api/auth/admin-login', (req, res) => {
       providedUser.toLowerCase() === 'admin@propfirm.com') &&
     (providedPass === adminPassEnv || providedPass === '9545884016aA@')
   ) {
-    const adminUser = {
-      id: 'admin-vaibhav-id-999',
-      email: 'vaibhav7616@propfirm.com',
-      full_name: 'Vaibhav (Admin)',
-      role: 'ADMIN' as const,
-      country: 'Global',
+    const db = DBEngine.getDB();
+    let adminUser = db.users.find((u) => u.role === 'ADMIN');
+    if (!adminUser) {
+      adminUser = {
+        id: 'admin-vaibhav-id-999',
+        email: 'vaibhav7616@propfirm.com',
+        password_hash: hashPassword(adminPassEnv),
+        full_name: 'Vaibhav (Admin)',
+        role: 'ADMIN' as const,
+        country: 'Global',
+        phone: '+1 800-FUNDEDSHIFT',
+        affiliate_code: 'ADMIN_PRO',
+        is_verified: true,
+        is_2fa_enabled: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      db.users.push(adminUser);
+      DBEngine.saveDB();
+    }
+
+    const token = generateToken(adminUser);
+
+    db.audit_logs.push({
+      id: `audit-${Date.now()}`,
+      actor_id: adminUser.id,
+      actor_role: 'ADMIN',
+      action: 'ADMIN_LOGIN_SUCCESS',
+      target_id: adminUser.id,
+      entity_type: 'AUTH',
+      details: 'Administrator logged into the admin command portal.',
       created_at: new Date().toISOString(),
-    };
+    });
+    DBEngine.saveDB();
 
     res.json({
       success: true,
-      token: `admin-jwt-${adminUser.id}`,
-      user: adminUser,
+      token,
+      user: sanitizeUser(adminUser),
       profile: {
-        ...adminUser,
-        phone: '+1 800-FUNDEDSHIFT',
+        ...sanitizeUser(adminUser),
         avatar_url: null,
-        affiliate_code: 'ADMIN_PRO',
         referred_by: null,
       },
     });
@@ -214,12 +300,13 @@ app.get('/api/plans', (_req, res) => {
 // -------------------------------------------------------------
 // TRADING ACCOUNTS API
 // -------------------------------------------------------------
-app.get(['/api/accounts', '/api/user/accounts'], (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+app.get(['/api/accounts', '/api/user/accounts'], requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
   const db = DBEngine.getDB();
 
-  // Evaluate rules on all user accounts to ensure live state
   const userAccounts = db.accounts.filter((a) => a.user_id === userId);
+
+  // Evaluate rules on all user accounts to ensure live state
   for (const acc of userAccounts) {
     RuleEngine.evaluateAccount(acc.id);
   }
@@ -227,7 +314,7 @@ app.get(['/api/accounts', '/api/user/accounts'], (req, res) => {
   res.json(userAccounts);
 });
 
-app.get('/api/accounts/:id', (req, res) => {
+app.get('/api/accounts/:id', requireAuth, (req, res) => {
   const db = DBEngine.getDB();
   const acc = db.accounts.find((a) => a.id === req.params.id);
   if (!acc) {
@@ -251,11 +338,91 @@ app.get('/api/accounts/:id/violations', (req, res) => {
   res.json(violations);
 });
 
+// Explainable Rule Breach Engine
+app.get('/api/accounts/:id/violations/explain', (req, res) => {
+  const report = RuleEngine.getExplainableBreachReport(req.params.id);
+  res.json(report);
+});
+
+// Performance Timeline Engine
+app.get('/api/accounts/:id/timeline', (req, res) => {
+  const events = TraderTimelineEngine.getAccountTimeline(req.params.id);
+  res.json(events);
+});
+
+// Account Recovery & Re-evaluation Engine
+app.get('/api/accounts/:id/recovery-options', (req, res) => {
+  const options = TradeSimulatorEngine.evaluateRecoveryEligibility(req.params.id);
+  if (!options) {
+    res.status(404).json({ error: 'Account not found.' });
+    return;
+  }
+  res.json(options);
+});
+
+app.post('/api/accounts/:id/recovery-reset', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const result = TradeSimulatorEngine.executeAccountRecovery(req.params.id, userId);
+  if (!result.success) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+// -------------------------------------------------------------
+// TRADER RISK INTELLIGENCE & HEALTH SCORE API
+// -------------------------------------------------------------
+app.get('/api/trader/risk-profile/:accountId', (req, res) => {
+  const profile = TraderRiskIntelligenceEngine.computeRiskProfile(req.params.accountId);
+  if (!profile) {
+    res.status(404).json({ error: 'Account not found or no trading history available.' });
+    return;
+  }
+  res.json(profile);
+});
+
+app.get('/api/trader/health-score/:accountId', (req, res) => {
+  const healthScore = TraderRiskIntelligenceEngine.computeHealthScore(req.params.accountId);
+  if (!healthScore) {
+    res.status(404).json({ error: 'Account not found.' });
+    return;
+  }
+  res.json(healthScore);
+});
+
+app.get('/api/trader/strategy-fingerprint/:accountId', (req, res) => {
+  const fingerprint = TraderRiskIntelligenceEngine.computeStrategyFingerprint(req.params.accountId);
+  if (!fingerprint) {
+    res.status(404).json({ error: 'Account not found.' });
+    return;
+  }
+  res.json(fingerprint);
+});
+
+app.get('/api/trader/risk-shield/:accountId', (req, res) => {
+  const status = TraderRiskIntelligenceEngine.getRiskShieldStatus(req.params.accountId);
+  if (!status) {
+    res.status(404).json({ error: 'Account not found.' });
+    return;
+  }
+  res.json(status);
+});
+
+app.get('/api/admin/risk-shield/config', requireAdmin, (_req, res) => {
+  res.json(TraderRiskIntelligenceEngine.getShieldConfig());
+});
+
+app.post('/api/admin/risk-shield/config', requireAdmin, (req, res) => {
+  const updated = TraderRiskIntelligenceEngine.updateShieldConfig(req.body);
+  res.json({ success: true, config: updated });
+});
+
 // -------------------------------------------------------------
 // SIMULATED TRADING EXECUTION ENGINE API
 // -------------------------------------------------------------
-app.post('/api/trading/order', async (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+app.post('/api/trading/order', tradingRateLimiter, requireAuth, async (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
   const { accountId, symbol, type, lotSize, stopLoss, takeProfit } = req.body;
 
   const result = await tradeExecutionEngine.executeMarketOrder({
@@ -276,8 +443,8 @@ app.post('/api/trading/order', async (req, res) => {
   res.json(result);
 });
 
-app.post('/api/trading/close-position', async (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+app.post('/api/trading/close-position', tradingRateLimiter, requireAuth, async (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
   const { accountId, positionId } = req.body;
 
   const result = await tradeExecutionEngine.closePosition({
@@ -294,18 +461,57 @@ app.post('/api/trading/close-position', async (req, res) => {
   res.json(result);
 });
 
+app.post('/api/trading/partial-close', tradingRateLimiter, requireAuth, async (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const { accountId, positionId, lotsToClose } = req.body;
+
+  const result = await tradeExecutionEngine.partialClosePosition({
+    accountId,
+    positionId,
+    userId,
+    lotsToClose: Number(lotsToClose),
+  });
+
+  if (!result.success) {
+    res.status(400).json({ success: false, error: result.error });
+    return;
+  }
+
+  res.json(result);
+});
+
+// What-If Trade Simulator Engine
+app.post('/api/trading/simulate-trade', (req, res) => {
+  const { accountId, symbol, type, lotSize, stopLoss, takeProfit } = req.body;
+  const result = TradeSimulatorEngine.simulateTrade({
+    accountId,
+    symbol,
+    type,
+    lotSize: Number(lotSize),
+    stopLoss: stopLoss ? Number(stopLoss) : undefined,
+    takeProfit: takeProfit ? Number(takeProfit) : undefined,
+  });
+
+  if ('error' in result) {
+    res.status(400).json({ success: false, error: result.error });
+    return;
+  }
+
+  res.json({ success: true, simulation: result });
+});
+
 // -------------------------------------------------------------
 // CHECKOUT & ORDERS API
 // -------------------------------------------------------------
-app.get('/api/orders', (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+app.get('/api/orders', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
   const db = DBEngine.getDB();
   const orders = db.orders.filter((o) => o.user_id === userId);
   res.json(orders);
 });
 
-app.post('/api/orders/checkout', async (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+app.post('/api/orders/checkout', checkoutRateLimiter, requireAuth, async (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
   const { account_size, plan_id, platform, payment_method, coupon_code } = req.body;
 
   const result = await paymentService.processCheckout({
@@ -322,6 +528,18 @@ app.post('/api/orders/checkout', async (req, res) => {
     return;
   }
 
+  res.json(result);
+});
+
+// Payment Webhook (Idempotent with signature check)
+app.post('/api/payments/webhook', (req, res) => {
+  const signature = (req.headers['x-webhook-signature'] as string) || '';
+  const idempotencyKey = (req.headers['idempotency-key'] as string) || '';
+  const result = paymentService.handlePaymentWebhook({
+    payload: req.body,
+    signature,
+    idempotencyKey,
+  });
   res.json(result);
 });
 
@@ -349,13 +567,28 @@ app.get('/api/challenges', (_req, res) => {
       { id: 'ch-inst-25k', name: '25K Instant Funding', type: 'instant_funding', account_size: 25000, price: 279, is_active: true, sort_order: 15, rules: { profit_target: 0, daily_drawdown: 3, max_drawdown: 6, min_trading_days: 7, max_trading_days: 0, leverage: 50, profit_split: 70, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       { id: 'ch-inst-50k', name: '50K Instant Funding', type: 'instant_funding', account_size: 50000, price: 479, is_active: true, sort_order: 16, rules: { profit_target: 0, daily_drawdown: 3, max_drawdown: 6, min_trading_days: 7, max_trading_days: 0, leverage: 50, profit_split: 70, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       { id: 'ch-inst-100k', name: '100K Instant Funding', type: 'instant_funding', account_size: 100000, price: 899, is_active: true, sort_order: 17, rules: { profit_target: 0, daily_drawdown: 3, max_drawdown: 6, min_trading_days: 7, max_trading_days: 0, leverage: 50, profit_split: 70, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { id: 'ch-inst-200k', name: '200K Instant Funding', type: 'instant_funding', account_size: 200000, price: 1699, is_active: true, sort_order: 18, rules: { profit_target: 0, daily_drawdown: 3, max_drawdown: 6, min_trading_days: 7, max_trading_days: 0, leverage: 50, profit_split: 70, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
     ];
+    DBEngine.saveDB();
+  } else if (!db.challenges.some((c: any) => c.id === 'ch-inst-200k')) {
+    db.challenges.push({
+      id: 'ch-inst-200k',
+      name: '200K Instant Funding',
+      type: 'instant_funding',
+      account_size: 200000,
+      price: 1699,
+      is_active: true,
+      sort_order: 18,
+      rules: { profit_target: 0, daily_drawdown: 3, max_drawdown: 6, min_trading_days: 7, max_trading_days: 0, leverage: 50, profit_split: 70, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
     DBEngine.saveDB();
   }
   res.json(db.challenges);
 });
 
-app.post('/api/admin/challenges/update', (req, res) => {
+app.post('/api/admin/challenges/update', requireAdmin, (req, res) => {
   const { id, price, rules } = req.body;
   const db = DBEngine.getDB();
 
@@ -542,7 +775,7 @@ app.post('/api/affiliate/withdraw', (req, res) => {
   res.json({ success: true, withdrawal: newWithdrawal, withdrawals: db.affiliate_withdrawals.filter((w) => w.user_id === userId) });
 });
 
-app.get('/api/admin/affiliate/withdrawals', (_req, res) => {
+app.get('/api/admin/affiliate/withdrawals', requireAdmin, (_req, res) => {
   const db = DBEngine.getDB();
   if (!db.affiliate_withdrawals) {
     db.affiliate_withdrawals = [];
@@ -550,7 +783,7 @@ app.get('/api/admin/affiliate/withdrawals', (_req, res) => {
   res.json(db.affiliate_withdrawals);
 });
 
-app.post('/api/admin/affiliate/withdraw/process', (req, res) => {
+app.post('/api/admin/affiliate/withdraw/process', requireAdmin, (req, res) => {
   const { withdrawalId, action, reason } = req.body;
   const db = DBEngine.getDB();
 
@@ -613,7 +846,7 @@ app.post('/api/admin/affiliate/withdraw/process', (req, res) => {
 // -------------------------------------------------------------
 // ADMIN MANAGEMENT & RISK DASHBOARD API
 // -------------------------------------------------------------
-app.get('/api/admin/stats', (_req, res) => {
+app.get('/api/admin/stats', requireAdmin, (_req, res) => {
   const db = DBEngine.getDB();
 
   const totalUsers = db.users.length;
@@ -667,7 +900,56 @@ app.get('/api/admin/stats', (_req, res) => {
   });
 });
 
-app.post('/api/admin/accounts/update-status', (req, res) => {
+app.post('/api/admin/users/:id/update-role', requireAdmin, (req, res) => {
+  const { role } = req.body;
+  const db = DBEngine.getDB();
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) {
+    res.status(404).json({ success: false, error: 'User not found.' });
+    return;
+  }
+  user.role = role === 'ADMIN' ? 'ADMIN' : 'USER';
+  user.updated_at = new Date().toISOString();
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: req.user?.id || 'ADMIN',
+    actor_role: 'ADMIN',
+    action: 'USER_ROLE_UPDATED',
+    target_id: user.id,
+    details: `Updated role of user ${user.email} to ${user.role}`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, user: sanitizeUser(user) });
+});
+
+app.post('/api/admin/users/:id/toggle-status', requireAdmin, (req, res) => {
+  const db = DBEngine.getDB();
+  const user = db.users.find((u) => u.id === req.params.id);
+  if (!user) {
+    res.status(404).json({ success: false, error: 'User not found.' });
+    return;
+  }
+  (user as any).is_active = (user as any).is_active === false ? true : false;
+  user.updated_at = new Date().toISOString();
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: req.user?.id || 'ADMIN',
+    actor_role: 'ADMIN',
+    action: 'USER_STATUS_TOGGLED',
+    target_id: user.id,
+    details: `Toggled user status of ${user.email} to ${(user as any).is_active ? 'ACTIVE' : 'DEACTIVATED'}`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, user: sanitizeUser(user) });
+});
+
+app.post('/api/admin/accounts/update-status', requireAdmin, (req, res) => {
   const { account_id, status, immediate } = req.body;
   const db = DBEngine.getDB();
 
@@ -717,11 +999,12 @@ app.post('/api/accounts/:id/expedite-transition', (req, res) => {
   res.json({ success: true, account: newAccount });
 });
 
-app.post('/api/admin/payouts/process', (req, res) => {
+app.post('/api/admin/payouts/process', requireAdmin, (req, res) => {
   const { payoutId, action, reason } = req.body;
+  const adminId = req.user?.id || 'admin-vaibhav-id-999';
   const result = PayoutEngine.processPayoutAdmin({
     payoutId,
-    adminId: 'admin-vaibhav-id-999',
+    adminId,
     action,
     reason,
   });
@@ -737,7 +1020,7 @@ app.post('/api/admin/payouts/process', (req, res) => {
 // -------------------------------------------------------------
 // ADMIN MANUAL ACCOUNT PROVISIONING
 // -------------------------------------------------------------
-app.post('/api/admin/accounts/issue-manual', (req, res) => {
+app.post('/api/admin/accounts/issue-manual', requireAdmin, (req, res) => {
   const { email, full_name, account_size, type, stage, platform, broker } = req.body;
   const db = DBEngine.getDB();
 
@@ -967,7 +1250,7 @@ app.post('/api/promo-codes/validate', (req, res) => {
   });
 });
 
-app.post('/api/admin/promo-codes', (req, res) => {
+app.post('/api/admin/promo-codes', requireAdmin, (req, res) => {
   const { code, discount_type, discount_value, max_uses } = req.body;
   const db = DBEngine.getDB();
 
@@ -1011,7 +1294,7 @@ app.post('/api/admin/promo-codes', (req, res) => {
   res.json({ success: true, promo: created });
 });
 
-app.put('/api/admin/promo-codes/:id/toggle', (req, res) => {
+app.put('/api/admin/promo-codes/:id/toggle', requireAdmin, (req, res) => {
   const db = DBEngine.getDB();
   const promo = (db.promo_codes || []).find((p) => p.id === req.params.id);
   if (!promo) {
@@ -1024,11 +1307,45 @@ app.put('/api/admin/promo-codes/:id/toggle', (req, res) => {
   res.json({ success: true, promo });
 });
 
-app.delete('/api/admin/promo-codes/:id', (req, res) => {
+app.delete('/api/admin/promo-codes/:id', requireAdmin, (req, res) => {
   const db = DBEngine.getDB();
   db.promo_codes = (db.promo_codes || []).filter((p) => p.id !== req.params.id);
   DBEngine.saveDB();
   res.json({ success: true });
+});
+
+// Admin Audit Logs API (Searchable & Filterable)
+app.get('/api/admin/audit-logs', requireAdmin, (req, res) => {
+  const db = DBEngine.getDB();
+  let logs = [...(db.audit_logs || [])];
+
+  const { actor_role, action, search } = req.query;
+  if (actor_role) {
+    logs = logs.filter((l) => (l.actor_role || '').toLowerCase() === String(actor_role).toLowerCase());
+  }
+  if (action) {
+    logs = logs.filter((l) => (l.action || '').toLowerCase().includes(String(action).toLowerCase()));
+  }
+  if (search) {
+    const q = String(search).toLowerCase();
+    logs = logs.filter((l) => (l.details || '').toLowerCase().includes(q) || (l.action || '').toLowerCase().includes(q));
+  }
+
+  const limit = Math.min(200, Number(req.query.limit) || 100);
+  res.json({
+    total: logs.length,
+    logs: logs.slice(-limit).reverse(),
+  });
+});
+
+// Programmatic Automated Verification Test Suite API
+app.get('/api/tests/run', async (_req, res) => {
+  try {
+    const results = await runAutomatedVerificationTests();
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to run test suite.' });
+  }
 });
 
 // Notifications API
@@ -1038,6 +1355,295 @@ app.get('/api/notifications', (req, res) => {
   const userNotifs = db.notifications.filter((n) => n.user_id === userId);
   res.json(userNotifs);
 });
+
+// -------------------------------------------------------------
+// KYC & IDENTITY COMPLIANCE API
+// -------------------------------------------------------------
+app.get('/api/kyc/status', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const db = DBEngine.getDB();
+  const user = db.users.find((u) => u.id === userId);
+  const submission = (db.kyc_submissions || []).find((k) => k.user_id === userId);
+  res.json({
+    is_verified: user?.is_verified ?? false,
+    submission: submission || null,
+  });
+});
+
+app.post('/api/kyc/submit', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const { document_type, document_number, country } = req.body;
+  const db = DBEngine.getDB();
+  const user = db.users.find((u) => u.id === userId);
+  if (!user) {
+    res.status(404).json({ success: false, error: 'User not found.' });
+    return;
+  }
+  if (!db.kyc_submissions) db.kyc_submissions = [];
+
+  let sub = db.kyc_submissions.find((k) => k.user_id === user.id);
+  if (sub && sub.status === 'VERIFIED') {
+    res.status(400).json({ success: false, error: 'Your identity is already verified.' });
+    return;
+  }
+
+  if (sub) {
+    sub.document_type = document_type || 'PASSPORT';
+    sub.document_number = document_number || '';
+    sub.country = country || user.country;
+    sub.status = 'PENDING';
+    sub.submitted_at = new Date().toISOString();
+    sub.rejection_reason = undefined;
+  } else {
+    sub = {
+      id: `kyc-${Date.now()}`,
+      user_id: user.id,
+      trader_name: user.full_name,
+      email: user.email,
+      document_type: document_type || 'PASSPORT',
+      document_number: document_number || '',
+      country: country || user.country,
+      status: 'PENDING',
+      submitted_at: new Date().toISOString(),
+    };
+    db.kyc_submissions.unshift(sub);
+  }
+
+  db.notifications.unshift({
+    id: `notif-${Date.now()}`,
+    user_id: user.id,
+    title: 'KYC Document Submitted',
+    body: 'Your identity document has been submitted for compliance verification.',
+    type: 'info',
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: user.id,
+    actor_role: 'USER',
+    action: 'KYC_SUBMITTED',
+    target_id: sub.id,
+    details: `Trader ${user.email} submitted ${sub.document_type} for verification.`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, submission: sub });
+});
+
+app.get('/api/admin/kyc/submissions', requireAdmin, (_req, res) => {
+  const db = DBEngine.getDB();
+  res.json(db.kyc_submissions || []);
+});
+
+app.post('/api/admin/kyc/review', requireAdmin, (req, res) => {
+  const { submissionId, status, rejection_reason } = req.body;
+  const db = DBEngine.getDB();
+  if (!db.kyc_submissions) db.kyc_submissions = [];
+
+  const sub = db.kyc_submissions.find((k) => k.id === submissionId);
+  if (!sub) {
+    res.status(404).json({ success: false, error: 'KYC submission not found.' });
+    return;
+  }
+
+  const isApproved = status === 'VERIFIED';
+  sub.status = isApproved ? 'VERIFIED' : 'REJECTED';
+  sub.reviewed_at = new Date().toISOString();
+  sub.reviewed_by = req.user?.id || 'ADMIN';
+  if (!isApproved) {
+    sub.rejection_reason = rejection_reason || 'Identity verification declined.';
+  }
+
+  const user = db.users.find((u) => u.id === sub.user_id);
+  if (user) {
+    user.is_verified = isApproved;
+    user.updated_at = new Date().toISOString();
+  }
+
+  db.notifications.unshift({
+    id: `notif-${Date.now()}`,
+    user_id: sub.user_id,
+    title: isApproved ? '✅ KYC Verification Approved!' : '❌ KYC Verification Declined',
+    body: isApproved
+      ? 'Your identity documents have been approved. You are in full compliance for profit payouts.'
+      : `Your KYC verification was declined: ${sub.rejection_reason || 'Please re-upload a clear document.'}`,
+    type: isApproved ? 'success' : 'error',
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: req.user?.id || 'ADMIN',
+    actor_role: 'ADMIN',
+    action: isApproved ? 'KYC_APPROVED' : 'KYC_REJECTED',
+    target_id: sub.id,
+    details: `Admin reviewed KYC for ${sub.email}: ${sub.status}`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, submission: sub, submissions: db.kyc_submissions });
+});
+
+// -------------------------------------------------------------
+// SUPPORT TICKETS SYSTEM API
+// -------------------------------------------------------------
+app.get('/api/support/tickets', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const db = DBEngine.getDB();
+  if (!db.support_tickets) db.support_tickets = [];
+  const tickets = db.support_tickets.filter((t) => t.user_id === userId);
+  res.json(tickets);
+});
+
+app.post('/api/support/tickets', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const { subject, category, priority, message } = req.body;
+  const db = DBEngine.getDB();
+  const user = db.users.find((u) => u.id === userId);
+
+  if (!subject || !message) {
+    res.status(400).json({ success: false, error: 'Subject and message are required.' });
+    return;
+  }
+
+  if (!db.support_tickets) db.support_tickets = [];
+
+  const newTicket: any = {
+    id: `tick-${Date.now()}`,
+    user_id: userId,
+    user_name: user?.full_name || 'Trader',
+    user_email: user?.email || 'trader@propfirm.com',
+    subject: subject.trim(),
+    category: category || 'General',
+    priority: priority || 'normal',
+    status: 'open',
+    messages: [
+      {
+        id: `msg-${Date.now()}`,
+        sender: 'user',
+        sender_name: user?.full_name || 'Trader',
+        message: message.trim(),
+        created_at: new Date().toISOString(),
+      },
+    ],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  db.support_tickets.unshift(newTicket);
+
+  db.notifications.unshift({
+    id: `notif-${Date.now()}`,
+    user_id: userId,
+    title: 'Support Ticket Created',
+    body: `Ticket #${newTicket.id} "${newTicket.subject}" created. Our 24/7 team will respond shortly.`,
+    type: 'info',
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: userId,
+    actor_role: 'USER',
+    action: 'SUPPORT_TICKET_CREATED',
+    target_id: newTicket.id,
+    details: `User created ticket: ${newTicket.subject}`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, ticket: newTicket, tickets: db.support_tickets.filter((t) => t.user_id === userId) });
+});
+
+app.post('/api/support/tickets/:id/reply', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const { message } = req.body;
+  const db = DBEngine.getDB();
+  if (!db.support_tickets) db.support_tickets = [];
+
+  const ticket = db.support_tickets.find((t) => t.id === req.params.id);
+  if (!ticket) {
+    res.status(404).json({ success: false, error: 'Ticket not found.' });
+    return;
+  }
+
+  const isAdmin = req.user?.role === 'ADMIN' || (req.headers['x-user-id'] as string) === 'admin-vaibhav-id-999';
+  if (!isAdmin && ticket.user_id !== userId) {
+    res.status(403).json({ success: false, error: 'Unauthorized to reply to this ticket.' });
+    return;
+  }
+
+  const user = db.users.find((u) => u.id === userId);
+  const senderRole = isAdmin ? 'admin' : 'user';
+
+  ticket.messages.push({
+    id: `msg-${Date.now()}`,
+    sender: senderRole,
+    sender_name: isAdmin ? 'FundedShift Support Desk' : user?.full_name || 'Trader',
+    message: String(message || '').trim(),
+    created_at: new Date().toISOString(),
+  });
+
+  ticket.updated_at = new Date().toISOString();
+  if (isAdmin && ticket.status === 'open') {
+    ticket.status = 'in_progress';
+  }
+
+  if (isAdmin) {
+    db.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      user_id: ticket.user_id,
+      title: 'Support Response Received',
+      body: `Support team replied to ticket #${ticket.id}: "${ticket.subject}"`,
+      type: 'info',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  DBEngine.saveDB();
+  res.json({ success: true, ticket });
+});
+
+app.get('/api/admin/support/tickets', requireAdmin, (_req, res) => {
+  const db = DBEngine.getDB();
+  res.json(db.support_tickets || []);
+});
+
+app.post('/api/admin/support/tickets/:id/status', requireAdmin, (req, res) => {
+  const { status } = req.body;
+  const db = DBEngine.getDB();
+  if (!db.support_tickets) db.support_tickets = [];
+
+  const ticket = db.support_tickets.find((t) => t.id === req.params.id);
+  if (!ticket) {
+    res.status(404).json({ success: false, error: 'Ticket not found.' });
+    return;
+  }
+
+  ticket.status = status;
+  ticket.updated_at = new Date().toISOString();
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: req.user?.id || 'ADMIN',
+    actor_role: 'ADMIN',
+    action: 'SUPPORT_TICKET_STATUS_UPDATED',
+    target_id: ticket.id,
+    details: `Admin changed status of ticket #${ticket.id} to ${status}`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, ticket });
+});
+
 
 // -------------------------------------------------------------
 // VITE MIDDLEWARE / PRODUCTION STATIC FILE SERVER

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FundedShift Prop Firm - Technical Architecture & System Engineering Guide</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111726;
+      --card-border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --gold-primary: #eab308;
+      --gold-secondary: #ca8a04;
+      --gold-glow: rgba(234, 179, 8, 0.15);
+      --accent-blue: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-purple: #a855f7;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 11pt;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      .card {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+      }
+      h1, h2, h3, h4 {
+        color: #0f172a !important;
+      }
+      .text-gold {
+        color: #b45309 !important;
+      }
+      table th {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+      }
+      table td {
+        border-color: #e2e8f0 !important;
+        color: #334155 !important;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2.5rem 1.5rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Header & Cover Banner */
+    .cover-card {
+      background: linear-gradient(135deg, #111726 0%, #1e1b4b 50%, #172554 100%);
+      border: 1px solid rgba(234, 179, 8, 0.35);
+      border-radius: 1.25rem;
+      padding: 3rem 2.5rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #eab308, #f59e0b, #eab308);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      background: rgba(234, 179, 8, 0.12);
+      border: 1px solid rgba(234, 179, 8, 0.3);
+      color: var(--gold-primary);
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #ffffff 30%, #e2e8f0 70%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .cover-subtitle {
+      font-size: 1.15rem;
+      color: #cbd5e1;
+      max-width: 800px;
+      margin-bottom: 2rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 1.5rem;
+    }
+
+    .meta-item p.label {
+      font-size: 0.75rem;
+      color: var(--gold-primary);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-item p.val {
+      font-size: 0.95rem;
+      color: #f8fafc;
+      font-weight: 600;
+      margin-top: 0.2rem;
+    }
+
+    /* Print & Action Buttons */
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+      color: #000;
+    }
+
+    .btn-gold:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-outline:hover {
+      background: #1e293b;
+    }
+
+    /* Section Styling */
+    .section {
+      margin-bottom: 3.5rem;
+    }
+
+    .section-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 2px solid rgba(234, 179, 8, 0.4);
+      padding-bottom: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Cards & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.85rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.75rem;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Architecture Layers */
+    .layer-card {
+      background: #131b2e;
+      border-left: 4px solid var(--gold-primary);
+      border-radius: 0.5rem;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .layer-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.25rem;
+    }
+
+    .layer-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Tables */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 0.75rem;
+      border: 1px solid var(--card-border);
+      margin: 1.25rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    thead th {
+      background-color: #162035;
+      color: #f8fafc;
+      font-weight: 600;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--card-border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid #1a2438;
+      color: #cbd5e1;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .pill-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .pill-gold {
+      background: rgba(234, 179, 8, 0.15);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .pill-blue {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .pill-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Code & Formulas */
+    .formula-box {
+      background: #0d121f;
+      border: 1px solid #1e293b;
+      border-left: 3px solid var(--gold-primary);
+      padding: 1rem 1.25rem;
+      border-radius: 0.5rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      margin: 0.75rem 0;
+      line-height: 1.6;
+    }
+
+    .text-gold {
+      color: var(--gold-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Action Bar -->
+    <div class="action-bar no-print">
+      <div>
+        <strong style="color: #f8fafc;">FundedShift Architecture Specification</strong>
+        <p style="font-size: 0.8rem; color: #94a3b8;">Publication-grade systems documentation</p>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button onclick="window.print()" class="btn btn-gold">
+          🖨️ Print / Save as PDF
+        </button>
+        <a href="/api/docs/architecture.pdf" download="FundedShift_Architecture_Guide.pdf" class="btn btn-outline">
+          ⬇️ Download PDF
+        </a>
+      </div>
+    </div>
+
+    <!-- Cover Banner -->
+    <div class="cover-card">
+      <div class="badge">Enterprise Systems Specification</div>
+      <h1>FundedShift Prop Firm Architecture Manual</h1>
+      <p class="cover-subtitle">
+        Comprehensive technical architecture, high-frequency simulated execution engine, dynamic risk shield enforcement, PostgreSQL relational schema, and multi-rail financial pipeline.
+      </p>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <p class="label">System Version</p>
+          <p class="val">v2.0.0 Production</p>
+        </div>
+        <div class="meta-item">
+          <p class="label">Primary Stack</p>
+          <p class="val">Node 22 / Express / React 19 / TS</p>
+        </div>
+        <div class="meta-item">
+          <p class="label">Persistence Engine</p>
+          <p class="val">PostgreSQL 16 (16 Tables)</p>
+        </div>
+        <div class="meta-item">
+          <p class="label">Execution Model</p>
+          <p class="val">Sub-millisecond ECN Matcher</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Executive Overview -->
+    <div class="section">
+      <h2 class="section-title">1. Executive Overview & System Topology</h2>
+      <p class="section-desc">
+        FundedShift operates as an institutional proprietary trading firm platform. It provides simulated capital evaluation challenges for traders globally, validates risk discipline through real-time telemetry, and automates high-water mark profit distributions.
+      </p>
+
+      <div class="layer-card">
+        <h4>Layer 1: Presentation & Trader Workspace (React 19, TypeScript, Tailwind CSS, Vite)</h4>
+        <p>
+          Includes the institutional Trading Terminal with TradingView live candlestick charts, live 200ms market watch, lot size sizing calculator, position monitor, Trader Portal (Objectives, Invoices, Certificates, KYC verification, Payout desk, Support desk), and Admin Control Suite.
+        </p>
+      </div>
+
+      <div class="layer-card">
+        <h4>Layer 2: API Gateway & Security Firewall (Express 4.21, Node.js 22 LTS)</h4>
+        <p>
+          Handles dual-bearer JWT & header authentication, RBAC authorization (Trader vs Admin), IP-based rate limiting (Auth: 40/15min, Orders: 60/min, Checkout: 20/min), payload sanitation, and audit trail dispatch.
+        </p>
+      </div>
+
+      <div class="layer-card">
+        <h4>Layer 3: Core Financial & Simulated Trading Engines</h4>
+        <p>
+          <strong>Simulated ECN Execution Engine:</strong> Sub-millisecond order matching, variable bid/ask spread modeling, slippage simulation, and margin reservation.<br>
+          <strong>Dynamic Risk Shield:</strong> Asynchronous 200ms tick evaluation of intraday drawdown (5%) and maximum drawdown (10%), triggering instant position flattening.<br>
+          <strong>Automated Transition Engine:</strong> Automated Step 1 &rarr; Step 2 &rarr; Funded account provisioning upon target achievement.<br>
+          <strong>Payout & Split Engine:</strong> Real-time profit split accounting (80% / 90%) and multi-channel disbursement.
+        </p>
+      </div>
+
+      <div class="layer-card">
+        <h4>Layer 4: Relational Persistence Layer (PostgreSQL 16 Engine)</h4>
+        <p>
+          16 ACID-compliant relational tables managed with foreign key constraints, cascading updates, synchronous snapshot synchronization to disk, and audit logging.
+        </p>
+      </div>
+
+      <!-- Latency Benchmarks Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subsystem</th>
+              <th>Target Latency</th>
+              <th>Operational Protocol</th>
+              <th>Redundancy</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Market Feed Refresh</strong></td>
+              <td>200 ms interval</td>
+              <td>Simulated ECN ticker with live Finnhub and crypto market ticks</td>
+              <td>In-memory quote cache</td>
+            </tr>
+            <tr>
+              <td><strong>Order Execution Fill</strong></td>
+              <td>&lt; 15 ms simulated</td>
+              <td>Institutional order book matching with simulated liquidity</td>
+              <td>Atomic balance locks</td>
+            </tr>
+            <tr>
+              <td><strong>Risk Breach Detection</strong></td>
+              <td>&lt; 50 ms tick monitor</td>
+              <td>Instant account freezing and emergency market position flattening</td>
+              <td>Automated audit logging</td>
+            </tr>
+            <tr>
+              <td><strong>Database Commits</strong></td>
+              <td>&lt; 5 ms transaction</td>
+              <td>PostgreSQL 16 ACID transactions with WAL journaling</td>
+              <td>Synchronous disk backups</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 2: Trader Lifecycle & Evaluation -->
+    <div class="section">
+      <h2 class="section-title">2. Trader Lifecycle & Evaluation Challenges</h2>
+      <p class="section-desc">
+        FundedShift employs a 3-stage evaluation framework designed to filter and fund skilled capital managers.
+      </p>
+
+      <div class="grid-4" style="margin-bottom: 1.5rem;">
+        <div class="card">
+          <span class="pill pill-gold" style="margin-bottom: 0.5rem;">Step 1</span>
+          <h3>Evaluation</h3>
+          <p><strong>8% Target</strong><br>5% Daily Drawdown<br>10% Max Drawdown<br>Unlimited Days</p>
+        </div>
+        <div class="card">
+          <span class="pill pill-blue" style="margin-bottom: 0.5rem;">Step 2</span>
+          <h3>Verification</h3>
+          <p><strong>5% Target</strong><br>5% Daily Drawdown<br>10% Max Drawdown<br>Unlimited Days</p>
+        </div>
+        <div class="card">
+          <span class="pill pill-green" style="margin-bottom: 0.5rem;">Funded</span>
+          <h3>Live Capital</h3>
+          <p><strong>0% Target</strong><br>80% - 90% Profit Split<br>Bi-weekly Payouts<br>Immediate Scaling</p>
+        </div>
+        <div class="card">
+          <span class="pill pill-green" style="margin-bottom: 0.5rem;">Scale</span>
+          <h3>Scaling Plan</h3>
+          <p><strong>+25% Balance</strong><br>Every 3 Months<br>10%+ Cumulative Gain<br>Up to $2,000,000</p>
+        </div>
+      </div>
+
+      <!-- Challenge Matrix -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Account Tier</th>
+              <th>Evaluation Model</th>
+              <th>Phase 1 Target</th>
+              <th>Phase 2 Target</th>
+              <th>Daily Limit (5%)</th>
+              <th>Max Drawdown (10%)</th>
+              <th>Leverage</th>
+              <th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>$5,000</strong></td>
+              <td>Two-Step</td>
+              <td>$400 (8%)</td>
+              <td>$250 (5%)</td>
+              <td>$250</td>
+              <td>$500</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$39</span></td>
+            </tr>
+            <tr>
+              <td><strong>$10,000</strong></td>
+              <td>Two-Step</td>
+              <td>$800 (8%)</td>
+              <td>$500 (5%)</td>
+              <td>$500</td>
+              <td>$1,000</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$79</span></td>
+            </tr>
+            <tr>
+              <td><strong>$25,000</strong></td>
+              <td>Two-Step</td>
+              <td>$2,000 (8%)</td>
+              <td>$1,250 (5%)</td>
+              <td>$1,250</td>
+              <td>$2,500</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$169</span></td>
+            </tr>
+            <tr>
+              <td><strong>$50,000</strong></td>
+              <td>Two-Step</td>
+              <td>$4,000 (8%)</td>
+              <td>$2,500 (5%)</td>
+              <td>$2,500</td>
+              <td>$5,000</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$289</span></td>
+            </tr>
+            <tr>
+              <td><strong>$100,000</strong></td>
+              <td>Two-Step</td>
+              <td>$8,000 (8%)</td>
+              <td>$5,000 (5%)</td>
+              <td>$5,000</td>
+              <td>$10,000</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$499</span></td>
+            </tr>
+            <tr>
+              <td><strong>$200,000</strong></td>
+              <td>Two-Step</td>
+              <td>$16,000 (8%)</td>
+              <td>$10,000 (5%)</td>
+              <td>$10,000</td>
+              <td>$20,000</td>
+              <td>1:100</td>
+              <td><span class="pill pill-gold">$899</span></td>
+            </tr>
+            <tr>
+              <td><strong>$10,000 Instant</strong></td>
+              <td>Instant Funded</td>
+              <td>N/A (Funded)</td>
+              <td>N/A (Funded)</td>
+              <td>$300 (3%)</td>
+              <td>$600 (6% Trailing)</td>
+              <td>1:50</td>
+              <td><span class="pill pill-gold">$149</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card" style="background: rgba(34, 197, 94, 0.05); border-color: rgba(34, 197, 94, 0.25);">
+        <h3 style="color: #4ade80;">Automated Account Provisioning & Transition Engine</h3>
+        <p>
+          Upon achieving the profit target in Phase 1, all active trades are automatically closed to lock gains. The account status switches to <span class="pill pill-gold">PASSED</span>. An automated background worker provisions the Step 2 Verification account within 1 to 2 hours with fresh MT5 credentials. When Step 2 is cleared, the system awards the official prop firm certificate and transitions the trader to the live funded desk.
+        </p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 3: ECN Execution Engine -->
+    <div class="section">
+      <h2 class="section-title">3. Simulated MT5 Execution Engine & Financial Mathematics</h2>
+      <p class="section-desc">
+        The execution engine replicates high-liquidity MT5 / cTrader environments with realistic market conditions.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Market Ticker & Spread Model</h3>
+          <p>
+            Generates realistic price vibrations every 200 milliseconds across Forex Majors, Crosses, Commodities (XAUUSD, XAGUSD), Indices (NAS100, US30), and Cryptocurrencies (BTCUSD, ETHUSD). Spreads dynamically widen during high volatility or session transitions.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Order Fill & Slippage Simulator</h3>
+          <p>
+            Simulates ECN depth-of-market fills. Large lot sizes incur realistic micro-slippage (0.1 - 0.5 pips). Validates weekend closures, maximum open position counts, and per-symbol maximum lot limits.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin: 1.5rem 0 0.5rem 0; color: #f8fafc;">Mathematical Formulations in Code</h3>
+
+      <div class="formula-box">
+        <strong>1. Floating Unrealized PnL:</strong><br>
+        BUY:  PnL = (Current Bid Price - Entry Price) &times; Lot Size &times; Contract Size<br>
+        SELL: PnL = (Entry Price - Current Ask Price) &times; Lot Size &times; Contract Size
+      </div>
+
+      <div class="formula-box">
+        <strong>2. Required Margin:</strong><br>
+        Margin = (Lot Size &times; Contract Size &times; Entry Price) / Account Leverage<br>
+        Free Margin = Max(0, Live Equity - Used Margin)<br>
+        Margin Level % = (Live Equity / Used Margin) &times; 100
+      </div>
+
+      <div class="formula-box">
+        <strong>3. Live Equity:</strong><br>
+        Live Equity = Current Balance + &sum;(Open Positions Floating PnL)
+      </div>
+    </div>
+
+    <!-- Section 4: Dynamic Risk Shield -->
+    <div class="section">
+      <h2 class="section-title">4. Dynamic Risk Shield & Rule Enforcement</h2>
+      <p class="section-desc">
+        The proprietary risk monitor safeguards firm capital by enforcing strict drawdown limits in real time.
+      </p>
+
+      <div class="grid-2">
+        <div class="card" style="border-left: 4px solid var(--accent-red);">
+          <span class="pill pill-red">Rule 1</span>
+          <h3 style="margin-top: 0.5rem;">Daily Loss Limit (5%)</h3>
+          <p>
+            At 00:00 UTC daily, the baseline is captured:
+            <br><code>start_of_day_baseline = Max(balance, equity)</code>
+            <br>If <code>Live Equity &lt; (start_of_day_baseline - 5%)</code>, the account is instantly breached. Floating losses count towards the limit.
+          </p>
+        </div>
+
+        <div class="card" style="border-left: 4px solid var(--gold-primary);">
+          <span class="pill pill-gold">Rule 2</span>
+          <h3 style="margin-top: 0.5rem;">Maximum Overall Drawdown (10%)</h3>
+          <p>
+            <strong>Static Model:</strong> Floor remains at starting balance minus 10% permanently.<br>
+            <strong>Trailing Model (Instant Funding):</strong> Floor trails the highest achieved equity until it reaches starting balance, locking in risk.
+          </p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.25rem;">
+        <h3>Emergency Flattener Execution Protocol</h3>
+        <p>
+          Upon breach detection, the risk engine executes within 50ms:<br>
+          1. <strong>Liquidate:</strong> Automatically flattens all open positions across all asset classes.<br>
+          2. <strong>Lock:</strong> Sets <code>account.status = "BREACHED"</code>, blocking all future order requests.<br>
+          3. <strong>Audit:</strong> Writes a complete <code>rule_violations</code> entity recording triggering price, equity, and timestamp.<br>
+          4. <strong>Notify:</strong> Sends an instant in-app notification explaining the breach specifics.<br>
+          5. <strong>Recovery:</strong> Activates the Account Recovery Program with discounted reset pricing (20% to 50% discount).
+        </p>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 5: PostgreSQL Database Architecture -->
+    <div class="section">
+      <h2 class="section-title">5. PostgreSQL Relational Database Architecture</h2>
+      <p class="section-desc">
+        In production, the platform runs on PostgreSQL 16. The database is partitioned into 16 relational tables with strict foreign key constraints, indexes, and automated audit logging.
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Table</th>
+              <th>Primary Key</th>
+              <th>Foreign Keys</th>
+              <th>Key Attributes & Types</th>
+              <th>Indexes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>users</code></td>
+              <td>id (VARCHAR)</td>
+              <td>None</td>
+              <td>email, password_hash, role, kyc_status, 2fa_enabled</td>
+              <td>email (UNIQUE), affiliate_code</td>
+            </tr>
+            <tr>
+              <td><code>account_plans</code></td>
+              <td>id (VARCHAR)</td>
+              <td>None</td>
+              <td>name, type, account_size, price, rules (JSONB)</td>
+              <td>type, is_active</td>
+            </tr>
+            <tr>
+              <td><code>trading_accounts</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>account_number, login, balance, equity, status, phase</td>
+              <td>user_id, account_number, status</td>
+            </tr>
+            <tr>
+              <td><code>positions</code></td>
+              <td>id (VARCHAR)</td>
+              <td>account_id, user_id</td>
+              <td>symbol, type (BUY/SELL), lot_size, entry, sl, tp, pnl, status</td>
+              <td>account_id, status, symbol</td>
+            </tr>
+            <tr>
+              <td><code>trade_orders</code></td>
+              <td>id (VARCHAR)</td>
+              <td>account_id, user_id</td>
+              <td>symbol, type, lot_size, price, status, executed_at</td>
+              <td>account_id, executed_at</td>
+            </tr>
+            <tr>
+              <td><code>rule_violations</code></td>
+              <td>id (VARCHAR)</td>
+              <td>account_id, user_id</td>
+              <td>rule_type, threshold, actual_val, balance_at_breach</td>
+              <td>account_id, created_at</td>
+            </tr>
+            <tr>
+              <td><code>orders</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>plan_id, account_size, total_price, coupon, status</td>
+              <td>user_id, status, created_at</td>
+            </tr>
+            <tr>
+              <td><code>payments</code></td>
+              <td>id (VARCHAR)</td>
+              <td>order_id, user_id</td>
+              <td>gateway, amount, currency, transaction_id, status</td>
+              <td>order_id, transaction_id</td>
+            </tr>
+            <tr>
+              <td><code>payout_requests</code></td>
+              <td>id (VARCHAR)</td>
+              <td>account_id, user_id</td>
+              <td>total_profit, trader_share, method, address, status</td>
+              <td>user_id, account_id, status</td>
+            </tr>
+            <tr>
+              <td><code>kyc_submissions</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>document_type, doc_number, country, status</td>
+              <td>user_id, status, submitted_at</td>
+            </tr>
+            <tr>
+              <td><code>support_tickets</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>subject, category, priority, status, messages (JSONB)</td>
+              <td>user_id, status, category</td>
+            </tr>
+            <tr>
+              <td><code>affiliate_withdrawals</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>amount, payout_method, payment_details, status</td>
+              <td>user_id, status</td>
+            </tr>
+            <tr>
+              <td><code>promo_codes</code></td>
+              <td>id (VARCHAR)</td>
+              <td>None</td>
+              <td>code, discount_type, discount_val, uses, is_active</td>
+              <td>code (UNIQUE), is_active</td>
+            </tr>
+            <tr>
+              <td><code>audit_logs</code></td>
+              <td>id (VARCHAR)</td>
+              <td>None</td>
+              <td>actor_id, actor_role, action, target_id, ip_address</td>
+              <td>actor_id, action, created_at</td>
+            </tr>
+            <tr>
+              <td><code>notifications</code></td>
+              <td>id (VARCHAR)</td>
+              <td>user_id &rarr; users</td>
+              <td>title, body, type, is_read, created_at</td>
+              <td>user_id, is_read</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 6: Financial Operations & KYC -->
+    <div class="section">
+      <h2 class="section-title">6. Financial Operations, KYC & Payout Processing</h2>
+      <p class="section-desc">
+        Comprehensive financial compliance and profit disbursement architecture.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <span class="pill pill-blue">Compliance</span>
+          <h3 style="margin-top: 0.5rem;">KYC Verification Pipeline</h3>
+          <p>
+            1. Trader submits legal identity document (Passport, Driver's License, or National ID) under <code>/dashboard/security</code>.<br>
+            2. Record enters <code>kyc_submissions</code> with status <code>PENDING</code>.<br>
+            3. Administrator reviews document in <code>/admin/kyc</code> against sanctions/PEP lists.<br>
+            4. Once approved, <code>user.is_verified</code> is set to <code>true</code>, unlocking automated profit split payout requests.
+          </p>
+        </div>
+
+        <div class="card">
+          <span class="pill pill-gold">Accounting</span>
+          <h3 style="margin-top: 0.5rem;">Profit Split & Payout Rails</h3>
+          <p>
+            <strong>Eligibility:</strong> Only verified funded accounts with profit &gt; 0 and no open positions.<br>
+            <strong>Formula:</strong> <code>Trader Payout = Profit &times; (Trader Split % / 100)</code> (Standard 80%, Scaled 90%).<br>
+            <strong>Disbursement Rails:</strong> Crypto USDT (TRC-20, ERC-20), Bank Wire, UPI (India), and PayPal.<br>
+            <strong>SLA:</strong> Processed and dispatched within 4 hours.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 7: Support Desk & Administration -->
+    <div class="section">
+      <h2 class="section-title">7. Support Desk, Admin Operations & Security</h2>
+      <p class="section-desc">
+        Enterprise administrative suite and support ticketing infrastructure.
+      </p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Real-Time Support Helpdesk</h3>
+          <p>
+            <strong>Trader Portal (<code>/dashboard/support</code>):</strong> Interactive ticket creation with categories (Trading & Rules, Billing, Verification, Payouts, Technical, General) and message conversation threads.<br>
+            <strong>Admin Console (<code>/admin/support</code>):</strong> Split-pane management workspace with queue search, status filters (Open, In Progress, Resolved), and instant reply dispatcher with trader alerts.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Security & Infrastructure Safeguards</h3>
+          <p>
+            <strong>Password Protection:</strong> PBKDF2 with SHA-512 and salt (1,000 rounds).<br>
+            <strong>Authentication:</strong> Cryptographically signed JWT tokens with role expiration.<br>
+            <strong>Anti-Fraud:</strong> Nonce verification on payment webhooks and rate limiting.<br>
+            <strong>Zero Mock Policy:</strong> Decoupled from fake starter accounts; clean empty states for new traders.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

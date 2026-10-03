@@ -76,6 +76,11 @@ export class TradeExecutionService implements TradingProvider {
       return { success: false, error: 'Cannot open trade: Maximum overall drawdown limit has been reached.' };
     }
 
+    // Validate numerical lot size
+    if (typeof params.lotSize !== 'number' || isNaN(params.lotSize) || !isFinite(params.lotSize) || params.lotSize <= 0) {
+      return { success: false, error: 'Invalid lot size. Lot size must be a positive number.' };
+    }
+
     const symbolConfig = db.symbols.find((s) => s.symbol === params.symbol && s.tradingEnabled);
     if (!symbolConfig) {
       return { success: false, error: `Symbol ${params.symbol} is not available for trading.` };
@@ -120,6 +125,37 @@ export class TradeExecutionService implements TradingProvider {
     }
 
     const entryPrice = params.type === 'BUY' ? quote.ask : quote.bid;
+
+    // Strict validation of Stop Loss & Take Profit logic
+    if (params.stopLoss && params.stopLoss > 0) {
+      if (params.type === 'BUY' && params.stopLoss >= entryPrice) {
+        return {
+          success: false,
+          error: `Invalid Stop Loss: For a BUY order, Stop Loss ($${params.stopLoss}) must be strictly below current entry ask price ($${entryPrice}).`,
+        };
+      }
+      if (params.type === 'SELL' && params.stopLoss <= entryPrice) {
+        return {
+          success: false,
+          error: `Invalid Stop Loss: For a SELL order, Stop Loss ($${params.stopLoss}) must be strictly above current entry bid price ($${entryPrice}).`,
+        };
+      }
+    }
+
+    if (params.takeProfit && params.takeProfit > 0) {
+      if (params.type === 'BUY' && params.takeProfit <= entryPrice) {
+        return {
+          success: false,
+          error: `Invalid Take Profit: For a BUY order, Take Profit ($${params.takeProfit}) must be strictly above current entry ask price ($${entryPrice}).`,
+        };
+      }
+      if (params.type === 'SELL' && params.takeProfit >= entryPrice) {
+        return {
+          success: false,
+          error: `Invalid Take Profit: For a SELL order, Take Profit ($${params.takeProfit}) must be strictly below current entry bid price ($${entryPrice}).`,
+        };
+      }
+    }
 
     // Calculate required margin using institutional MT5 formula
     const requiredMargin = calculateInstitutionalMargin({
@@ -261,6 +297,114 @@ export class TradeExecutionService implements TradingProvider {
     RuleEngine.evaluateAccount(account.id);
 
     return { success: true, closedPosition: position };
+  }
+
+  /**
+   * Partially closes an existing open position
+   */
+  public async partialClosePosition(params: {
+    positionId: string;
+    accountId: string;
+    userId: string;
+    lotsToClose: number;
+  }): Promise<{ success: boolean; closedLotSize?: number; remainingPosition?: PositionEntity; error?: string }> {
+    const db = DBEngine.getDB();
+    const position = db.positions.find((p) => p.id === params.positionId && p.account_id === params.accountId && p.user_id === params.userId);
+
+    if (!position || position.status !== 'OPEN') {
+      return { success: false, error: 'Position not found or already closed.' };
+    }
+
+    const account = db.accounts.find((a) => a.id === params.accountId);
+    if (!account) {
+      return { success: false, error: 'Account not found.' };
+    }
+
+    const lotsToClose = Number(params.lotsToClose);
+    if (isNaN(lotsToClose) || lotsToClose <= 0 || lotsToClose >= position.lot_size) {
+      return {
+        success: false,
+        error: `Invalid lots to close. Must be greater than 0 and less than current position lot size (${position.lot_size}).`,
+      };
+    }
+
+    const quote = marketDataService.getQuote(position.symbol);
+    const symConfig = db.symbols.find((s) => s.symbol === position.symbol);
+
+    if (!quote || !symConfig) {
+      return { success: false, error: 'Market data error while closing position.' };
+    }
+
+    // Calculate PnL for the closed fraction
+    const pnlResult = calculateMT5PnL({
+      symbol: position.symbol,
+      type: position.type,
+      lotSize: lotsToClose,
+      openPrice: position.open_price,
+      currentBid: quote.bid,
+      currentAsk: quote.ask,
+      commission: Number((lotsToClose * 6.0).toFixed(2)),
+      swap: 0,
+      quoteLookup: (sym) => marketDataService.getQuote(sym) || undefined,
+    });
+
+    const exitPrice = pnlResult.currentPrice;
+    const closedPnL = pnlResult.netPnl;
+
+    // Remaining lot size
+    const remainingLots = Number((position.lot_size - lotsToClose).toFixed(2));
+    position.lot_size = remainingLots;
+
+    // Recalculate remaining margin
+    position.margin = calculateInstitutionalMargin({
+      symbol: position.symbol,
+      lotSize: remainingLots,
+      entryPrice: position.open_price,
+      leverage: account.leverage || 100,
+      contractSize: symConfig.contractSize,
+      quoteLookup: (sym) => marketDataService.getQuote(sym) || undefined,
+    });
+
+    // Update account balance with realized profit from the partial close
+    account.current_balance = Number((account.current_balance + closedPnL).toFixed(2));
+
+    // Create a closed trade record for the closed portion
+    const partialRecord: PositionEntity = {
+      id: `pos-part-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
+      account_id: account.id,
+      user_id: account.user_id,
+      symbol: position.symbol,
+      type: position.type,
+      lot_size: lotsToClose,
+      open_price: position.open_price,
+      close_price: exitPrice,
+      stop_loss: position.stop_loss,
+      take_profit: position.take_profit,
+      margin: 0,
+      floating_pnl: 0,
+      realized_pnl: closedPnL,
+      swap: 0,
+      commission: Number((lotsToClose * 6.0).toFixed(2)),
+      status: 'CLOSED',
+      opened_at: position.opened_at,
+      closed_at: new Date().toISOString(),
+      close_reason: 'MANUAL',
+    };
+    db.positions.push(partialRecord);
+
+    // Recalculate remaining open positions equity
+    const openPositions = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN');
+    const remainingFloatingPnL = openPositions.reduce((sum, p) => sum + (p.floating_pnl || 0), 0);
+    account.current_equity = Number((account.current_balance + remainingFloatingPnL).toFixed(2));
+
+    if (account.current_balance > account.highest_balance) {
+      account.highest_balance = account.current_balance;
+    }
+
+    DBEngine.saveDB();
+    RuleEngine.evaluateAccount(account.id);
+
+    return { success: true, closedLotSize: lotsToClose, remainingPosition: position };
   }
 }
 

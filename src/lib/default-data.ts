@@ -414,6 +414,30 @@ export const DEFAULT_CHALLENGES: Challenge[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
+  {
+    id: 'ch-inst-200k',
+    name: '200K Instant Funding',
+    type: 'instant_funding',
+    account_size: 200000,
+    price: 1699,
+    is_active: true,
+    sort_order: 18,
+    rules: {
+      profit_target: 0,
+      daily_drawdown: 3,
+      max_drawdown: 6,
+      min_trading_days: 7,
+      max_trading_days: 0,
+      leverage: 50,
+      profit_split: 70,
+      news_trading: true,
+      weekend_holding: true,
+      consistency: 0,
+      scaling_plan: true,
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
 ];
 
 export const DEFAULT_ACCOUNTS: TradingAccount[] = [

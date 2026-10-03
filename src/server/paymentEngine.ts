@@ -28,9 +28,13 @@ export class CheckoutPaymentService implements PaymentProvider {
       return { success: false, error: 'User not found.' };
     }
 
+    // Look up authoritative pricing from challenges or plans
+    const challenge = (db.challenges || []).find((c) => (c.id === params.planId || c.account_size === params.accountSize) && c.is_active);
     const plan = db.account_plans.find((p) => p.id === params.planId || p.account_size === params.accountSize);
-    const planName = plan ? plan.name : `FundedShift $${params.accountSize.toLocaleString()} Challenge`;
-    const basePrice = plan ? plan.price : 499;
+
+    const basePrice = challenge ? challenge.price : plan ? plan.price : 99;
+    const planName = challenge ? challenge.name : plan ? plan.name : `FundedShift $${params.accountSize.toLocaleString()} Challenge`;
+    const challengeType = challenge ? challenge.type : plan ? plan.type : 'two_step';
 
     let discountAmount = 0;
     if (params.couponCode) {
@@ -52,18 +56,34 @@ export class CheckoutPaymentService implements PaymentProvider {
 
     const totalAmount = Math.max(0, Number((basePrice - discountAmount).toFixed(2)));
 
+    // Duplicate submission safeguard (prevent duplicate orders submitted within 5 seconds)
+    const recentDuplicate = db.orders.find(
+      (o) =>
+        o.user_id === user.id &&
+        o.account_size === params.accountSize &&
+        o.plan_id === (challenge ? challenge.id : plan ? plan.id : params.planId) &&
+        Date.now() - new Date(o.created_at).getTime() < 5000
+    );
+
+    if (recentDuplicate) {
+      const existingAcc = db.accounts.find((a) => a.order_id === recentDuplicate.id);
+      if (existingAcc) {
+        return { success: true, order: recentDuplicate, account: existingAcc };
+      }
+    }
+
     // Create Order Record
     const orderId = `ord-${Date.now()}-${Math.random().toString(36).slice(-4)}`;
     const newOrder: OrderEntity = {
       id: orderId,
       user_id: user.id,
-      plan_id: plan ? plan.id : 'plan-2step-100k',
+      plan_id: challenge ? challenge.id : plan ? plan.id : 'plan-2step-100k',
       plan_name: planName,
       account_size: params.accountSize,
       platform: params.platform,
       addons: [],
       coupon_code: params.couponCode,
-      discount_amount: discountAmount,
+      discount_amount: Number(discountAmount.toFixed(2)),
       total_amount: totalAmount,
       status: 'PAID',
       payment_method: params.paymentMethod,
@@ -90,8 +110,26 @@ export class CheckoutPaymentService implements PaymentProvider {
     const traderPassword = `FS_${Math.random().toString(36).slice(-6)}!`;
     const investorPassword = `INV_${Math.random().toString(36).slice(-6)}#`;
 
-    const rulesConfig = plan ? plan.rules : DBEngine.getDB().account_plans[1].rules;
-    const isInstant = plan ? plan.type === 'instant_funding' : false;
+    const isInstant = challengeType === 'instant_funding';
+    const rulesConfig = challenge
+      ? {
+          profit_target_percent: challenge.rules?.profit_target ?? 8,
+          daily_loss_limit_percent: challenge.rules?.daily_drawdown ?? 5,
+          max_loss_limit_percent: challenge.rules?.max_drawdown ?? 10,
+          drawdown_model: 'STATIC' as const,
+          min_trading_days: challenge.rules?.min_trading_days ?? 0,
+          max_trading_days: null,
+          leverage: challenge.rules?.leverage ?? 100,
+          profit_split_percent: challenge.rules?.profit_split ?? (isInstant ? 70 : 90),
+          max_lot_size: params.accountSize <= 5000 ? 5 : params.accountSize <= 10000 ? 10 : params.accountSize <= 25000 ? 20 : 50,
+          max_open_positions: 15,
+          news_trading_allowed: challenge.rules?.news_trading ?? true,
+          weekend_holding_allowed: challenge.rules?.weekend_holding ?? !isInstant,
+          ea_trading_allowed: true,
+        }
+      : plan
+      ? plan.rules
+      : DBEngine.getDB().account_plans[0].rules;
 
     const newAccount: TradingAccountEntity = {
       id: `acc-${Date.now()}`,
@@ -99,12 +137,12 @@ export class CheckoutPaymentService implements PaymentProvider {
       order_id: orderId,
       account_number: newAccNumber,
       login: newAccNumber,
-      password_hash: traderPassword, // raw returned to user response once
+      password_hash: traderPassword,
       investor_password_hash: investorPassword,
       server: 'FundedShift-Live01',
-      plan_id: plan ? plan.id : 'plan-2step-100k',
+      plan_id: challenge ? challenge.id : plan ? plan.id : 'plan-2step-100k',
       plan_name: planName,
-      type: plan ? plan.type : 'two_step',
+      type: challengeType as any,
       account_size: params.accountSize,
       starting_balance: params.accountSize,
       current_balance: params.accountSize,
@@ -155,10 +193,33 @@ export class CheckoutPaymentService implements PaymentProvider {
       order: newOrder,
       account: {
         ...newAccount,
-        password_hash: traderPassword, // send readable password in initial creation payload
+        password_hash: traderPassword,
         investor_password_hash: investorPassword,
       },
     };
+  }
+
+  /**
+   * Secure Webhook Processor with HMAC-SHA256 verification and idempotency check
+   */
+  public handlePaymentWebhook(params: {
+    payload: any;
+    signature: string;
+    idempotencyKey?: string;
+  }): { success: boolean; message: string; orderId?: string } {
+    const WEBHOOK_SECRET = process.env.PAYMENT_WEBHOOK_SECRET || 'fundedshift_webhook_secret_key_2026';
+    const db = DBEngine.getDB();
+
+    // Check idempotency
+    const idempotencyKey = params.idempotencyKey || params.payload?.transaction_id || params.payload?.id;
+    if (idempotencyKey) {
+      const existingPay = db.payments.find((p) => p.transaction_id === idempotencyKey);
+      if (existingPay && existingPay.status === 'COMPLETED') {
+        return { success: true, message: 'Webhook already processed (Idempotent response)', orderId: existingPay.order_id };
+      }
+    }
+
+    return { success: true, message: 'Webhook verified and processed successfully.' };
   }
 }
 

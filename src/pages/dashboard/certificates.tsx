@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Award, Download, Eye, ShieldCheck, CheckCircle2, Sparkles, X, Share2, Copy, FileCheck } from 'lucide-react';
@@ -9,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { fetchUserAccounts } from '@/lib/api-client';
-import { DEFAULT_ACCOUNTS, DEFAULT_CERTIFICATES } from '@/lib/default-data';
+import { DEFAULT_CERTIFICATES } from '@/lib/default-data';
 
 export function DashboardCertificates() {
   const { user, profile } = useAuth();
@@ -37,9 +38,6 @@ export function DashboardCertificates() {
               if (Array.isArray(pData)) userPayouts = pData;
             }
           } catch (_) {}
-        }
-        if (userAccs.length === 0) {
-          userAccs = DEFAULT_ACCOUNTS;
         }
 
         // Combine default certificates with dynamic account certificates
@@ -128,10 +126,9 @@ export function DashboardCertificates() {
           }
         });
 
-        // Merge with DEFAULT_CERTIFICATES ensuring no duplicate IDs
-        // Only include default certificates if user is using demo accounts
-        const userHasRealAccs = user && userAccs.some(a => a.user_id === user.id && a.id !== 'acc-10001');
-        const defaultCertsToUse = userHasRealAccs ? [] : DEFAULT_CERTIFICATES;
+        // Only include default certificates for the demo account
+        const isDemoTrader = user?.id === 'demo-trader-id-12345';
+        const defaultCertsToUse = isDemoTrader ? DEFAULT_CERTIFICATES : [];
 
         const existingIds = new Set(dynamicCerts.map((c) => c.id));
         const finalCerts = [
@@ -142,7 +139,7 @@ export function DashboardCertificates() {
         setCertificates(finalCerts);
       } catch (err) {
         console.warn('Error building certificates:', err);
-        setCertificates(DEFAULT_CERTIFICATES);
+        setCertificates([]);
       } finally {
         setLoading(false);
       }
@@ -429,7 +426,22 @@ export function DashboardCertificates() {
       </div>
 
       {/* Certificate Cards Grid */}
-      {filteredCertificates.length === 0 ? (
+      {certificates.length === 0 ? (
+        <Card className="glass border-border/50 p-12 text-center max-w-lg mx-auto">
+          <div className="h-16 w-16 rounded-2xl bg-gold-400/10 text-gold-400 flex items-center justify-center mx-auto mb-4">
+            <Award className="h-8 w-8" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-foreground">No Certificates Earned Yet</h3>
+          <p className="text-muted-foreground text-sm mt-1 mb-5">
+            Pass Phase 1, Phase 2, or receive a funded payout to unlock your official verified prop firm certifications.
+          </p>
+          <Link to="/challenges">
+            <Button className="bg-gold-gradient text-black font-semibold text-xs">
+              Browse Challenges
+            </Button>
+          </Link>
+        </Card>
+      ) : filteredCertificates.length === 0 ? (
         <Card className="glass border-border/50 p-12 text-center">
           <Award className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-muted-foreground font-medium text-sm">No certificates found in this category.</p>

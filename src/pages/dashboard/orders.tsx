@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { formatCurrency, formatAccountSize, ORDER_STATUS_LABELS, PLATFORM_LABELS, formatDate } from '@/lib/constants';
 import type { Order } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fetchUserOrders } from '@/lib/api-client';
 import { DEFAULT_ORDERS } from '@/lib/default-data';
@@ -23,18 +25,26 @@ export function DashboardOrders() {
             setOrders(apiOrders);
             setLoading(false);
             return;
+          } else if (user.id === 'demo-trader-id-12345') {
+            setOrders(DEFAULT_ORDERS);
+            setLoading(false);
+            return;
           }
         }
       } catch (err) {
         console.warn('Orders fetch error:', err);
       }
-      setOrders(DEFAULT_ORDERS);
+      if (user?.id === 'demo-trader-id-12345') {
+        setOrders(DEFAULT_ORDERS);
+      } else {
+        setOrders([]);
+      }
       setLoading(false);
     };
     load();
   }, [user]);
 
-  const displayOrders = orders.length > 0 ? orders : DEFAULT_ORDERS;
+  const displayOrders = orders;
 
   if (loading) {
     return (
@@ -53,6 +63,22 @@ export function DashboardOrders() {
         <p className="text-muted-foreground text-sm mt-1">Your challenge purchase history.</p>
       </div>
 
+      {displayOrders.length === 0 ? (
+        <Card className="glass border-border/50 text-center py-12">
+          <CardContent className="space-y-3">
+            <ShoppingCart className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <p className="text-base font-semibold text-foreground">No Orders Yet</p>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              You haven't placed any challenge orders yet. When you enroll in an evaluation, your receipt and order history will appear here.
+            </p>
+            <Link to="/challenges">
+              <Button size="sm" className="mt-2">
+                Browse Challenges
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
       <div className="space-y-3">
         {displayOrders.map((order, idx) => (
           <motion.div
@@ -102,6 +128,7 @@ export function DashboardOrders() {
           </motion.div>
         ))}
       </div>
+      )}
     </div>
   );
 }

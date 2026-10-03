@@ -64,7 +64,7 @@ export function DashboardPayouts() {
       if (accData && accData.length > 0) {
         setAccounts(accData);
       } else {
-        setAccounts(DEFAULT_ACCOUNTS);
+        setAccounts([]);
       }
 
       if (payRes && payRes.ok) {
@@ -75,7 +75,7 @@ export function DashboardPayouts() {
       }
     } catch (err) {
       console.warn('Payout page load warning:', err);
-      setAccounts(DEFAULT_ACCOUNTS);
+      setAccounts([]);
       setPayouts([]);
     } finally {
       setLoading(false);
@@ -310,8 +310,21 @@ export function DashboardPayouts() {
               <tbody className="divide-y divide-border/40">
                 {fundedAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      No active Funded accounts found. Pass Phase 1 & Phase 2 or get an Instant Funding account to start earning payouts!
+                    <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                        <div className="h-12 w-12 rounded-2xl bg-gold-400/10 text-gold-400 flex items-center justify-center mb-3">
+                          <ShieldCheck className="h-6 w-6" />
+                        </div>
+                        <p className="font-display font-bold text-foreground text-sm">No Funded Accounts Found</p>
+                        <p className="text-xs text-muted-foreground mt-1 mb-4 leading-relaxed">
+                          Only verified live funded accounts are eligible for profit split payouts. Complete an evaluation challenge or acquire an Instant Funded account to begin earning.
+                        </p>
+                        <Link to="/challenges">
+                          <Button size="sm" className="bg-gold-gradient text-black font-semibold text-xs">
+                            Browse Challenges
+                          </Button>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ) : (

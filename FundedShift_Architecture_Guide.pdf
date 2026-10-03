@@ -1,0 +1,241 @@
+%PDF-1.4
+%FundedShift
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R 9 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 11 0 R /F2 12 0 R /F3 13 0 R /F4 14 0 R >> >> /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2690 >>
+stream
+q 0.08 0.10 0.15 rg 0 0 612 792 re f Q
+q 0.92 0.76 0.20 rg 0 782 612 10 re f Q
+q 0.12 0.15 0.22 rg 0.85 0.70 0.20 RG 1.5 w 45 615 522 145 re B Q
+BT /F2 26 Tf 0.95 0.80 0.25 rg 65 725 Td (FUNDEDSHIFT PROP FIRM) Tj ET
+BT /F2 13 Tf 0.90 0.92 0.96 rg 65 700 Td (TECHNICAL ARCHITECTURE & SYSTEMS MANUAL) Tj ET
+BT /F1 9.5 Tf 0.70 0.75 0.85 rg 65 680 Td (Production Platform v2.0 - ECN Execution Engine & Dynamic Risk Shield) Tj ET
+q 0.92 0.76 0.20 RG 1 w 65 668 m 540 668 l S Q
+BT /F2 8.5 Tf 0.92 0.76 0.20 rg 65 650 Td (Stack:) Tj /F1 8.5 Tf 0.9 0.9 0.9 rg 115 650 Td (Node.js 22 LTS, Express 4.21, React 19, TypeScript, PostgreSQL 16) Tj ET
+BT /F2 8.5 Tf 0.92 0.76 0.20 rg 65 635 Td (Engine:) Tj /F1 8.5 Tf 0.9 0.9 0.9 rg 115 635 Td (Sub-millisecond Simulated MT5 Execution with Real-Time Risk Shield) Tj ET
+q 0.95 0.96 0.98 rg 45 45 522 550 re f Q
+q 0.85 0.70 0.20 RG 1.5 w 45 570 522 0 re S Q
+BT /F2 14 Tf 0.10 0.15 0.25 rg 55 578 Td (1. Executive Overview & Multi-Tier Topology) Tj ET
+BT /F1 9 Tf 0.25 0.30 0.35 rg 55 555 Td (FundedShift is an institutional proprietary trading firm platform built to evaluate trading talent) Tj ET
+BT /F1 9 Tf 0.25 0.30 0.35 rg 55 542 Td (through structured capital challenges, enforce automated risk rules, and disburse bi-weekly payouts.) Tj ET
+q 0.90 0.94 0.98 rg 0.20 0.40 0.70 RG 1 w 55 450 502 75 re B Q
+BT /F2 9.5 Tf 0.10 0.25 0.55 rg 65 510 Td (TIER 1: PRESENTATION & CLIENT WORKSPACE (React 19 + TypeScript + Vite)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 496 Td (- Trader Web Terminal: Live TradingView candlestick charts, 200ms ECN market watch, lot calculator.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 483 Td (- Trader Portal: Objectives, KYC upload, official certificates, payout request desk, support ticketing.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 470 Td (- Admin Command Suite: Trader role management, challenge pricing, KYC review queue, payout dispatch.) Tj ET
+q 0.92 0.97 0.93 rg 0.15 0.55 0.25 RG 1 w 55 365 502 75 re B Q
+BT /F2 9.5 Tf 0.08 0.40 0.18 rg 65 425 Td (TIER 2: API GATEWAY & SECURITY MIDDLEWARE (Express.js 4.21 + Node 22)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 411 Td (- Dual Header Authentication: Authorization Bearer JWT & x-user-id fallback for microservices.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 398 Td (- IP Rate Limiting: Auth (40/15min), Orders (60/min), Checkout (20/min) preventing abuse.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 385 Td (- Security & Sanitization: PBKDF2 with SHA-512 password hashing, XSS/CORS middleware, audit logging.) Tj ET
+q 0.99 0.96 0.92 rg 0.80 0.50 0.10 RG 1 w 55 280 502 75 re B Q
+BT /F2 9.5 Tf 0.65 0.35 0.05 rg 65 340 Td (TIER 3: CORE FINANCIAL & TRADING ENGINES) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 326 Td (- Simulated ECN Execution Engine: Sub-millisecond tick matcher, slippage, and dynamic spreads.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 313 Td (- Dynamic Risk Shield: 200ms intraday high-water loss computation, trailing/static drawdown monitor.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 300 Td (- Payout & Transition Engine: 80-90% profit split computation, automated Phase 1 -> Phase 2 transitions.) Tj ET
+q 0.96 0.94 0.98 rg 0.45 0.20 0.65 RG 1 w 55 195 502 75 re B Q
+BT /F2 9.5 Tf 0.35 0.12 0.50 rg 65 255 Td (TIER 4: RELATIONAL PERSISTENCE (PostgreSQL 16 Relational Engine)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 241 Td (- 16 Relational Tables with foreign key cascades, unique indexes, and ACID guarantees.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 228 Td (- Synchronous snapshot disk mirroring to .data/propfirm_database.json for instantaneous recovery.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 215 Td (- Immutable audit logs tracking all administrative role updates, payouts, and compliance actions.) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 180 502 0 re S Q
+BT /F2 9 Tf 0.15 0.20 0.30 rg 55 165 Td (System Performance Targets:) Tj ET
+BT /F1 8 Tf 0.30 0.35 0.40 rg 55 150 Td (Market Tick: 200ms | Order Execution: < 15ms | Risk Breach Detection: < 50ms | DB Latency: < 5ms) Tj ET
+BT /F2 7.5 Tf 0.50 0.50 0.50 rg 55 60 Td (CONFIDENTIAL - FUNDEDSHIFT PROP FIRM ARCHITECTURE SPECIFICATION - PAGE 1 OF 4) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 11 0 R /F2 12 0 R /F3 13 0 R /F4 14 0 R >> >> /MediaBox [0 0 612 792] /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3450 >>
+stream
+q 0.95 0.96 0.98 rg 45 45 522 702 re f Q
+q 0.92 0.76 0.20 rg 45 740 522 7 re f Q
+BT /F2 14 Tf 0.10 0.15 0.25 rg 55 715 Td (2. End-to-End Trader Lifecycle & Evaluation Challenges) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 705 m 555 705 l S Q
+BT /F1 9 Tf 0.25 0.30 0.35 rg 55 690 Td (The platform provides a 3-stage evaluation framework filtering for disciplined, profitable traders.) Tj ET
+q 1 1 1 rg 0.85 0.70 0.20 RG 1 w 55 580 115 95 re B Q
+BT /F2 8.5 Tf 0.85 0.65 0.15 rg 65 660 Td (PHASE 1: EVAL) Tj ET
+BT /F2 8 Tf 0.15 0.20 0.30 rg 65 645 Td (Step 1 Evaluation) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 65 630 Td (- 8% Profit Target) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 65 618 Td (- 5% Daily Loss) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 65 606 Td (- 10% Max Drawdown) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 65 594 Td (- Unlimited Days) Tj ET
+q 1 1 1 rg 0.20 0.40 0.70 RG 1 w 180 580 115 95 re B Q
+BT /F2 8.5 Tf 0.15 0.35 0.65 rg 190 660 Td (PHASE 2: VERIFY) Tj ET
+BT /F2 8 Tf 0.15 0.20 0.30 rg 190 645 Td (Step 2 Verification) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 190 630 Td (- 5% Profit Target) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 190 618 Td (- 5% Daily Loss) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 190 606 Td (- 10% Max Drawdown) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 190 594 Td (- Unlimited Days) Tj ET
+q 1 1 1 rg 0.15 0.55 0.25 RG 1 w 305 580 115 95 re B Q
+BT /F2 8.5 Tf 0.10 0.50 0.20 rg 315 660 Td (PHASE 3: FUNDED) Tj ET
+BT /F2 8 Tf 0.15 0.20 0.30 rg 315 645 Td (Live Funded Account) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 315 630 Td (- 0% Profit Target) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 315 618 Td (- 80% to 90% Split) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 315 606 Td (- Bi-weekly Payouts) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 315 594 Td (- First Payout at 14d) Tj ET
+q 1 1 1 rg 0.45 0.20 0.65 RG 1 w 430 580 115 95 re B Q
+BT /F2 8.5 Tf 0.40 0.15 0.60 rg 440 660 Td (PHASE 4: SCALE) Tj ET
+BT /F2 8 Tf 0.15 0.20 0.30 rg 440 645 Td (Capital Scaling Plan) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 440 630 Td (- +25% Balance Boost) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 440 618 Td (- Every 3 Months) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 440 606 Td (- 10%+ Cum. Gain) Tj ET
+BT /F1 7.5 Tf 0.35 0.40 0.45 rg 440 594 Td (- Up to $2,000,000) Tj ET
+BT /F2 10.5 Tf 0.85 0.65 0.15 rg 55 555 Td (EVALUATION TIERS & SPECIFICATIONS MATRIX) Tj ET
+q 0.88 0.90 0.94 rg 55 528 502 18 re f Q
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 60 533 Td (Account Size) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 130 533 Td (Model) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 180 533 Td (Step 1 (8%)) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 250 533 Td (Step 2 (5%)) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 320 533 Td (Daily Limit) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 390 533 Td (Max Drawdown) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 470 533 Td (Leverage) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 520 533 Td (Price) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 512 Td ($5,000) Tj /F1 7.5 Tf 130 512 Td (Two-Step) Tj /F1 7.5 Tf 180 512 Td ($400) Tj /F1 7.5 Tf 250 512 Td ($250) Tj /F1 7.5 Tf 320 512 Td ($250 (5%)) Tj /F1 7.5 Tf 390 512 Td ($500 (10%)) Tj /F1 7.5 Tf 470 512 Td (1:100) Tj /F2 7.5 Tf 520 512 Td ($39) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 494 Td ($10,000) Tj /F1 7.5 Tf 130 494 Td (Two-Step) Tj /F1 7.5 Tf 180 494 Td ($800) Tj /F1 7.5 Tf 250 494 Td ($500) Tj /F1 7.5 Tf 320 494 Td ($500 (5%)) Tj /F1 7.5 Tf 390 494 Td ($1,000 (10%)) Tj /F1 7.5 Tf 470 494 Td (1:100) Tj /F2 7.5 Tf 520 494 Td ($79) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 476 Td ($25,000) Tj /F1 7.5 Tf 130 476 Td (Two-Step) Tj /F1 7.5 Tf 180 476 Td ($2,000) Tj /F1 7.5 Tf 250 476 Td ($1,250) Tj /F1 7.5 Tf 320 476 Td ($1,250 (5%)) Tj /F1 7.5 Tf 390 476 Td ($2,500 (10%)) Tj /F1 7.5 Tf 470 476 Td (1:100) Tj /F2 7.5 Tf 520 476 Td ($169) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 458 Td ($50,000) Tj /F1 7.5 Tf 130 458 Td (Two-Step) Tj /F1 7.5 Tf 180 458 Td ($4,000) Tj /F1 7.5 Tf 250 458 Td ($2,500) Tj /F1 7.5 Tf 320 458 Td ($2,500 (5%)) Tj /F1 7.5 Tf 390 458 Td ($5,000 (10%)) Tj /F1 7.5 Tf 470 458 Td (1:100) Tj /F2 7.5 Tf 520 458 Td ($289) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 440 Td ($100,000) Tj /F1 7.5 Tf 130 440 Td (Two-Step) Tj /F1 7.5 Tf 180 440 Td ($8,000) Tj /F1 7.5 Tf 250 440 Td ($5,000) Tj /F1 7.5 Tf 320 440 Td ($5,000 (5%)) Tj /F1 7.5 Tf 390 440 Td ($10,000 (10%)) Tj /F1 7.5 Tf 470 440 Td (1:100) Tj /F2 7.5 Tf 520 440 Td ($499) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 422 Td ($200,000) Tj /F1 7.5 Tf 130 422 Td (Two-Step) Tj /F1 7.5 Tf 180 422 Td ($16,000) Tj /F1 7.5 Tf 250 422 Td ($10,000) Tj /F1 7.5 Tf 320 422 Td ($10,000 (5%)) Tj /F1 7.5 Tf 390 422 Td ($20,000 (10%)) Tj /F1 7.5 Tf 470 422 Td (1:100) Tj /F2 7.5 Tf 520 422 Td ($899) Tj ET
+BT /F1 7.5 Tf 0.15 0.15 0.15 rg 60 404 Td ($10,000) Tj /F1 7.5 Tf 130 404 Td (Instant) Tj /F1 7.5 Tf 180 404 Td (N/A (Funded)) Tj /F1 7.5 Tf 250 404 Td (N/A) Tj /F1 7.5 Tf 320 404 Td ($300 (3%)) Tj /F1 7.5 Tf 390 404 Td ($600 (6% Tr)) Tj /F1 7.5 Tf 470 404 Td (1:50) Tj /F2 7.5 Tf 520 404 Td ($149) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 390 502 0 re S Q
+q 0.96 0.98 0.96 rg 0.20 0.60 0.30 RG 1 w 55 240 502 135 re B Q
+BT /F2 9.5 Tf 0.10 0.50 0.20 rg 65 355 Td (AUTOMATED ACCOUNT TRANSITION & RECOVERY LIFECYCLE) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 338 Td (1. Target Reached: Risk engine detects balance reaching profit target. All open positions are flat.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 324 Td (2. Scheduled Transition: Account status is updated to PASSED. An automated background worker provisions) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 312 Td (   the Step 2 Verification account within 1 to 2 hours with new login credentials.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 298 Td (3. Step 2 Target Reached: System marks verification passed and generates live Funded Account certificate.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 284 Td (4. Immediate KYC Prompt: Funded account is issued with zero profit target and up to 90% profit split eligibility.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 270 Td (5. Account Recovery Program: Breached accounts receive discounted reset options (-20% to -50%) without rebuy.) Tj ET
+BT /F2 7.5 Tf 0.50 0.50 0.50 rg 55 60 Td (CONFIDENTIAL - FUNDEDSHIFT PROP FIRM ARCHITECTURE SPECIFICATION - PAGE 2 OF 4) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 11 0 R /F2 12 0 R /F3 13 0 R /F4 14 0 R >> >> /MediaBox [0 0 612 792] /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 2640 >>
+stream
+q 0.95 0.96 0.98 rg 45 45 522 702 re f Q
+q 0.92 0.76 0.20 rg 45 740 522 7 re f Q
+BT /F2 14 Tf 0.10 0.15 0.25 rg 55 715 Td (3. Simulated MT5 Execution Engine & Dynamic Risk Shield) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 705 m 555 705 l S Q
+BT /F1 9 Tf 0.25 0.30 0.35 rg 55 690 Td (The platform contains an integrated high-frequency institutional simulator mimicking MT5/cTrader execution.) Tj ET
+BT /F2 10.5 Tf 0.85 0.65 0.15 rg 55 670 Td (CORE FINANCIAL MATHEMATICS & FORMULAS) Tj ET
+q 0.98 0.98 0.97 rg 0.85 0.70 0.20 RG 1 w 55 530 502 125 re B Q
+BT /F2 8.5 Tf 0.80 0.55 0.10 rg 65 635 Td (1. Floating Unrealized PnL Formulation:) Tj ET
+BT /F3 8 Tf 0.15 0.15 0.15 rg 65 622 Td (   BUY:  Floating PnL = (Current Bid Price - Entry Price) * Lot Size * Contract Size) Tj ET
+BT /F3 8 Tf 0.15 0.15 0.15 rg 65 610 Td (   SELL: Floating PnL = (Entry Price - Current Ask Price) * Lot Size * Contract Size) Tj ET
+BT /F2 8.5 Tf 0.80 0.55 0.10 rg 65 595 Td (2. Used Margin Requirement:) Tj ET
+BT /F3 8 Tf 0.15 0.15 0.15 rg 65 582 Td (   Used Margin = (Lot Size * Contract Size * Entry Price) / Account Leverage) Tj ET
+BT /F2 8.5 Tf 0.80 0.55 0.10 rg 65 567 Td (3. Live Equity & Free Margin:) Tj ET
+BT /F3 8 Tf 0.15 0.15 0.15 rg 65 554 Td (   Live Equity = Current Balance + Sum(Open Positions Floating PnL)) Tj ET
+BT /F3 8 Tf 0.15 0.15 0.15 rg 65 542 Td (   Free Margin = Max(0, Live Equity - Used Margin) | Margin Level % = (Equity / Margin) * 100) Tj ET
+BT /F2 10.5 Tf 0.85 0.65 0.15 rg 55 510 Td (DYNAMIC RISK SHIELD & DRAWDOWN COMPUTATION) Tj ET
+q 0.99 0.96 0.96 rg 0.80 0.20 0.20 RG 1 w 55 385 502 110 re B Q
+BT /F2 9.5 Tf 0.75 0.15 0.15 rg 65 478 Td (RULE 1: MAXIMUM DAILY LOSS LIMIT (5% INTRADAY)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 464 Td (Baseline Reset: At 00:00 UTC daily, the system records:) Tj ET
+BT /F3 8 Tf 0.50 0.10 0.10 rg 65 452 Td (   start_of_day_baseline = Max(start_of_day_balance, start_of_day_equity)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 438 Td (Live Intraday Loss Formula = Max(0, start_of_day_baseline - Live Equity)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 425 Td (Breach Threshold: If Live Equity drops below (baseline * 0.95), account breaches immediately.) Tj ET
+BT /F2 8 Tf 0.75 0.15 0.15 rg 65 412 Td (Notice: Daily drawdown incorporates BOTH closed trades AND open floating losses.) Tj ET
+q 0.99 0.97 0.94 rg 0.85 0.50 0.15 RG 1 w 55 260 502 110 re B Q
+BT /F2 9.5 Tf 0.75 0.40 0.10 rg 65 352 Td (RULE 2: MAXIMUM OVERALL DRAWDOWN (10% STATIC / TRAILING)) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 338 Td (1. Static Model (Evaluation Challenges): Permanent floor at starting_balance * 0.90.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 325 Td (   Example: $100,000 account floor remains permanently fixed at $90,000.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 312 Td (2. Trailing Model (Instant Funding): Floor trails highest achieved equity until starting balance.) Tj ET
+BT /F3 8 Tf 0.60 0.20 0.05 rg 65 298 Td (   Max Loss Violation = (Live Equity < Max Permitted Drawdown Floor)) Tj ET
+BT /F2 8 Tf 0.80 0.10 0.10 rg 65 285 Td (Emergency Flattener: Instant market closure of all positions and status set to BREACHED in < 50ms.) Tj ET
+BT /F2 7.5 Tf 0.50 0.50 0.50 rg 55 60 Td (CONFIDENTIAL - FUNDEDSHIFT PROP FIRM ARCHITECTURE SPECIFICATION - PAGE 3 OF 4) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 11 0 R /F2 12 0 R /F3 13 0 R /F4 14 0 R >> >> /MediaBox [0 0 612 792] /Contents 10 0 R >>
+endobj
+10 0 obj
+<< /Length 3020 >>
+stream
+q 0.95 0.96 0.98 rg 45 45 522 702 re f Q
+q 0.92 0.76 0.20 rg 45 740 522 7 re f Q
+BT /F2 14 Tf 0.10 0.15 0.25 rg 55 715 Td (4. PostgreSQL 16 Schema, Financial Rails & Support Desk) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 705 m 555 705 l S Q
+BT /F1 9 Tf 0.25 0.30 0.35 rg 55 690 Td (In production, the platform runs on PostgreSQL 16 partitioned into 16 relational tables.) Tj ET
+BT /F2 10.5 Tf 0.85 0.65 0.15 rg 55 670 Td (POSTGRESQL 16 RELATIONAL TABLES SCHEMA) Tj ET
+q 0.88 0.90 0.94 rg 55 640 502 16 re f Q
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 60 644 Td (Table Name) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 140 644 Td (Primary Key) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 220 644 Td (Foreign Keys) Tj ET
+BT /F2 7.5 Tf 0.10 0.20 0.40 rg 330 644 Td (Key Columns & Constraints) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 626 Td (users) Tj /F1 7.5 Tf 140 626 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 626 Td (None) Tj /F1 7.5 Tf 330 626 Td (email (UNIQUE), password_hash, role, kyc_status, 2fa) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 612 Td (trading_accounts) Tj /F1 7.5 Tf 140 612 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 612 Td (user_id -> users) Tj /F1 7.5 Tf 330 612 Td (account_number, balance, equity, status, phase, rules) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 598 Td (positions) Tj /F1 7.5 Tf 140 598 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 598 Td (account_id, user_id) Tj /F1 7.5 Tf 330 598 Td (symbol, type, lot_size, entry, sl, tp, pnl, status) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 584 Td (rule_violations) Tj /F1 7.5 Tf 140 584 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 584 Td (account_id, user_id) Tj /F1 7.5 Tf 330 584 Td (rule_type, threshold, actual_val, balance_at_breach) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 570 Td (orders & payments) Tj /F1 7.5 Tf 140 570 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 570 Td (user_id, order_id) Tj /F1 7.5 Tf 330 570 Td (plan_id, total_price, coupon, gateway, tx_id, status) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 556 Td (payout_requests) Tj /F1 7.5 Tf 140 556 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 556 Td (account_id, user_id) Tj /F1 7.5 Tf 330 556 Td (total_profit, trader_share, method, address, status) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 542 Td (kyc_submissions) Tj /F1 7.5 Tf 140 542 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 542 Td (user_id -> users) Tj /F1 7.5 Tf 330 542 Td (document_type, doc_number, country, status) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 528 Td (support_tickets) Tj /F1 7.5 Tf 140 528 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 528 Td (user_id -> users) Tj /F1 7.5 Tf 330 528 Td (subject, category, priority, status, messages (JSONB)) Tj ET
+BT /F1 7.5 Tf 0.10 0.35 0.60 rg 60 514 Td (audit_logs) Tj /F1 7.5 Tf 140 514 Td (id (VARCHAR)) Tj /F1 7.5 Tf 220 514 Td (None) Tj /F1 7.5 Tf 330 514 Td (actor_id, actor_role, action, target_id, ip, timestamp) Tj ET
+q 0.85 0.70 0.20 RG 1 w 55 500 502 0 re S Q
+BT /F2 10.5 Tf 0.85 0.65 0.15 rg 55 480 Td (FINANCIAL PIPELINE, KYC VERIFICATION & SUPPORT DESK) Tj ET
+q 0.97 0.98 1.0 rg 0.20 0.40 0.80 RG 1 w 55 350 502 115 re B Q
+BT /F2 9 Tf 0.10 0.25 0.60 rg 65 448 Td (1. Identity Verification Pipeline (KYC):) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 434 Td (- Trader submits Passport, Driver's License, or National ID under /dashboard/security.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 422 Td (- Enters kyc_submissions with status = PENDING. Compliance reviews on /admin/kyc.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 410 Td (- Approval sets user.is_verified = true, unlocking immediate profit split withdrawal eligibility.) Tj ET
+BT /F2 9 Tf 0.10 0.25 0.60 rg 65 394 Td (2. Profit Split & Payout Rails:) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 380 Td (- Formula: Trader Payout = Profit * (Trader Split % / 100)  [80% Standard, 90% Scaled].) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 368 Td (- Rails: Crypto USDT (TRC-20, ERC-20), Direct Bank Wire, UPI (India), PayPal (within 4 hours SLA).) Tj ET
+q 0.96 0.98 0.96 rg 0.20 0.60 0.30 RG 1 w 55 210 502 125 re B Q
+BT /F2 9 Tf 0.10 0.50 0.20 rg 65 318 Td (3. Helpdesk Ticketing & Administrative Control Suite:) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 304 Td (- Trader Support Desk (/dashboard/support): Categorized tickets with real-time threaded replies.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 292 Td (- Admin Support Desk (/admin/support): Split-pane console with search, status filters, and instant reply.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 280 Td (- Admin Users (/admin/users): Role toggling (User <-> Admin) and account suspension with DB persistence.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 268 Td (- Zero Mock Fallbacks: Platform verified completely decoupled from fake starter accounts.) Tj ET
+BT /F1 8 Tf 0.20 0.25 0.30 rg 65 256 Td (- Production Deployment: Dockerized container with health-check monitoring and Postgres 16.) Tj ET
+BT /F2 7.5 Tf 0.50 0.50 0.50 rg 55 60 Td (CONFIDENTIAL - FUNDEDSHIFT PROP FIRM ARCHITECTURE SPECIFICATION - PAGE 4 OF 4) Tj ET
+endstream
+endobj
+11 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+12 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+13 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+14 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000022 00000 n 
+0000000069 00000 n 
+0000000145 00000 n 
+0000000302 00000 n 
+0000003043 00000 n 
+0000003200 00000 n 
+0000006701 00000 n 
+0000006858 00000 n 
+0000009549 00000 n 
+0000009706 00000 n 
+0000012778 00000 n 
+0000012844 00000 n 
+0000012915 00000 n 
+0000012979 00000 n 
+trailer
+<< /Size 15 /Root 1 0 R >>
+startxref
+13048
+%%EOF
