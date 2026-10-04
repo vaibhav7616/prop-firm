@@ -50,7 +50,7 @@ import { toast } from 'sonner';
 import { getAccountPassword } from '@/lib/utils';
 
 import { DEFAULT_ACCOUNTS, DEFAULT_ORDERS, DEFAULT_NOTIFICATIONS } from '@/lib/default-data';
-import { fetchUserAccounts, fetchUserOrders, fetchAccountPositionsApi } from '@/lib/api-client';
+import { fetchUserAccounts, fetchUserOrders, fetchAccountPositionsApi, fetchNotificationsApi } from '@/lib/api-client';
 import { PLATFORM_LABELS } from '@/lib/constants';
 
 export function DashboardOverview() {
@@ -72,16 +72,17 @@ export function DashboardOverview() {
         return;
       }
       try {
-        const [userAccs, userOrds] = await Promise.all([
+        const [userAccs, userOrds, userNotifs] = await Promise.all([
           fetchUserAccounts(user.id),
           fetchUserOrders(user.id),
+          fetchNotificationsApi(user.id),
         ]);
         setAccounts(userAccs);
         if (userAccs.length > 0) {
           setSelectedAccountId(userAccs[0].id);
         }
         setOrders(userOrds);
-        setNotifications(DEFAULT_NOTIFICATIONS);
+        setNotifications(user.id === 'demo-trader-id-12345' && (!userNotifs || userNotifs.length === 0) ? DEFAULT_NOTIFICATIONS : (userNotifs || []));
       } catch (_) {
         if (user.id === 'demo-trader-id-12345') {
           setAccounts(DEFAULT_ACCOUNTS);

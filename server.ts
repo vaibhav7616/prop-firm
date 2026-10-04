@@ -113,7 +113,7 @@ app.post('/api/auth/login', authRateLimiter, (req, res) => {
 });
 
 app.post('/api/auth/register', authRateLimiter, (req, res) => {
-  const { email, password, full_name, country, phone } = req.body;
+  const { email, password, full_name, country, phone, referred_by } = req.body;
   const db = DBEngine.getDB();
 
   if (!email || !email.includes('@')) {
@@ -142,6 +142,7 @@ app.post('/api/auth/register', authRateLimiter, (req, res) => {
     country: country || 'United States',
     phone: phone || '',
     affiliate_code: `FS${Math.floor(100 + Math.random() * 900)}`,
+    referred_by: referred_by ? String(referred_by).trim() : null,
     is_verified: true,
     is_2fa_enabled: false,
     created_at: new Date().toISOString(),
@@ -665,42 +666,80 @@ app.get('/api/payouts', (req, res) => {
 // -------------------------------------------------------------
 // AFFILIATE WITHDRAWAL SYSTEM API
 // -------------------------------------------------------------
+// Helper to calculate dynamic affiliate stats for a user
+function getAffiliateStatsForUser(userId: string, db: any) {
+  const user = db.users.find((u: any) => u.id === userId);
+  const isDemo = userId === 'demo-trader-id-12345';
+  const refCode = user?.affiliate_code;
+  const referredUsers = (db.users || []).filter(
+    (u: any) => refCode && (u.referred_by === refCode || u.referred_by === user?.id)
+  );
+  const referredUserIds = new Set(referredUsers.map((u: any) => u.id));
+  const paidReferredOrders = (db.orders || []).filter(
+    (o: any) => referredUserIds.has(o.user_id) && (o.status === 'PAID' || o.status === 'assigned')
+  );
+
+  let totalEarnings = Number(
+    paidReferredOrders.reduce((sum: number, o: any) => sum + (o.total_amount * 0.15), 0).toFixed(2)
+  );
+  let conversions = paidReferredOrders.length;
+  let clicks = referredUsers.length > 0 ? referredUsers.length * 7 : 0;
+
+  // Demo fallback stats only for demo-trader-id-12345
+  if (isDemo && totalEarnings === 0) {
+    totalEarnings = 480;
+    conversions = 8;
+    clicks = 142;
+  }
+
+  const userWithdrawals = (db.affiliate_withdrawals || []).filter((w: any) => w.user_id === userId);
+  const approvedWithdrawn = userWithdrawals
+    .filter((w: any) => w.status === 'APPROVED')
+    .reduce((sum: number, w: any) => sum + Number(w.amount), 0);
+
+  const pendingAmount = userWithdrawals
+    .filter((w: any) => w.status === 'APPROVAL PENDING')
+    .reduce((sum: number, w: any) => sum + Number(w.amount), 0);
+
+  const availableBalance = Math.max(0, Number((totalEarnings - approvedWithdrawn - pendingAmount).toFixed(2)));
+
+  return {
+    totalEarnings,
+    conversions,
+    clicks,
+    approvedWithdrawn,
+    pendingAmount,
+    availableBalance,
+    userWithdrawals,
+  };
+}
+
 app.get('/api/affiliate/withdrawals', (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const userId = (req.headers['x-user-id'] as string) || req.user?.id || 'demo-trader-id-12345';
   const db = DBEngine.getDB();
 
   if (!db.affiliate_withdrawals) {
     db.affiliate_withdrawals = [];
   }
 
-  const userWithdrawals = db.affiliate_withdrawals.filter((w) => w.user_id === userId);
-
-  // Calculate totals
-  const totalEarnings = 480; // default base affiliate earnings
-  const approvedWithdrawn = userWithdrawals
-    .filter((w) => w.status === 'APPROVED')
-    .reduce((sum, w) => sum + Number(w.amount), 0);
-
-  const pendingAmount = userWithdrawals
-    .filter((w) => w.status === 'APPROVAL PENDING')
-    .reduce((sum, w) => sum + Number(w.amount), 0);
-
-  const availableBalance = Math.max(0, totalEarnings - approvedWithdrawn - pendingAmount);
+  const stats = getAffiliateStatsForUser(userId, db);
 
   res.json({
-    withdrawals: userWithdrawals,
+    withdrawals: stats.userWithdrawals,
     stats: {
-      total_earnings: totalEarnings,
-      approved_withdrawn: approvedWithdrawn,
-      pending_withdrawn: pendingAmount,
-      available_balance: availableBalance,
+      total_earnings: stats.totalEarnings,
+      approved_withdrawn: stats.approvedWithdrawn,
+      pending_withdrawn: stats.pendingAmount,
+      available_balance: stats.availableBalance,
+      clicks: stats.clicks,
+      conversions: stats.conversions,
       min_withdrawal: 250,
     },
   });
 });
 
 app.post('/api/affiliate/withdraw', (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const userId = (req.headers['x-user-id'] as string) || req.user?.id || 'demo-trader-id-12345';
   const { amount, method, payment_details } = req.body;
   const db = DBEngine.getDB();
 
@@ -717,20 +756,15 @@ app.post('/api/affiliate/withdraw', (req, res) => {
   const userObj = db.users.find((u) => u.id === userId) || {
     id: userId,
     email: 'trader@propfirm.com',
-    full_name: 'Alex Vance',
+    full_name: 'Valued Trader',
   };
 
-  // Check balance
-  const userWithdrawals = db.affiliate_withdrawals.filter((w) => w.user_id === userId);
-  const totalEarnings = 480;
-  const approvedWithdrawn = userWithdrawals.filter((w) => w.status === 'APPROVED').reduce((sum, w) => sum + Number(w.amount), 0);
-  const pendingAmount = userWithdrawals.filter((w) => w.status === 'APPROVAL PENDING').reduce((sum, w) => sum + Number(w.amount), 0);
-  const currentAvailable = Math.max(0, totalEarnings - approvedWithdrawn - pendingAmount);
+  const stats = getAffiliateStatsForUser(userId, db);
 
-  if (reqAmount > currentAvailable) {
+  if (reqAmount > stats.availableBalance) {
     res.status(400).json({
       success: false,
-      error: `Requested amount ($${reqAmount}) exceeds available balance ($${currentAvailable}).`,
+      error: `Requested amount ($${reqAmount}) exceeds available balance ($${stats.availableBalance}).`,
     });
     return;
   }
@@ -1350,10 +1384,38 @@ app.get('/api/tests/run', async (_req, res) => {
 
 // Notifications API
 app.get('/api/notifications', (req, res) => {
-  const userId = (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const userId = (req.headers['x-user-id'] as string) || (req.query.userId as string);
   const db = DBEngine.getDB();
+  if (!userId) {
+    res.json([]);
+    return;
+  }
   const userNotifs = db.notifications.filter((n) => n.user_id === userId);
   res.json(userNotifs);
+});
+
+app.post('/api/notifications/mark-read', (req, res) => {
+  const userId = (req.headers['x-user-id'] as string) || req.body?.userId;
+  const { id } = req.body || {};
+  const db = DBEngine.getDB();
+
+  if (!userId) {
+    res.json({ success: true });
+    return;
+  }
+
+  if (id) {
+    const notif = db.notifications.find((n) => n.id === id && n.user_id === userId);
+    if (notif) notif.is_read = true;
+  } else {
+    // mark all read for this user
+    db.notifications.forEach((n) => {
+      if (n.user_id === userId) n.is_read = true;
+    });
+  }
+
+  DBEngine.saveDB();
+  res.json({ success: true });
 });
 
 // -------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Wallet, Search, Plus, Eye, ShieldAlert, CheckCircle2, XCircle, AlertTriangle, UserCheck, Key, RefreshCw } from 'lucide-react';
 import { formatDateTime, formatCurrency, PLATFORM_LABELS, ACCOUNT_STATUS_LABELS, ACCOUNT_STATUS_COLORS, getAccountPhaseLabel } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { fetchAdminStatsApi, updateAccountStatusApi, issueManualAccountApi, expe
 import { toast } from 'sonner';
 
 export function AdminAccounts() {
+  const [searchParams] = useSearchParams();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [ruleViolations, setRuleViolations] = useState<any[]>([]);
@@ -29,6 +31,17 @@ export function AdminAccounts() {
 
   // Detail Modal State
   const [selectedAccount, setSelectedAccount] = useState<any | null>(null);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const emailParam = searchParams.get('email');
+    const nameParam = searchParams.get('name');
+    if (action === 'issue' || emailParam) {
+      if (emailParam) setIssueEmail(emailParam);
+      if (nameParam) setIssueFullName(nameParam);
+      setShowIssueModal(true);
+    }
+  }, [searchParams]);
 
   const loadData = async () => {
     const res = await fetchAdminStatsApi();

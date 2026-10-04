@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, UserCheck, Shield, ShieldAlert, Plus, Wallet, Mail } from 'lucide-react';
 import { formatDate } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
@@ -157,6 +158,14 @@ export function AdminUsers() {
 
                       {/* Admin Quick Action Controls */}
                       <div className="flex items-center gap-1.5">
+                        <Link
+                          to={`/admin/accounts?action=issue&email=${encodeURIComponent(user.email)}&name=${encodeURIComponent(user.full_name || '')}`}
+                          className="px-2.5 py-1.5 rounded-lg bg-gold-400/10 hover:bg-gold-400/20 text-xs font-semibold text-gold-400 border border-gold-400/30 flex items-center gap-1.5 transition-colors"
+                          title="Issue custom account to this user"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Give Account
+                        </Link>
+
                         <button
                           onClick={() => handleToggleRole(user.id, user.role)}
                           className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold text-foreground transition-colors border border-border/50"

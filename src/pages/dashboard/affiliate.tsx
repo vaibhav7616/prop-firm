@@ -34,10 +34,10 @@ export function DashboardAffiliate() {
   const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [stats, setStats] = useState({
-    total_earnings: 480,
+    total_earnings: 0,
     approved_withdrawn: 0,
     pending_withdrawn: 0,
-    available_balance: 480,
+    available_balance: 0,
     min_withdrawal: 250,
   });
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,7 @@ export function DashboardAffiliate() {
 
   const loadAffiliateData = async () => {
     setLoading(true);
+    const isDemo = !user || user.id === 'demo-trader-id-12345';
     const userId = user?.id || 'demo-trader-id-12345';
     const res = await fetchAffiliateWithdrawalsApi(userId);
 
@@ -75,15 +76,16 @@ export function DashboardAffiliate() {
       }
     }
 
+    const code = profile?.affiliate_code || (isDemo ? 'FSALEX99' : (user?.id ? `FS${user.id.slice(-4).toUpperCase()}` : ''));
     setAffiliate({
       id: `aff-${userId}`,
       user_id: userId,
-      referral_code: profile?.affiliate_code || 'FSALEX99',
-      code: profile?.affiliate_code || 'FSALEX99',
-      clicks: 142,
-      conversions: 8,
-      earnings: res?.stats?.total_earnings || 480,
-      withdrawn: res?.stats?.approved_withdrawn || 0,
+      referral_code: code,
+      code: code,
+      clicks: res?.stats?.clicks ?? (isDemo ? 142 : 0),
+      conversions: res?.stats?.conversions ?? (isDemo ? 8 : 0),
+      earnings: res?.stats?.total_earnings ?? (isDemo ? 480 : 0),
+      withdrawn: res?.stats?.approved_withdrawn ?? 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -95,7 +97,7 @@ export function DashboardAffiliate() {
     loadAffiliateData();
   }, [user, profile]);
 
-  const referralCode = profile?.affiliate_code || affiliate?.code || 'FSALEX99';
+  const referralCode = profile?.affiliate_code || affiliate?.code || (user?.id === 'demo-trader-id-12345' ? 'FSALEX99' : (user?.id ? `FS${user.id.slice(-4).toUpperCase()}` : 'FS100'));
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
 
   const copyLink = () => {
@@ -196,8 +198,8 @@ export function DashboardAffiliate() {
   }
 
   const statCards = [
-    { label: 'Total Clicks', value: affiliate?.clicks ?? 142, icon: MousePointerClick, color: 'text-blue-400' },
-    { label: 'Conversions', value: affiliate?.conversions ?? 8, icon: Users, color: 'text-gold-400' },
+    { label: 'Total Clicks', value: affiliate?.clicks ?? (user?.id === 'demo-trader-id-12345' ? 142 : 0), icon: MousePointerClick, color: 'text-blue-400' },
+    { label: 'Conversions', value: affiliate?.conversions ?? (user?.id === 'demo-trader-id-12345' ? 8 : 0), icon: Users, color: 'text-gold-400' },
     { label: 'Total Commission', value: formatCurrency(stats.total_earnings), icon: DollarSign, color: 'text-emerald-400' },
     { label: 'Available Balance', value: formatCurrency(stats.available_balance), icon: TrendingUp, color: 'text-amber-400' },
   ];

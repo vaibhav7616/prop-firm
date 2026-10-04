@@ -34,6 +34,7 @@ export function RegisterPage() {
         email: email.trim().toLowerCase(),
         password,
         full_name: fullName.trim() || email.split('@')[0],
+        referred_by: referralCode || undefined,
       });
 
       if (regData && regData.token && regData.user) {

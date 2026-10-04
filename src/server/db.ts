@@ -346,7 +346,7 @@ export const DEFAULT_SYMBOLS: SymbolConfig[] = [
     minLot: 0.01,
     maxLot: 10,
     lotStep: 0.01,
-    spreadPips: 15.0,
+    spreadPips: 0.5,
     marginRequirementPercent: 3.33, // 1:30 leverage
     tradingEnabled: true,
     marketSession: '24/7',
@@ -362,7 +362,7 @@ export const DEFAULT_SYMBOLS: SymbolConfig[] = [
     minLot: 0.01,
     maxLot: 20,
     lotStep: 0.01,
-    spreadPips: 2.5,
+    spreadPips: 0.1,
     marginRequirementPercent: 3.33,
     tradingEnabled: true,
     marketSession: '24/7',
@@ -378,7 +378,7 @@ export const DEFAULT_SYMBOLS: SymbolConfig[] = [
     minLot: 0.1,
     maxLot: 50,
     lotStep: 0.1,
-    spreadPips: 0.15,
+    spreadPips: 0.02,
     marginRequirementPercent: 5.0,
     tradingEnabled: true,
     marketSession: '24/7',
@@ -918,6 +918,14 @@ export class DBEngine {
               acc.plan_name = `$${Number(acc.account_size).toLocaleString()} Funded Account`;
             }
           }
+        }
+      }
+      // Ensure symbols have raw institutional ECN spreads
+      if (loaded.symbols && Array.isArray(loaded.symbols)) {
+        for (const s of loaded.symbols) {
+          if (s.symbol === 'BTCUSD') s.spreadPips = 0.5;
+          if (s.symbol === 'ETHUSD') s.spreadPips = 0.1;
+          if (s.symbol === 'SOLUSD') s.spreadPips = 0.02;
         }
       }
       return loaded;

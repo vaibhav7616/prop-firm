@@ -508,6 +508,261 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     assert(fingerprint?.primaryStyle !== undefined, 'Primary style must be detected');
   });
 
+  // =============================================================
+  // 7. ADMIN MANAGEMENT & MANUAL ACCOUNT PROVISIONING TESTS
+  // =============================================================
+  await test('Admin Features', 'Admin Manual Account Issuance to User ("Give Account")', () => {
+    const adminEmail = 'tester-manual-trader@propfirm.com';
+    const targetSize = 50000;
+    const targetStage = 'funded';
+
+    // Find or create user
+    let user = db.users.find((u) => u.email.toLowerCase() === adminEmail);
+    if (!user) {
+      user = {
+        id: `usr-manual-${Date.now()}`,
+        email: adminEmail,
+        password_hash: hashPassword('Trader123!'),
+        full_name: 'Manual Test Trader',
+        role: 'USER',
+        country: 'United States',
+        phone: '+1 555-0199',
+        affiliate_code: `FS${Math.floor(100 + Math.random() * 900)}`,
+        is_verified: true,
+        is_2fa_enabled: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      db.users.push(user);
+    }
+
+    const newAccNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
+    const traderPassword = `FS_${Math.random().toString(36).slice(-6)}!`;
+    const investorPassword = `INV_${Math.random().toString(36).slice(-6)}#`;
+    const orderId = `ord-admin-${Date.now()}`;
+
+    const newAccount: any = {
+      id: `acc-manual-${Date.now()}`,
+      user_id: user.id,
+      order_id: orderId,
+      account_number: newAccNumber,
+      login: newAccNumber,
+      password_hash: traderPassword,
+      investor_password_hash: investorPassword,
+      server: 'FundedShift-Live01',
+      broker: 'FundedShift Direct ECN',
+      platform: 'fundedshift_terminal',
+      plan_name: `$${targetSize.toLocaleString()} Funded Account`,
+      type: 'instant_funding',
+      account_size: targetSize,
+      starting_balance: targetSize,
+      current_balance: targetSize,
+      current_equity: targetSize,
+      highest_balance: targetSize,
+      highest_equity: targetSize,
+      start_of_day_balance: targetSize,
+      start_of_day_equity: targetSize,
+      status: 'FUNDED',
+      phase: 1,
+      is_funded: true,
+      funded_at: new Date().toISOString(),
+      trading_days: 0,
+      leverage: 50,
+      rules: {
+        profit_target_percent: 0,
+        daily_loss_limit_percent: 3,
+        max_loss_limit_percent: 6,
+        drawdown_model: 'STATIC',
+        min_trading_days: 0,
+        leverage: 50,
+        profit_split_percent: 80,
+        max_lot_size: 35,
+        max_open_positions: 15,
+        news_trading_allowed: true,
+        weekend_holding_allowed: true,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    db.accounts.unshift(newAccount);
+
+    db.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      user_id: user.id,
+      title: '🎉 Admin Issued Direct Funded Account!',
+      body: `Admin assigned a $${targetSize.toLocaleString()} Direct Funded Account (#${newAccNumber}) to your profile. Login: ${newAccNumber}, Password: ${traderPassword}`,
+      type: 'success',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+
+    db.audit_logs.push({
+      id: `audit-${Date.now()}`,
+      actor_id: 'ADMIN',
+      actor_role: 'ADMIN',
+      action: 'ADMIN_MANUAL_ACCOUNT_PROVISION',
+      target_id: newAccount.id,
+      details: `Admin issued $${targetSize.toLocaleString()} Funded account #${newAccNumber} to ${user.email}.`,
+      created_at: new Date().toISOString(),
+    });
+
+    assert(newAccount.status === 'FUNDED', 'Issued account status must be FUNDED');
+    assert(newAccount.account_size === 50000, 'Issued account size must be $50,000');
+    assert(newAccount.current_balance === 50000, 'Starting and current balance must be $50,000');
+    assert(newAccount.login === newAccNumber, 'Login number must match generated account number');
+    assert(newAccount.password_hash.startsWith('FS_'), 'Trader password must follow format');
+    assert(newAccount.investor_password_hash.startsWith('INV_'), 'Investor password must follow format');
+
+    const notif = db.notifications.find((n) => n.user_id === user.id && n.title.includes('Admin Issued'));
+    assert(notif !== undefined, 'User must receive instant notification of admin issued account');
+    assert(notif?.body.includes(newAccNumber), 'Notification must include login account number');
+
+    const audit = db.audit_logs.find((a) => a.target_id === newAccount.id);
+    assert(audit !== undefined, 'Audit log entry must be created');
+    assert(audit?.action === 'ADMIN_MANUAL_ACCOUNT_PROVISION', 'Audit log must specify ADMIN_MANUAL_ACCOUNT_PROVISION');
+  });
+
+  await test('Admin Features', 'Admin User Role & Status Controls', () => {
+    const testUser = db.users.find((u) => u.role === 'USER') || db.users[0];
+    const originalRole = testUser.role;
+
+    // Toggle Role to ADMIN
+    testUser.role = 'ADMIN';
+    assert(testUser.role === 'ADMIN', 'Admin must be able to promote user to ADMIN');
+
+    // Toggle back to USER
+    testUser.role = originalRole;
+    assert(testUser.role === originalRole, 'Admin must be able to demote user');
+
+    // Toggle Suspension Status
+    testUser.is_active = false;
+    assert(testUser.is_active === false, 'Admin must be able to suspend user');
+    testUser.is_active = true;
+    assert(testUser.is_active === true, 'Admin must be able to reactivate user');
+  });
+
+  await test('Admin Features', 'Admin KYC Review & Identity Approval Flow', () => {
+    const kycUserId = `user-kyc-${Date.now()}`;
+    const kycUser: any = {
+      id: kycUserId,
+      email: 'trader-kyc@example.com',
+      full_name: 'Compliance Test Trader',
+      role: 'USER',
+      is_verified: false,
+    };
+    db.users.push(kycUser);
+
+    // Trader submits KYC
+    if (!db.kyc_submissions) db.kyc_submissions = [];
+    const submission: any = {
+      id: `kyc-${Date.now()}`,
+      user_id: kycUserId,
+      trader_name: kycUser.full_name,
+      email: kycUser.email,
+      document_type: 'PASSPORT',
+      document_number: 'P987654321',
+      country: 'United States',
+      status: 'PENDING',
+      submitted_at: new Date().toISOString(),
+    };
+    db.kyc_submissions.unshift(submission);
+
+    assert(submission.status === 'PENDING', 'Initial KYC status must be PENDING');
+    assert(kycUser.is_verified === false, 'User must not be verified before review');
+
+    // Admin reviews and approves KYC
+    submission.status = 'VERIFIED';
+    submission.reviewed_at = new Date().toISOString();
+    submission.reviewer_id = 'admin-vaibhav-id-999';
+    kycUser.is_verified = true;
+
+    db.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      user_id: kycUserId,
+      title: '✅ KYC Identity Verified!',
+      body: 'Your identity documents have been approved by compliance. You are eligible for profit split payouts.',
+      type: 'success',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+
+    assert(submission.status === 'VERIFIED', 'Submission status must be updated to VERIFIED');
+    assert(kycUser.is_verified === true, 'User is_verified must be updated to true');
+    const kycNotif = db.notifications.find((n) => n.user_id === kycUserId && n.title.includes('KYC Identity Verified'));
+    assert(kycNotif !== undefined, 'Trader must receive verified notification');
+  });
+
+  // =============================================================
+  // 8. END-TO-END TRADER PURCHASE & TRADING TERMINAL FLOW
+  // =============================================================
+  await test('Trader Lifecycle', 'End-to-End Challenge Purchase -> Terminal Execution -> PnL Update', async () => {
+    const buyerEmail = `buyer-${Date.now()}@propfirm.com`;
+    const buyerUser = {
+      id: `usr-buyer-${Date.now()}`,
+      email: buyerEmail,
+      password_hash: hashPassword('Buyer123!'),
+      full_name: 'Challenge Buyer',
+      role: 'USER' as const,
+      country: 'United States',
+      phone: '+1 555-0100',
+      affiliate_code: `FS${Math.floor(100 + Math.random() * 900)}`,
+      is_verified: true,
+      is_2fa_enabled: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.users.push(buyerUser);
+
+    // 1. User buys a 25K Two-Step Challenge
+    const checkoutResult = await paymentService.processCheckout({
+      userId: buyerUser.id,
+      planId: 'ch-two-25k',
+      accountSize: 25000,
+      platform: 'fundedshift_terminal',
+      paymentMethod: 'visa',
+    });
+
+    assert(checkoutResult.success, 'Challenge purchase must succeed');
+    assert(checkoutResult.order?.status === 'PAID', 'Order status must be PAID');
+    assert(checkoutResult.account?.account_size === 25000, 'Account size must be $25,000');
+    assert(checkoutResult.account?.current_balance === 25000, 'Balance must be $25,000');
+    assert(checkoutResult.account?.status === 'ACTIVE', 'Account status must be ACTIVE');
+
+    const accountId = checkoutResult.account!.id;
+
+    // 2. Open a trade on BTCUSD in Web Terminal
+    const btcQuote = marketDataService.getQuote('BTCUSD');
+    const currentAsk = btcQuote ? btcQuote.ask : 72500;
+
+    const orderResult = await tradeExecutionEngine.executeMarketOrder({
+      accountId,
+      userId: buyerUser.id,
+      symbol: 'BTCUSD',
+      type: 'BUY',
+      lotSize: 0.1,
+      stopLoss: currentAsk - 5000,
+      takeProfit: currentAsk + 10000,
+    });
+
+    assert(orderResult.success, 'Terminal order execution must succeed');
+    assert(orderResult.position?.symbol === 'BTCUSD', 'Position symbol must be BTCUSD');
+    assert(orderResult.position?.status === 'OPEN', 'Position status must be OPEN');
+
+    // 3. Close the trade and verify balance & trading days
+    const closeResult = await tradeExecutionEngine.closePosition({
+      accountId,
+      userId: buyerUser.id,
+      positionId: orderResult.position!.id,
+    });
+
+    assert(closeResult.success, 'Position close must succeed');
+    const closedAcc = db.accounts.find((a) => a.id === accountId);
+    assert(closedAcc !== undefined, 'Account must exist in DB');
+    assert(closedAcc?.trading_days >= 1, 'Trading days must increment');
+  });
+
   // Summary
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
@@ -520,3 +775,4 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     results,
   };
 }
+

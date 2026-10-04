@@ -84,13 +84,18 @@ export function DashboardObjectives() {
           setSelectedId(accs[0].id);
         }
       } catch (_) {
-        const { DEFAULT_ACCOUNTS } = await import('@/lib/default-data');
-        setAccounts(DEFAULT_ACCOUNTS);
-        const queryAccount = searchParams.get('account');
-        if (queryAccount && DEFAULT_ACCOUNTS.some((a) => a.id === queryAccount)) {
-          setSelectedId(queryAccount);
-        } else if (DEFAULT_ACCOUNTS.length > 0) {
-          setSelectedId(DEFAULT_ACCOUNTS[0].id);
+        if (user.id === 'demo-trader-id-12345') {
+          const { DEFAULT_ACCOUNTS } = await import('@/lib/default-data');
+          setAccounts(DEFAULT_ACCOUNTS);
+          const queryAccount = searchParams.get('account');
+          if (queryAccount && DEFAULT_ACCOUNTS.some((a) => a.id === queryAccount)) {
+            setSelectedId(queryAccount);
+          } else if (DEFAULT_ACCOUNTS.length > 0) {
+            setSelectedId(DEFAULT_ACCOUNTS[0].id);
+          }
+        } else {
+          setAccounts([]);
+          setSelectedId('');
         }
       } finally {
         setLoading(false);

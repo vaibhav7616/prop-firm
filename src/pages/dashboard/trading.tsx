@@ -591,7 +591,7 @@ export function DashboardTrading() {
                               : 'text-slate-900'
                           }`}
                         >
-                          {formatPrice(q.bid, q.symbol)}
+                          {formatPrice(q.price, q.symbol)}
                         </span>
                       </div>
                       <span
@@ -638,14 +638,33 @@ export function DashboardTrading() {
                 <p className="text-xs text-muted-foreground mt-1 sm:mt-0.5">Real-time TradingView technical candles & indicators</p>
               </div>
 
-              <div className="flex items-center gap-6 font-mono text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80 w-full sm:w-auto justify-between sm:justify-end">
-                <div>
-                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">BID PRICE</span>
+              <div className="flex items-center gap-3 sm:gap-5 font-mono text-xs sm:text-sm pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/80 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="text-left">
+                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    MARKET PRICE
+                  </span>
+                  <span className="font-bold text-foreground text-sm sm:text-base">
+                    {formatPrice(activeQuote.price || ((activeQuote.bid + activeQuote.ask) / 2), selectedSymbol)}
+                  </span>
+                </div>
+                <div className="text-center sm:text-left">
+                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">BID (SELL)</span>
                   <span className="font-bold text-rose-500 text-sm sm:text-base">{formatPrice(activeQuote.bid, selectedSymbol)}</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">ASK PRICE</span>
+                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">ASK (BUY)</span>
                   <span className="font-bold text-emerald-500 text-sm sm:text-base">{formatPrice(activeQuote.ask, selectedSymbol)}</span>
+                </div>
+                <div className="hidden md:block text-right pl-3 border-l border-border/60">
+                  <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">SPREAD</span>
+                  <span className="font-mono text-xs font-semibold text-muted-foreground">
+                    {['NAS100', 'US30', 'SPX500', 'GER40'].includes(selectedSymbol)
+                      ? `${(activeQuote.ask - activeQuote.bid).toFixed(1)} pts`
+                      : ['BTCUSD', 'ETHUSD', 'SOLUSD'].includes(selectedSymbol)
+                      ? `$${(activeQuote.ask - activeQuote.bid).toFixed(2)}`
+                      : `${((activeQuote.ask - activeQuote.bid) * (selectedSymbol.includes('JPY') ? 100 : selectedSymbol.includes('XAU') ? 10 : 10000)).toFixed(1)} pips`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -854,7 +873,7 @@ export function DashboardTrading() {
                       disabled={submitting || (selectedAccount?.status !== 'ACTIVE' && selectedAccount?.status !== 'FUNDED')}
                       className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex flex-col items-center justify-center transition-all disabled:opacity-50 active:scale-95"
                     >
-                      <span>BUY {selectedSymbol}</span>
+                      <span>BUY (Ask) {selectedSymbol}</span>
                       <span className="text-[10px] font-mono opacity-90">{formatPrice(activeQuote.ask, selectedSymbol)}</span>
                     </button>
 
@@ -867,7 +886,7 @@ export function DashboardTrading() {
                       disabled={submitting || (selectedAccount?.status !== 'ACTIVE' && selectedAccount?.status !== 'FUNDED')}
                       className="flex-1 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-500/20 flex flex-col items-center justify-center transition-all disabled:opacity-50 active:scale-95"
                     >
-                      <span>SELL {selectedSymbol}</span>
+                      <span>SELL (Bid) {selectedSymbol}</span>
                       <span className="text-[10px] font-mono opacity-90">{formatPrice(activeQuote.bid, selectedSymbol)}</span>
                     </button>
                   </div>

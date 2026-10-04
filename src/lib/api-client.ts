@@ -197,9 +197,19 @@ export async function adminLoginApi(username: string, password: string) {
   return res.json();
 }
 
+function getAdminHeaders(): Record<string, string> {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('admin_token') || localStorage.getItem('auth_token') : null;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'admin-vaibhav-id-999' }),
+  };
+}
+
 export async function fetchAdminStatsApi() {
   try {
-    const res = await fetch('/api/admin/stats');
+    const res = await fetch('/api/admin/stats', {
+      headers: getAdminHeaders(),
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -213,7 +223,7 @@ export async function updateAccountStatusApi(account_id: string, status: string,
   try {
     const res = await fetch('/api/admin/accounts/update-status', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify({ account_id, status, immediate }),
     });
     if (res.ok) {
@@ -229,7 +239,7 @@ export async function expediteTransitionApi(accountId: string) {
   try {
     const res = await fetch(`/api/accounts/${accountId}/expedite-transition`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
     });
     return await res.json();
   } catch (err: any) {
@@ -241,7 +251,7 @@ export async function processPayoutAdminApi(payoutId: string, action: 'APPROVE' 
   try {
     const res = await fetch('/api/admin/payouts/process', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify({ payoutId, action, reason }),
     });
     if (res.ok) {
@@ -265,7 +275,7 @@ export async function issueManualAccountApi(params: {
   try {
     const res = await fetch('/api/admin/accounts/issue-manual', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify(params),
     });
     return await res.json();
@@ -316,7 +326,7 @@ export async function updateChallengePriceApi(id: string, price: number, rules?:
   try {
     const res = await fetch('/api/admin/challenges/update', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify({ id, price, rules }),
     });
     if (res.ok) {
@@ -353,7 +363,7 @@ export async function createPromoCodeApi(params: {
   try {
     const res = await fetch('/api/admin/promo-codes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify(params),
     });
     return await res.json();
@@ -366,6 +376,7 @@ export async function togglePromoCodeApi(id: string) {
   try {
     const res = await fetch(`/api/admin/promo-codes/${id}/toggle`, {
       method: 'PUT',
+      headers: getAdminHeaders(),
     });
     return await res.json();
   } catch (err) {
@@ -377,6 +388,7 @@ export async function deletePromoCodeApi(id: string) {
   try {
     const res = await fetch(`/api/admin/promo-codes/${id}`, {
       method: 'DELETE',
+      headers: getAdminHeaders(),
     });
     return await res.json();
   } catch (err) {
@@ -401,10 +413,10 @@ export async function fetchAffiliateWithdrawalsApi(userId: string) {
   return {
     withdrawals: [],
     stats: {
-      total_earnings: 480,
+      total_earnings: 0,
       approved_withdrawn: 0,
       pending_withdrawn: 0,
-      available_balance: 480,
+      available_balance: 0,
       min_withdrawal: 250,
     },
   };
@@ -433,7 +445,9 @@ export async function submitAffiliateWithdrawalApi(params: {
 
 export async function fetchAdminAffiliateWithdrawalsApi() {
   try {
-    const res = await fetch('/api/admin/affiliate/withdrawals');
+    const res = await fetch('/api/admin/affiliate/withdrawals', {
+      headers: getAdminHeaders(),
+    });
     if (res.ok) {
       return await res.json();
     }
@@ -451,7 +465,7 @@ export async function processAdminAffiliateWithdrawalApi(params: {
   try {
     const res = await fetch('/api/admin/affiliate/withdraw/process', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAdminHeaders(),
       body: JSON.stringify(params),
     });
     return await res.json();
@@ -598,6 +612,7 @@ export async function registerUserApi(params: {
   full_name?: string;
   country?: string;
   phone?: string;
+  referred_by?: string;
 }) {
   const res = await fetch('/api/auth/register', {
     method: 'POST',
@@ -833,5 +848,46 @@ export async function adminUpdateSupportTicketStatusApi(ticketId: string, status
     return { success: false, error: err.message || 'Failed to update ticket status.' };
   }
 }
+
+// -------------------------------------------------------------
+// NOTIFICATIONS API CLIENT HELPERS
+// -------------------------------------------------------------
+export async function fetchNotificationsApi(userId?: string): Promise<Notification[]> {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/notifications', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'x-user-id': userId } : {}),
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch notifications:', err);
+  }
+  return [];
+}
+
+export async function markNotificationReadApi(id?: string, userId?: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/notifications/mark-read', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(userId ? { 'x-user-id': userId } : {}),
+      },
+      body: JSON.stringify({ id, userId }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to mark notifications read' };
+  }
+}
+
 
 
