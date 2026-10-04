@@ -37,7 +37,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { calculateMT5PnL, calculateInstitutionalMargin } from '@/utils/mt5';
 import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
-import { TradingViewChart } from '@/components/trading/trading-view-chart';
 
 interface MarketQuote {
   symbol: string;
@@ -76,22 +75,14 @@ export function DashboardTrading() {
   // Load Accounts
   useEffect(() => {
     async function loadData() {
-      if (!user) {
-        setLoadingAccounts(false);
-        return;
+      if (!user) return;
+      setLoadingAccounts(true);
+      const accs = await fetchUserAccounts(user.id);
+      setAccounts(accs);
+      if (accs.length > 0) {
+        setSelectedAccount(accs[0]);
       }
-      try {
-        setLoadingAccounts(true);
-        const accs = await fetchUserAccounts(user.id);
-        setAccounts(accs);
-        if (accs.length > 0) {
-          setSelectedAccount(accs[0]);
-        }
-      } catch (err) {
-        console.error('Failed to load accounts in trading terminal:', err);
-      } finally {
-        setLoadingAccounts(false);
-      }
+      setLoadingAccounts(false);
     }
     loadData();
   }, [user]);
@@ -722,12 +713,55 @@ export function DashboardTrading() {
               </div>
             )}
 
-            {/* High-Performance TradingView & Instant ECN Chart Engine */}
-            <TradingViewChart
-              symbol={selectedSymbol}
-              quote={activeQuote}
-              height={480}
-            />
+            {/* TradingView Widget Chart Container */}
+            <div className="w-full h-[450px] bg-background border border-slate-300 rounded-xl overflow-hidden relative shadow-sm">
+              <iframe
+                key={selectedSymbol}
+                src={`https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol=${
+                  selectedSymbol === 'XAUUSD'
+                    ? 'OANDA%3AXAUUSD'
+                    : selectedSymbol === 'XAGUSD'
+                    ? 'TVC%3ASILVER'
+                    : selectedSymbol === 'EURUSD'
+                    ? 'OANDA%3AEURUSD'
+                    : selectedSymbol === 'GBPUSD'
+                    ? 'OANDA%3AGBPUSD'
+                    : selectedSymbol === 'USDJPY'
+                    ? 'OANDA%3AUSDJPY'
+                    : selectedSymbol === 'AUDUSD'
+                    ? 'OANDA%3AAUDUSD'
+                    : selectedSymbol === 'USDCAD'
+                    ? 'OANDA%3AUSDCAD'
+                    : selectedSymbol === 'USDCHF'
+                    ? 'OANDA%3AUSDCHF'
+                    : selectedSymbol === 'NZDUSD'
+                    ? 'OANDA%3ANZDUSD'
+                    : selectedSymbol === 'EURGBP'
+                    ? 'OANDA%3AEURGBP'
+                    : selectedSymbol === 'EURJPY'
+                    ? 'OANDA%3AEURJPY'
+                    : selectedSymbol === 'GBPJPY'
+                    ? 'OANDA%3AGBPJPY'
+                    : selectedSymbol === 'NAS100'
+                    ? 'NASDAQ%3ANDX'
+                    : selectedSymbol === 'US30'
+                    ? 'OANDA%3AUS30USD'
+                    : selectedSymbol === 'SPX500'
+                    ? 'SP%3ASPX'
+                    : selectedSymbol === 'GER40'
+                    ? 'OANDA%3ADE30EUR'
+                    : selectedSymbol === 'BTCUSD'
+                    ? 'BINANCE%3ABTCUSDT'
+                    : selectedSymbol === 'ETHUSD'
+                    ? 'BINANCE%3AETHUSDT'
+                    : selectedSymbol === 'SOLUSD'
+                    ? 'BINANCE%3ASOLUSDT'
+                    : selectedSymbol
+                }&interval=15&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=f1f3f6&studies=%5B%5D&theme=dark&style=1&timezone=Etc%2FUTC&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=localhost`}
+                className="w-full h-full border-0"
+                title={`${selectedSymbol} Live Chart`}
+              />
+            </div>
 
             {/* Quick Order Control Bar */}
             <div className="bg-background/80 border border-slate-300 p-4 rounded-xl space-y-4">

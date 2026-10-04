@@ -1523,15 +1523,6 @@ app.get('/api/tests/run', async (_req, res) => {
   }
 });
 
-app.get('/api/admin/tests/run', async (_req, res) => {
-  try {
-    const results = await runAutomatedVerificationTests();
-    res.json(results);
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Failed to run test suite.' });
-  }
-});
-
 // Notifications API
 app.get('/api/notifications', (req, res) => {
   const userId = (req.headers['x-user-id'] as string) || (req.query.userId as string);

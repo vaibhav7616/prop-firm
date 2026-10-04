@@ -932,41 +932,6 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     }
   });
 
-  // 17. TradingView Edge CDN & Chart Engine Verification
-  await test('Chart Engine', 'TradingView Edge CDN & Symbol Resolution Integrity', async () => {
-    const symbolMap: Record<string, string> = {
-      XAUUSD: 'OANDA:XAUUSD',
-      XAGUSD: 'TVC:SILVER',
-      USOIL: 'TVC:USOIL',
-      EURUSD: 'FX:EURUSD',
-      GBPUSD: 'FX:GBPUSD',
-      USDJPY: 'FX:USDJPY',
-      NAS100: 'NASDAQ:NDX',
-      US30: 'DJ:DJI',
-      SPX500: 'SP:SPX',
-      GER40: 'XETR:DAX',
-      BTCUSD: 'BINANCE:BTCUSDT',
-      ETHUSD: 'BINANCE:ETHUSDT',
-    };
-
-    for (const [sym, expectedTv] of Object.entries(symbolMap)) {
-      assert(expectedTv && expectedTv.includes(':'), `Symbol ${sym} must resolve to a valid exchange-qualified TradingView ticker`);
-    }
-
-    const testConfig = {
-      autosize: true,
-      symbol: symbolMap.XAUUSD,
-      interval: '15',
-      timezone: 'Etc/UTC',
-      theme: 'dark',
-      style: '1',
-      locale: 'en',
-    };
-    const embedUrl = `https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en#${encodeURIComponent(JSON.stringify(testConfig))}`;
-    assert(embedUrl.startsWith('https://www.tradingview-widget.com/embed-widget/advanced-chart/'), 'Must use high-speed TradingView Edge CDN');
-    assert(!embedUrl.includes('utm_source=localhost'), 'Must not pass localhost utm_source that triggers rate limiting');
-  });
-
   // Summary
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
