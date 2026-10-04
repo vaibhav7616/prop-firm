@@ -591,7 +591,7 @@ app.get('/api/challenges', (_req, res) => {
 });
 
 app.post('/api/admin/challenges/update', requireAdmin, (req, res) => {
-  const { id, price, rules } = req.body;
+  const { id, price, original_price, offer_active, discount_badge, rules } = req.body;
   const db = DBEngine.getDB();
 
   if (!db.challenges) {
@@ -604,11 +604,41 @@ app.post('/api/admin/challenges/update', requireAdmin, (req, res) => {
     return;
   }
 
-  db.challenges[idx].price = Number(price);
-  if (rules) {
-    db.challenges[idx].rules = { ...db.challenges[idx].rules, ...rules };
+  const ch = db.challenges[idx];
+  const newPrice = Number(price);
+  ch.price = newPrice;
+  if (original_price !== undefined) {
+    ch.original_price = original_price !== null && Number(original_price) > 0 ? Number(original_price) : undefined;
   }
-  db.challenges[idx].updated_at = new Date().toISOString();
+  if (offer_active !== undefined) {
+    ch.offer_active = Boolean(offer_active);
+  }
+  if (discount_badge !== undefined) {
+    ch.discount_badge = discount_badge ? String(discount_badge).trim() : undefined;
+  }
+  if (rules) {
+    ch.rules = { ...ch.rules, ...rules };
+  }
+  ch.updated_at = new Date().toISOString();
+
+  // Synchronize to db.account_plans so all backend plan queries reflect the exact price
+  if (db.account_plans) {
+    const plan = db.account_plans.find(
+      (p) => (p.account_size === ch.account_size && p.type === ch.type) || p.id === ch.id
+    );
+    if (plan) {
+      plan.price = newPrice;
+      plan.original_price = ch.original_price;
+      plan.offer_active = ch.offer_active;
+      plan.discount_badge = ch.discount_badge;
+      if (rules?.profit_split) {
+        plan.rules.profit_split_percent = rules.profit_split;
+      }
+      if (rules?.leverage) {
+        plan.rules.leverage = rules.leverage;
+      }
+    }
+  }
 
   // Log audit
   db.audit_logs.push({
@@ -617,12 +647,76 @@ app.post('/api/admin/challenges/update', requireAdmin, (req, res) => {
     actor_role: 'ADMIN',
     action: 'ADMIN_CHALLENGE_PRICE_UPDATE',
     target_id: id,
-    details: `Updated challenge #${id} price to $${price}`,
+    details: `Updated challenge #${id} (${ch.name}): active price $${newPrice}${ch.offer_active ? ` [OFFER ACTIVE: ${ch.discount_badge || 'Discounted'}, Regular: $${ch.original_price}]` : ''}`,
     created_at: new Date().toISOString(),
   });
 
   DBEngine.saveDB();
-  res.json({ success: true, challenge: db.challenges[idx], challenges: db.challenges });
+  res.json({ success: true, challenge: ch, challenges: db.challenges });
+});
+
+// Admin Batch Offer Endpoint (apply store-wide or category discount, or clear offers)
+app.post('/api/admin/challenges/batch-offer', requireAdmin, (req, res) => {
+  const { discount_percent, discount_badge, target_type, clear_offers } = req.body;
+  const db = DBEngine.getDB();
+
+  if (!db.challenges) db.challenges = [];
+
+  const pct = Number(discount_percent || 0);
+
+  db.challenges.forEach((ch: any) => {
+    if (target_type && target_type !== 'all' && ch.type !== target_type) {
+      return;
+    }
+
+    if (clear_offers) {
+      // Revert back to original price if set
+      if (ch.original_price && ch.original_price > 0) {
+        ch.price = ch.original_price;
+      }
+      ch.original_price = undefined;
+      ch.offer_active = false;
+      ch.discount_badge = undefined;
+      ch.updated_at = new Date().toISOString();
+    } else if (pct > 0) {
+      // Save current price as original_price if not already on an offer
+      const regularPrice = ch.original_price || ch.price;
+      const discountedPrice = Math.max(1, Math.round(regularPrice * (1 - pct / 100)));
+      ch.original_price = regularPrice;
+      ch.price = discountedPrice;
+      ch.offer_active = true;
+      ch.discount_badge = discount_badge || `${pct}% OFF SPECIAL OFFER`;
+      ch.updated_at = new Date().toISOString();
+    }
+
+    // Sync to account_plans
+    if (db.account_plans) {
+      const plan = db.account_plans.find(
+        (p) => (p.account_size === ch.account_size && p.type === ch.type) || p.id === ch.id
+      );
+      if (plan) {
+        plan.price = ch.price;
+        plan.original_price = ch.original_price;
+        plan.offer_active = ch.offer_active;
+        plan.discount_badge = ch.discount_badge;
+      }
+    }
+  });
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: 'ADMIN',
+    actor_role: 'ADMIN',
+    action: clear_offers ? 'ADMIN_BATCH_OFFER_CLEARED' : 'ADMIN_BATCH_OFFER_APPLIED',
+    target_id: 'ALL_CHALLENGES',
+    details: clear_offers
+      ? 'Admin cleared all promotional offers and restored regular prices.'
+      : `Admin applied store-wide ${pct}% OFF offer (${discount_badge || `${pct}% OFF`}) across ${target_type || 'all'} challenge accounts.`,
+    created_at: new Date().toISOString(),
+  });
+
+  DBEngine.saveDB();
+  res.json({ success: true, challenges: db.challenges });
 });
 
 // -------------------------------------------------------------
@@ -1421,6 +1515,15 @@ app.post('/api/admin/email/test', requireAdmin, async (req, res) => {
 
 // Programmatic Automated Verification Test Suite API
 app.get('/api/tests/run', async (_req, res) => {
+  try {
+    const results = await runAutomatedVerificationTests();
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to run test suite.' });
+  }
+});
+
+app.get('/api/admin/tests/run', async (_req, res) => {
   try {
     const results = await runAutomatedVerificationTests();
     res.json(results);

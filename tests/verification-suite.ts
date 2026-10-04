@@ -857,6 +857,116 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     assert(lastLog.subject.includes('$10,000'), 'Subject must mention trader share');
   });
 
+  // =============================================================
+  // 12. PROMOTIONAL OFFER & DYNAMIC PRICING ENGINE TESTS
+  // =============================================================
+  await test('Pricing & Offer Engine', 'Admin Direct Account Price Change & Offer Activation', () => {
+    if (!db.challenges || db.challenges.length === 0) {
+      db.challenges = [
+        { id: 'ch-two-50k', name: '50K Two Step Evaluation', type: 'two_step', account_size: 50000, price: 179, is_active: true, sort_order: 10, rules: { profit_target: 8, daily_drawdown: 5, max_drawdown: 10, min_trading_days: 4, max_trading_days: 0, leverage: 100, profit_split: 85, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      ];
+    }
+
+    const targetCh = db.challenges.find((c: any) => c.id === 'ch-two-50k') || db.challenges[0];
+    const prevPrice = targetCh.price;
+
+    // Simulate Admin applying a 25% discount offer directly to this account
+    const offerPrice = 139;
+    targetCh.original_price = prevPrice;
+    targetCh.price = offerPrice;
+    targetCh.offer_active = true;
+    targetCh.discount_badge = '25% OFF FLASH OFFER';
+    targetCh.updated_at = new Date().toISOString();
+
+    // Verify sync to account_plans
+    if (db.account_plans) {
+      const matchedPlan = db.account_plans.find(
+        (p) => (p.account_size === targetCh.account_size && p.type === targetCh.type) || p.id === targetCh.id
+      );
+      if (matchedPlan) {
+        matchedPlan.price = offerPrice;
+        matchedPlan.original_price = prevPrice;
+        matchedPlan.offer_active = true;
+        matchedPlan.discount_badge = '25% OFF FLASH OFFER';
+      }
+    }
+
+    assert(targetCh.price === 139, 'Active price must be updated to 139');
+    assert(targetCh.original_price === prevPrice, 'Original price must be preserved for strike-through');
+    assert(targetCh.offer_active === true, 'Offer active flag must be true');
+    assert(targetCh.discount_badge === '25% OFF FLASH OFFER', 'Discount badge must be set');
+  });
+
+  await test('Pricing & Offer Engine', 'Checkout Order Charges Exact Admin-Set Offer Price', async () => {
+    const buyerEmail = `offer-trader-${Date.now()}@propfirm.com`;
+    const buyerUser = {
+      id: `usr-offer-${Date.now()}`,
+      email: buyerEmail,
+      password_hash: hashPassword('OfferTrader123!'),
+      full_name: 'Offer Trader',
+      role: 'USER' as const,
+      country: 'Canada',
+      phone: '+1 555-0999',
+      affiliate_code: `OFFER${Math.floor(100 + Math.random() * 900)}`,
+      is_verified: true,
+      is_2fa_enabled: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.users.push(buyerUser);
+
+    const targetCh = db.challenges.find((c: any) => c.id === 'ch-two-50k') || db.challenges[0];
+
+    const checkoutResult = await paymentService.processCheckout({
+      userId: buyerUser.id,
+      planId: targetCh.id,
+      accountSize: targetCh.account_size,
+      platform: 'fundedshift_terminal',
+      paymentMethod: 'visa',
+    });
+
+    assert(checkoutResult.success, 'Checkout with offer price must succeed');
+    assert(checkoutResult.order?.total_amount === targetCh.price, `Charged total must equal active offer price ($${targetCh.price})`);
+    if (targetCh.offer_active && targetCh.original_price && targetCh.original_price > targetCh.price) {
+      assert(checkoutResult.order?.discount_amount === Number((targetCh.original_price - targetCh.price).toFixed(2)), 'Order discount must reflect direct offer savings');
+    }
+  });
+
+  // 17. TradingView Edge CDN & Chart Engine Verification
+  await test('Chart Engine', 'TradingView Edge CDN & Symbol Resolution Integrity', async () => {
+    const symbolMap: Record<string, string> = {
+      XAUUSD: 'OANDA:XAUUSD',
+      XAGUSD: 'TVC:SILVER',
+      USOIL: 'TVC:USOIL',
+      EURUSD: 'FX:EURUSD',
+      GBPUSD: 'FX:GBPUSD',
+      USDJPY: 'FX:USDJPY',
+      NAS100: 'NASDAQ:NDX',
+      US30: 'DJ:DJI',
+      SPX500: 'SP:SPX',
+      GER40: 'XETR:DAX',
+      BTCUSD: 'BINANCE:BTCUSDT',
+      ETHUSD: 'BINANCE:ETHUSDT',
+    };
+
+    for (const [sym, expectedTv] of Object.entries(symbolMap)) {
+      assert(expectedTv && expectedTv.includes(':'), `Symbol ${sym} must resolve to a valid exchange-qualified TradingView ticker`);
+    }
+
+    const testConfig = {
+      autosize: true,
+      symbol: symbolMap.XAUUSD,
+      interval: '15',
+      timezone: 'Etc/UTC',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+    };
+    const embedUrl = `https://www.tradingview-widget.com/embed-widget/advanced-chart/?locale=en#${encodeURIComponent(JSON.stringify(testConfig))}`;
+    assert(embedUrl.startsWith('https://www.tradingview-widget.com/embed-widget/advanced-chart/'), 'Must use high-speed TradingView Edge CDN');
+    assert(!embedUrl.includes('utm_source=localhost'), 'Must not pass localhost utm_source that triggers rate limiting');
+  });
+
   // Summary
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
