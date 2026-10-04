@@ -889,5 +889,59 @@ export async function markNotificationReadApi(id?: string, userId?: string) {
   }
 }
 
+// -------------------------------------------------------------
+// ADMIN EMAIL ENGINE API CLIENT HELPERS
+// -------------------------------------------------------------
+export async function fetchEmailConfigApi() {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/admin/email/config', {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Failed to fetch email config:', err);
+  }
+  return { configured: false, provider: 'Unavailable', from: '', replyTo: '' };
+}
+
+export async function fetchEmailLogsApi(limit = 50) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch(`/api/admin/email/logs?limit=${limit}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Failed to fetch email logs:', err);
+  }
+  return { total: 0, logs: [] };
+}
+
+export async function sendTestEmailApi(to: string) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/admin/email/test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ to }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to send test email' };
+  }
+}
+
 
 

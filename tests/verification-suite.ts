@@ -14,6 +14,7 @@ import { TradeSimulatorEngine } from '../src/server/simulator';
 import { TraderTimelineEngine } from '../src/server/timeline';
 import { calculateMT5PnL, calculateInstitutionalMargin } from '../src/server/mt5';
 import { marketDataService } from '../src/server/marketData';
+import { EmailService } from '../src/server/emailService';
 
 export interface TestResultItem {
   category: string;
@@ -761,6 +762,99 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     const closedAcc = db.accounts.find((a) => a.id === accountId);
     assert(closedAcc !== undefined, 'Account must exist in DB');
     assert(closedAcc?.trading_days >= 1, 'Trading days must increment');
+  });
+
+  // =============================================================
+  // 11. TRANSACTIONAL EMAIL ENGINE TESTS (Resend Integration)
+  // =============================================================
+  await test('Email Engine', 'Configuration and Resend API Key Validation', () => {
+    const config = EmailService.getConfig();
+    assert(config !== null, 'Config must return an object');
+    assert(config.configured === true, 'Resend key must be detected and configured');
+    assert(config.provider === 'Resend REST API', 'Provider must report Resend REST API');
+    assert(config.from.includes('onboarding@resend.dev'), 'From address must be onboarding@resend.dev for test tier');
+    assert(config.replyTo === 'support@fundedshift.com', 'Reply-to must be support@fundedshift.com');
+  });
+
+  await test('Email Engine', 'Order Confirmation & Credentials Template Dispatch', async () => {
+    const initialLogsCount = (db.email_logs || []).length;
+    const result = await EmailService.sendOrderCredentialsEmail({
+      recipientEmail: 'delivered@resend.dev',
+      recipientName: 'Alex Trader',
+      orderId: 'ord-test-email-001',
+      planName: '$100,000 Two-Step Evaluation',
+      accountSize: 100000,
+      accountNumber: '88776655',
+      traderPassword: 'Pass_12345!',
+      investorPassword: 'Inv_12345#',
+      server: 'FundedShift-Live01',
+      platform: 'FundedShift Institutional Terminal',
+      rules: {
+        profit_target_percent: 8,
+        daily_loss_limit_percent: 5,
+        max_loss_limit_percent: 10,
+        leverage: 100,
+      },
+    });
+
+    assert(result.success || typeof result.error === 'string', 'Order credentials email dispatch must return structured response');
+    assert((db.email_logs || []).length > initialLogsCount, 'Email dispatch must be recorded in email_logs');
+    const lastLog = db.email_logs[0];
+    assert(lastLog.template === 'ORDER_CREDENTIALS', 'Template must be ORDER_CREDENTIALS');
+    assert(lastLog.recipient_email === 'delivered@resend.dev', 'Recipient must match');
+  });
+
+  await test('Email Engine', 'Rule Breach Alert Template Dispatch', async () => {
+    const result = await EmailService.sendRuleBreachEmail({
+      recipientEmail: 'delivered@resend.dev',
+      recipientName: 'Alex Trader',
+      accountNumber: '88776655',
+      accountSize: 100000,
+      ruleViolated: '5% Daily Loss Limit',
+      breachEquity: 94800,
+      thresholdLimit: 5000,
+      breachTime: new Date().toISOString(),
+    });
+
+    assert(result.success || typeof result.error === 'string', 'Rule breach email dispatch must return structured response');
+    const lastLog = db.email_logs[0];
+    assert(lastLog.template === 'RULE_BREACH', 'Template must be RULE_BREACH');
+    assert(lastLog.subject.includes('88776655'), 'Subject must contain account number');
+  });
+
+  await test('Email Engine', 'Stage Promotion & Certificate Template Dispatch', async () => {
+    const result = await EmailService.sendStagePromotionEmail({
+      recipientEmail: 'delivered@resend.dev',
+      recipientName: 'Alex Trader',
+      fromStage: 'Phase 1 Challenge',
+      toStage: 'Live Funded Account',
+      accountSize: 100000,
+      newAccountNumber: '99887766',
+      newPassword: 'Funded_Pass_2026!',
+    });
+
+    assert(result.success || typeof result.error === 'string', 'Stage promotion email dispatch must return structured response');
+    const lastLog = db.email_logs[0];
+    assert(lastLog.template === 'STAGE_PROMOTION', 'Template must be STAGE_PROMOTION');
+  });
+
+  await test('Email Engine', 'Profit Split Payout Disbursed Template Dispatch', async () => {
+    const result = await EmailService.sendPayoutDisbursedEmail({
+      recipientEmail: 'delivered@resend.dev',
+      recipientName: 'Alex Trader',
+      payoutId: 'payout-test-001',
+      accountNumber: '99887766',
+      totalProfit: 12500,
+      traderShare: 10000,
+      firmShare: 2500,
+      payoutMethod: 'Crypto (USDT TRC20)',
+      destination: 'TLx9876543210ABCDEF',
+    });
+
+    assert(result.success || typeof result.error === 'string', 'Payout disbursed email dispatch must return structured response');
+    const lastLog = db.email_logs[0];
+    assert(lastLog.template === 'PAYOUT_DISBURSED', 'Template must be PAYOUT_DISBURSED');
+    assert(lastLog.subject.includes('$10,000'), 'Subject must mention trader share');
   });
 
   // Summary

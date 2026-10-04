@@ -1,4 +1,5 @@
 import { DBEngine } from './db';
+import { EmailService } from './emailService';
 import type { OrderEntity, PaymentEntity, TradingAccountEntity, PaymentMethod } from './types';
 
 export interface PaymentProvider {
@@ -187,6 +188,21 @@ export class CheckoutPaymentService implements PaymentProvider {
     });
 
     DBEngine.saveDB();
+
+    // Asynchronously dispatch transactional email
+    EmailService.sendOrderCredentialsEmail({
+      recipientEmail: user.email,
+      recipientName: user.full_name,
+      orderId: newOrder.id,
+      planName: newAccount.plan_name,
+      accountSize: newAccount.account_size,
+      accountNumber: newAccNumber,
+      traderPassword,
+      investorPassword,
+      server: newAccount.server,
+      platform: newAccount.platform,
+      rules: newAccount.rules,
+    }).catch((err) => console.warn('Email dispatch notice:', err));
 
     return {
       success: true,

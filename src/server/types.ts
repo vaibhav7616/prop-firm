@@ -544,5 +544,19 @@ export interface SupportTicketEntity {
   updated_at: string;
 }
 
+export interface EmailLogEntity {
+  id: string;
+  recipient_email: string;
+  recipient_name?: string;
+  subject: string;
+  template: 'ORDER_CREDENTIALS' | 'RULE_BREACH' | 'STAGE_PROMOTION' | 'PAYOUT_DISBURSED' | 'TEST_EMAIL';
+  status: 'DELIVERED' | 'FAILED' | 'PREVIEW';
+  provider: 'resend' | 'preview';
+  resend_id?: string;
+  error_message?: string;
+  sent_at: string;
+}
+
+
 
 

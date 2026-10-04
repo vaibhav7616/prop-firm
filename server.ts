@@ -14,6 +14,7 @@ import { requireAuth, requireAdmin, createRateLimiter, generateToken, sanitizeUs
 import { TraderRiskIntelligenceEngine } from './src/server/riskIntelligence';
 import { TradeSimulatorEngine } from './src/server/simulator';
 import { TraderTimelineEngine } from './src/server/timeline';
+import { EmailService } from './src/server/emailService';
 import { runAutomatedVerificationTests } from './tests/verification-suite';
 
 const app = express();
@@ -1215,6 +1216,21 @@ app.post('/api/admin/accounts/issue-manual', requireAdmin, (req, res) => {
 
   DBEngine.saveDB();
 
+  // Send credentials email to the trader
+  EmailService.sendOrderCredentialsEmail({
+    recipientEmail: user.email,
+    recipientName: user.name || user.email.split('@')[0],
+    orderId: newOrder.id,
+    planName: planName,
+    accountSize: sizeNum,
+    accountNumber: newAccNumber,
+    traderPassword: traderPassword,
+    investorPassword: investorPassword,
+    server: 'FundedShift-Live01',
+    platform: platform || 'fundedshift_terminal',
+    rules: rulesConfig,
+  }).catch((err) => console.error('[EmailService] Failed to send manual issue credentials email:', err));
+
   res.json({
     success: true,
     account: {
@@ -1370,6 +1386,37 @@ app.get('/api/admin/audit-logs', requireAdmin, (req, res) => {
     total: logs.length,
     logs: logs.slice(-limit).reverse(),
   });
+});
+
+// -------------------------------------------------------------
+// ADMIN EMAIL ENGINE MANAGEMENT APIS (Resend Integration)
+// -------------------------------------------------------------
+app.get('/api/admin/email/config', requireAdmin, (_req, res) => {
+  res.json(EmailService.getConfig());
+});
+
+app.get('/api/admin/email/logs', requireAdmin, (req, res) => {
+  const db = DBEngine.getDB();
+  const limit = Math.min(200, Number(req.query.limit) || 100);
+  const logs = [...(db.email_logs || [])];
+  res.json({
+    total: logs.length,
+    logs: logs.slice(0, limit),
+  });
+});
+
+app.post('/api/admin/email/test', requireAdmin, async (req, res) => {
+  try {
+    const { to } = req.body;
+    if (!to || !to.includes('@')) {
+      res.status(400).json({ success: false, error: 'A valid email address is required.' });
+      return;
+    }
+    const result = await EmailService.sendTestEmail(to);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to send test email.' });
+  }
 });
 
 // Programmatic Automated Verification Test Suite API

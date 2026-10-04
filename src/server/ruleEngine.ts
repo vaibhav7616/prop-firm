@@ -2,6 +2,7 @@ import { DBEngine } from './db';
 import type { TradingAccountEntity, RuleViolationEntity, PositionEntity } from './types';
 import { marketDataService } from './marketData';
 import { calculateMT5PnL } from './mt5';
+import { EmailService } from './emailService';
 
 export interface RuleEvaluationResult {
   hasBreached: boolean;
@@ -267,6 +268,29 @@ export class RuleEngine {
       });
 
       DBEngine.saveDB();
+
+      // Dispatch Rule Breach Email Alert
+      const user = db.users.find((u) => u.id === account.user_id);
+      if (user && user.email) {
+        const primaryViol = violations[0];
+        const ruleName =
+          primaryViol.rule_type === 'DAILY_LOSS'
+            ? 'Daily Loss Limit (5%)'
+            : primaryViol.rule_type === 'MAX_LOSS'
+            ? 'Maximum Drawdown Limit (10%)'
+            : primaryViol.rule_type;
+        EmailService.sendRuleBreachEmail({
+          recipientEmail: user.email,
+          recipientName: user.name || user.email.split('@')[0],
+          accountNumber: account.account_number,
+          accountSize: account.account_size,
+          ruleViolated: ruleName,
+          breachEquity: primaryViol.equity_at_breach,
+          thresholdLimit: primaryViol.threshold_value,
+          breachTime: primaryViol.created_at,
+        }).catch((err) => console.error('[EmailService] Failed to send rule breach email:', err));
+      }
+
       return { hasBreached: true, violations, passedTarget: false, warnings };
     }
 
@@ -603,6 +627,23 @@ export class RuleEngine {
     });
 
     DBEngine.saveDB();
+
+    // Dispatch Stage Passed & Promotion Email
+    const user = db.users.find((u) => u.id === parent.user_id);
+    if (user && user.email) {
+      const fromStage = target_type === 'step_2' ? 'Phase 1 Challenge' : 'Phase 2 Verification';
+      const toStage = target_type === 'step_2' ? 'Step 2 Verification' : 'Live Funded Account';
+      EmailService.sendStagePromotionEmail({
+        recipientEmail: user.email,
+        recipientName: user.name || user.email.split('@')[0],
+        fromStage,
+        toStage,
+        accountSize: newAccount.account_size,
+        newAccountNumber: newAccount.account_number,
+        newPassword: traderPassword,
+      }).catch((err) => console.error('[EmailService] Failed to send stage promotion email:', err));
+    }
+
     return newAccount;
   }
 }

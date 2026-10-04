@@ -1,5 +1,6 @@
 import { DBEngine } from './db';
 import type { PayoutRequestEntity } from './types';
+import { EmailService } from './emailService';
 
 export class PayoutEngine {
   /**
@@ -226,6 +227,24 @@ export class PayoutEngine {
     });
 
     DBEngine.saveDB();
+
+    if (params.action === 'APPROVE') {
+      const user = db.users.find((u) => u.id === payout.user_id);
+      const recipientEmail = payout.user_email || user?.email;
+      if (recipientEmail) {
+        EmailService.sendPayoutDisbursedEmail({
+          recipientEmail,
+          recipientName: payout.user_name || user?.name || recipientEmail.split('@')[0],
+          payoutId: payout.id,
+          accountNumber: payout.account_number,
+          totalProfit: payout.total_profit,
+          traderShare: payout.trader_payout_amount,
+          firmShare: payout.firm_share_amount,
+          payoutMethod: payout.payout_method,
+          destination: payout.payout_address,
+        }).catch((err) => console.error('[EmailService] Failed to send payout disbursed email:', err));
+      }
+    }
 
     return { success: true, payout };
   }

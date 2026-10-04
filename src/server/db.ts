@@ -18,6 +18,7 @@ import type {
   AccountPlan,
   KycSubmissionEntity,
   SupportTicketEntity,
+  EmailLogEntity,
 } from './types';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -41,6 +42,7 @@ export interface DatabaseSchema {
   promo_codes: PromoCodeEntity[];
   kyc_submissions: KycSubmissionEntity[];
   support_tickets: SupportTicketEntity[];
+  email_logs: EmailLogEntity[];
 }
 
 export function hashPassword(password: string): string {
@@ -877,6 +879,7 @@ export class DBEngine {
         ],
         kyc_submissions: [],
         support_tickets: [],
+        email_logs: [],
       };
 
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2));
@@ -905,6 +908,9 @@ export class DBEngine {
       }
       if (!loaded.support_tickets) {
         loaded.support_tickets = [];
+      }
+      if (!loaded.email_logs) {
+        loaded.email_logs = [];
       }
       // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true
       if (loaded.accounts && Array.isArray(loaded.accounts)) {
