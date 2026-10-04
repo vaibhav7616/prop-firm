@@ -149,12 +149,16 @@ export function DashboardPayouts() {
 
     setSubmitting(true);
     try {
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-id': user?.id || 'demo-trader-id-12345',
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/api/payouts/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user?.id || 'demo-trader-id-12345',
-        },
+        headers,
         body: JSON.stringify({
           accountId: selectedAccount.id,
           payoutMethod: selectedMethod,

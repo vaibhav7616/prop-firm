@@ -512,11 +512,11 @@ app.get('/api/orders', requireAuth, (req, res) => {
 
 app.post('/api/orders/checkout', checkoutRateLimiter, requireAuth, async (req, res) => {
   const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
-  const { account_size, plan_id, platform, payment_method, coupon_code } = req.body;
+  const { account_size, plan_id, challenge_id, platform, payment_method, coupon_code } = req.body;
 
   const result = await paymentService.processCheckout({
     userId,
-    planId: plan_id || 'plan-2step-100k',
+    planId: plan_id || challenge_id || 'plan-2step-100k',
     accountSize: Number(account_size || 100000),
     platform: platform || 'mt5',
     paymentMethod: payment_method || 'visa',

@@ -42,15 +42,23 @@ export async function createChallengeOrder(params: {
   total_amount: number;
   payment_method: string;
   coupon_code?: string;
+  plan_id?: string;
 }) {
   try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-user-id': params.userId,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch('/api/orders/checkout', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': params.userId,
-      },
-      body: JSON.stringify(params),
+      headers,
+      body: JSON.stringify({
+        ...params,
+        plan_id: params.plan_id || params.challenge_id,
+      }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -72,12 +80,16 @@ export async function executeOrderApi(params: {
   takeProfit?: number;
 }) {
   try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-user-id': params.userId,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch('/api/trading/order', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': params.userId,
-      },
+      headers,
       body: JSON.stringify(params),
     });
     const data = await res.json();
@@ -93,12 +105,16 @@ export async function closePositionApi(params: {
   positionId: string;
 }) {
   try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-user-id': params.userId,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch('/api/trading/close-position', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-id': params.userId,
-      },
+      headers,
       body: JSON.stringify(params),
     });
     const data = await res.json();
