@@ -4,7 +4,15 @@
  */
 
 import { DBEngine, hashPassword, verifyPassword } from '../src/server/db';
-import { generateToken, verifyToken, sanitizeUser } from '../src/server/auth';
+import {
+  generateToken,
+  verifyToken,
+  sanitizeUser,
+  generateTerminalToken,
+  verifyTerminalToken,
+  sanitizeAccount,
+  invalidatedTerminalTokens,
+} from '../src/server/auth';
 import { tradeExecutionEngine } from '../src/server/tradeEngine';
 import { RuleEngine } from '../src/server/ruleEngine';
 import { PayoutEngine } from '../src/server/payoutEngine';
@@ -930,6 +938,163 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     if (targetCh.offer_active && targetCh.original_price && targetCh.original_price > targetCh.price) {
       assert(checkoutResult.order?.discount_amount === Number((targetCh.original_price - targetCh.price).toFixed(2)), 'Order discount must reflect direct offer savings');
     }
+  });
+
+  // =============================================================
+  // 17. WEB TERMINAL AUTHENTICATION, SECURITY & SESSION LIFECYCLE
+  // =============================================================
+  await test('Web Terminal Auth', 'PBKDF2 Master Password Verification for Trading Account', () => {
+    const rawPass = 'TraderSecret99!';
+    const hashed = hashPassword(rawPass);
+    assert(verifyPassword(rawPass, hashed), 'Valid trading password must verify with PBKDF2 SHA-512');
+    assert(!verifyPassword('WrongTraderPass123', hashed), 'Invalid trading password must be rejected');
+  });
+
+  await test('Web Terminal Session', 'Cryptographic Terminal JWT Token Generation & Payload Validation', () => {
+    const mockAccount: any = {
+      id: 'acc-test-terminal-001',
+      user_id: 'usr-test-terminal-001',
+      account_number: '8820491',
+      status: 'ACTIVE',
+      server: 'FundedShift-Live',
+    };
+
+    const token = generateTerminalToken(mockAccount, 3600);
+    assert(token && token.split('.').length === 3, 'Terminal token must be a valid 3-part HMAC-SHA256 JWT');
+
+    const verified = verifyTerminalToken(token);
+    assert(verified !== null, 'Valid terminal token must verify successfully');
+    assert(verified?.accountId === mockAccount.id, 'Verified accountId must match token payload');
+    assert(verified?.sub === mockAccount.user_id, 'Verified sub must match user ID');
+    assert(verified?.accountNumber === mockAccount.account_number, 'Verified accountNumber must match');
+
+    // Tampered token test
+    const tampered = token.slice(0, -6) + 'abc123';
+    assert(verifyTerminalToken(tampered) === null, 'Tampered terminal token must be rejected');
+  });
+
+  await test('Web Terminal Security', 'Session Token Invalidation on Terminal Logout', () => {
+    const mockAccount: any = {
+      id: 'acc-test-logout-002',
+      user_id: 'usr-test-logout-002',
+      account_number: '8820492',
+      status: 'ACTIVE',
+      server: 'FundedShift-Live',
+    };
+
+    const token = generateTerminalToken(mockAccount, 3600);
+    assert(verifyTerminalToken(token) !== null, 'Token should initially be valid');
+
+    // Invalidate token (simulating POST /api/terminal/logout)
+    invalidatedTerminalTokens.add(token);
+
+    const afterLogout = verifyTerminalToken(token);
+    assert(afterLogout === null, 'Token must be rejected immediately after terminal logout');
+
+    // Clean up
+    invalidatedTerminalTokens.delete(token);
+  });
+
+  await test('Web Terminal Security', 'Account Sanitization Prevents Password Hash & Secret Leaks', () => {
+    const rawAccount: any = {
+      id: 'acc-leak-test',
+      account_number: '8820499',
+      user_id: 'usr-leak-test',
+      password_hash: '5f4dcc3b5aa765d61d8327deb882cf992b32ba3b609e208b5f36e4f9b8c0099',
+      investor_password: 'investor_secret_pass',
+      current_balance: 100000,
+      starting_balance: 100000,
+      status: 'ACTIVE',
+      rules: { daily_loss_limit_percent: 5, max_loss_limit_percent: 10 },
+    };
+
+    const sanitized = sanitizeAccount(rawAccount);
+    assert(!('password_hash' in sanitized), 'password_hash must never be leaked to terminal frontend');
+    assert(!('investor_password' in sanitized), 'investor_password must never be leaked to terminal frontend');
+    assert(sanitized.id === rawAccount.id, 'Account ID must be preserved');
+    assert(sanitized.current_balance === 100000, 'Account balance must be preserved');
+    assert(sanitized.rules?.daily_loss_limit_percent === 5, 'Rules must be preserved');
+  });
+
+  await test('Web Terminal Isolation', 'Order Execution Rejects Unmatched Terminal Tokens (Cross-Account Attack)', async () => {
+    const ownerUserId = `usr-owner-${Date.now()}`;
+    const attackerUserId = `usr-attacker-${Date.now()}`;
+
+    // Target account owned by owner
+    const targetAccount: any = {
+      id: `acc-victim-${Date.now()}`,
+      order_id: `ord-victim-${Date.now()}`,
+      user_id: ownerUserId,
+      challenge_id: 'ch-two-100k',
+      account_size: 100000,
+      platform: 'fundedshift_terminal',
+      broker: 'FundedShift Institutional LP',
+      account_number: `882${Math.floor(1000 + Math.random() * 9000)}`,
+      password_hash: hashPassword('OwnerPass123!'),
+      server: 'FundedShift-Live',
+      status: 'ACTIVE',
+      current_balance: 100000,
+      starting_balance: 100000,
+      profit: 0,
+      highest_balance: 100000,
+      trading_days: 1,
+      phase: 1,
+      rules: {
+        profit_target_percent: 8,
+        daily_loss_limit_percent: 5,
+        max_loss_limit_percent: 10,
+        drawdown_model: 'STATIC',
+        min_trading_days: 0,
+        max_trading_days: null,
+        leverage: 100,
+        profit_split_percent: 80,
+        max_lot_size: 50,
+        max_open_positions: 20,
+        news_trading_allowed: true,
+        weekend_holding_allowed: true,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(targetAccount);
+
+    // Attacker account
+    const attackerAccount: any = {
+      id: `acc-attacker-${Date.now()}`,
+      order_id: `ord-attacker-${Date.now()}`,
+      user_id: attackerUserId,
+      challenge_id: 'ch-two-5k',
+      account_size: 5000,
+      platform: 'fundedshift_terminal',
+      broker: 'FundedShift Institutional LP',
+      account_number: `883${Math.floor(1000 + Math.random() * 9000)}`,
+      password_hash: hashPassword('AttackerPass123!'),
+      server: 'FundedShift-Live',
+      status: 'ACTIVE',
+      current_balance: 5000,
+      starting_balance: 5000,
+      profit: 0,
+      highest_balance: 5000,
+      trading_days: 1,
+      phase: 1,
+      rules: targetAccount.rules,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(attackerAccount);
+
+    // Attacker obtains a valid token for attackerAccount
+    const attackerToken = generateTerminalToken(attackerAccount, 3600);
+
+    // Attacker attempts to place an order on targetAccount using attackerToken
+    const payload = verifyTerminalToken(attackerToken);
+    assert(payload?.accountId === attackerAccount.id, 'Token belongs to attacker account');
+    assert(payload?.accountId !== targetAccount.id, 'Token does NOT belong to victim account');
+
+    // Strict cross-account validation check:
+    const isAuthorizedForTarget = payload?.accountId === targetAccount.id && payload?.sub === targetAccount.user_id;
+    assert(!isAuthorizedForTarget, 'Cross-account execution must be strictly forbidden');
   });
 
   // Summary

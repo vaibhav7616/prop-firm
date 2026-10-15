@@ -34,6 +34,7 @@ import { CheckoutPage } from '@/pages/checkout';
 // Dashboard pages
 import { DashboardOverview } from '@/pages/dashboard/overview';
 import { DashboardTrading } from '@/pages/dashboard/trading';
+import WebTerminalPage from '@/pages/terminal';
 import { DashboardAccounts } from '@/pages/dashboard/accounts';
 import { DashboardObjectives } from '@/pages/dashboard/objectives';
 import { DashboardOrders } from '@/pages/dashboard/orders';
@@ -109,10 +110,13 @@ function AppRoutes() {
       {/* Checkout */}
       <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
 
+      {/* Web Terminal Dedicated Standalone Route */}
+      <Route path="/terminal" element={<ProtectedRoute><WebTerminalPage /></ProtectedRoute>} />
+
       {/* Trader Dashboard */}
       <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout variant="trader" /></ProtectedRoute>}>
         <Route index element={<DashboardOverview />} />
-        <Route path="trading" element={<DashboardTrading />} />
+        <Route path="trading" element={<Navigate to="/terminal" replace />} />
         <Route path="accounts" element={<DashboardAccounts />} />
         <Route path="progress" element={<Navigate to="/dashboard/objectives" replace />} />
         <Route path="objectives" element={<DashboardObjectives />} />

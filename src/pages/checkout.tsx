@@ -220,14 +220,28 @@ export function CheckoutPage() {
               <div className="rounded-2xl glass p-8 animate-fade-in">
                 <h2 className="font-display text-2xl font-bold mb-6">Review Your Challenge</h2>
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 mb-6">
-                  <div className="h-14 w-14 rounded-xl bg-gold-gradient flex items-center justify-center">
+                  <div className="h-14 w-14 rounded-xl bg-gold-gradient flex items-center justify-center shrink-0">
                     <span className="font-display text-lg font-bold text-black">{formatAccountSize(challenge.account_size)}</span>
                   </div>
-                  <div>
-                    <h3 className="font-display text-lg font-semibold">{challenge.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display text-lg font-semibold truncate">{challenge.name}</h3>
+                      {challenge.offer_active && (
+                        <span className="text-[10px] font-bold text-gold-400 bg-gold-400/20 px-2 py-0.5 rounded-full border border-gold-400/30 whitespace-nowrap">
+                          {challenge.discount_badge || 'SPECIAL OFFER'}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">{CHALLENGE_TYPE_LABELS[challenge.type]} · {PLATFORM_LABELS[platform]}</p>
                   </div>
-                  <span className="ml-auto font-display text-2xl font-bold gold-text">{formatCurrency(challenge.price)}</span>
+                  <div className="ml-auto text-right shrink-0">
+                    {challenge.offer_active && challenge.original_price && challenge.original_price > challenge.price && (
+                      <span className="text-xs line-through text-muted-foreground block font-mono">
+                        {formatCurrency(challenge.original_price)}
+                      </span>
+                    )}
+                    <span className="font-display text-2xl font-bold gold-text">{formatCurrency(challenge.price)}</span>
+                  </div>
                 </div>
                 <div className="space-y-2 text-sm mb-8">
                   <div className="flex justify-between"><span className="text-muted-foreground">Profit Target</span><span>{challenge.rules.profit_target}%</span></div>
@@ -421,10 +435,30 @@ export function CheckoutPage() {
               <div className="rounded-2xl glass p-6 sticky top-8">
                 <h3 className="font-display font-semibold mb-4">Order Summary</h3>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">{challenge.name}</span>
-                    <span>{formatCurrency(challenge.price)}</span>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-muted-foreground block">{challenge.name}</span>
+                      {challenge.offer_active && (
+                        <span className="inline-block mt-0.5 text-[10px] font-bold text-gold-400 bg-gold-400/10 px-1.5 py-0.5 rounded border border-gold-400/20">
+                          {challenge.discount_badge || 'OFFER APPLIED'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {challenge.offer_active && challenge.original_price && challenge.original_price > challenge.price && (
+                        <span className="text-xs line-through text-muted-foreground block font-mono">
+                          {formatCurrency(challenge.original_price)}
+                        </span>
+                      )}
+                      <span className="font-bold">{formatCurrency(challenge.price)}</span>
+                    </div>
                   </div>
+                  {challenge.offer_active && challenge.original_price && challenge.original_price > challenge.price && (
+                    <div className="flex justify-between text-emerald-400 text-xs font-semibold">
+                      <span>Direct Account Offer</span>
+                      <span>Save -{formatCurrency(challenge.original_price - challenge.price)}</span>
+                    </div>
+                  )}
                   {selectedAddons.map((id) => {
                     const addon = ADDONS.find((a) => a.id === id);
                     if (!addon) return null;

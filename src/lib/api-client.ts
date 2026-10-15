@@ -81,11 +81,13 @@ export async function executeOrderApi(params: {
 }) {
   try {
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-user-id': params.userId,
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (termToken) headers['x-terminal-token'] = termToken;
 
     const res = await fetch('/api/trading/order', {
       method: 'POST',
@@ -106,11 +108,13 @@ export async function closePositionApi(params: {
 }) {
   try {
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'x-user-id': params.userId,
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (termToken) headers['x-terminal-token'] = termToken;
 
     const res = await fetch('/api/trading/close-position', {
       method: 'POST',
@@ -322,12 +326,21 @@ export async function fetchChallengesApi(): Promise<any[]> {
   return [];
 }
 
-export async function updateChallengePriceApi(id: string, price: number, rules?: any): Promise<any> {
+export async function updateChallengePriceApi(
+  id: string,
+  priceOrData: number | { price: number; original_price?: number; offer_active?: boolean; discount_badge?: string; rules?: any },
+  rulesParam?: any
+): Promise<any> {
   try {
+    const payload =
+      typeof priceOrData === 'number'
+        ? { id, price: priceOrData, rules: rulesParam }
+        : { id, ...priceOrData, rules: priceOrData.rules || rulesParam };
+
     const res = await fetch('/api/admin/challenges/update', {
       method: 'POST',
       headers: getAdminHeaders(),
-      body: JSON.stringify({ id, price, rules }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       const data = await res.json();
@@ -338,6 +351,31 @@ export async function updateChallengePriceApi(id: string, price: number, rules?:
     }
   } catch (err) {
     console.warn('Failed to update challenge price on server:', err);
+  }
+  return { success: false };
+}
+
+export async function batchOfferApi(params: {
+  discount_percent?: number;
+  discount_badge?: string;
+  target_type?: string;
+  clear_offers?: boolean;
+}): Promise<any> {
+  try {
+    const res = await fetch('/api/admin/challenges/batch-offer', {
+      method: 'POST',
+      headers: getAdminHeaders(),
+      body: JSON.stringify(params),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.challenges) {
+        localStorage.setItem('fundedshift_challenges', JSON.stringify(data.challenges));
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn('Failed to apply batch offer on server:', err);
   }
   return { success: false };
 }
@@ -941,6 +979,101 @@ export async function sendTestEmailApi(to: string) {
   } catch (err: any) {
     return { success: false, error: err.message || 'Failed to send test email' };
   }
+}
+
+// -------------------------------------------------------------
+// WEB TERMINAL AUTHENTICATION & SESSION APIS
+// -------------------------------------------------------------
+
+export async function loginTerminalApi(params: { login: string; password: string }) {
+  try {
+    const webToken = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/terminal/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(webToken ? { Authorization: `Bearer ${webToken}` } : {}),
+      },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    if (data.success && data.token && typeof localStorage !== 'undefined') {
+      localStorage.setItem('terminal_token', data.token);
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Failed to authenticate trading account.' };
+  }
+}
+
+export async function fetchTerminalSessionApi(accountId?: string) {
+  try {
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
+    const webToken = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const headers: Record<string, string> = {};
+    if (termToken) headers['x-terminal-token'] = termToken;
+    if (webToken) headers['Authorization'] = `Bearer ${webToken}`;
+
+    const url = accountId ? `/api/terminal/session?accountId=${encodeURIComponent(accountId)}` : '/api/terminal/session';
+    const res = await fetch(url, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token && typeof localStorage !== 'undefined') {
+        localStorage.setItem('terminal_token', data.token);
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn('Terminal session check error:', err);
+  }
+  return { authenticated: false, reason: 'NETWORK_ERROR' };
+}
+
+export async function logoutTerminalApi() {
+  try {
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('terminal_token');
+    }
+    if (termToken) {
+      await fetch('/api/terminal/logout', {
+        method: 'POST',
+        headers: { 'x-terminal-token': termToken },
+      });
+    }
+  } catch (err) {
+    console.warn('Terminal logout notice:', err);
+  }
+  return { success: true };
+}
+
+export async function fetchTerminalAccountsApi() {
+  try {
+    const webToken = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const res = await fetch('/api/terminal/accounts', {
+      headers: {
+        ...(webToken ? { Authorization: `Bearer ${webToken}` } : {}),
+      },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Failed to fetch terminal accounts:', err);
+  }
+  return [];
+}
+
+export async function fetchTerminalCandlesApi(symbol: string, timeframe: string = '15m', limit: number = 60) {
+  try {
+    const res = await fetch(`/api/terminal/candles/${encodeURIComponent(symbol)}?timeframe=${timeframe}&limit=${limit}`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch candles for ${symbol}:`, err);
+  }
+  return { symbol, timeframe, candles: [] };
 }
 
 

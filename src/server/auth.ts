@@ -265,3 +265,96 @@ export function sanitizeUser(user: UserEntity): Omit<UserEntity, 'password_hash'
   const { password_hash, ...safeUser } = user;
   return safeUser;
 }
+
+export interface TerminalTokenPayload {
+  sub: string; // User ID
+  accountId: string; // Trading Account ID
+  accountNumber: string;
+  login: string;
+  server: string;
+  iat: number;
+  exp: number;
+}
+
+// Active invalidated terminal sessions (e.g. on explicit logout)
+export const invalidatedTerminalTokens = new Set<string>();
+
+/**
+ * Generates an HMAC-SHA256 cryptographically signed Terminal Session Token
+ */
+export function generateTerminalToken(params: {
+  userId: string;
+  accountId: string;
+  accountNumber: string;
+  login: string;
+  server: string;
+  expiresInSeconds?: number;
+}): string {
+  const header = {
+    alg: 'HS256',
+    typ: 'TERM_JWT',
+  };
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload: TerminalTokenPayload = {
+    sub: params.userId,
+    accountId: params.accountId,
+    accountNumber: params.accountNumber,
+    login: params.login,
+    server: params.server,
+    iat: now,
+    exp: now + (params.expiresInSeconds || 86400 * 2), // 48 hours terminal session
+  };
+
+  const base64Header = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${base64Header}.${base64Payload}`)
+    .digest('base64url');
+
+  return `${base64Header}.${base64Payload}.${signature}`;
+}
+
+/**
+ * Verifies and decodes a Terminal Session Token
+ */
+export function verifyTerminalToken(token: string): TerminalTokenPayload | null {
+  if (!token) return null;
+  if (invalidatedTerminalTokens.has(token)) return null;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  const [headerB64, payloadB64, signatureB64] = parts;
+  const expectedSig = crypto
+    .createHmac('sha256', JWT_SECRET)
+    .update(`${headerB64}.${payloadB64}`)
+    .digest('base64url');
+
+  if (!crypto.timingSafeEqual(Buffer.from(signatureB64), Buffer.from(expectedSig))) {
+    return null;
+  }
+
+  try {
+    const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
+    const payload = JSON.parse(payloadJson) as TerminalTokenPayload;
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Strips sensitive hashes from trading account before returning to client
+ */
+export function sanitizeAccount(account: any): any {
+  if (!account) return null;
+  const { password_hash, investor_password_hash, ...safe } = account;
+  return safe;
+}
+

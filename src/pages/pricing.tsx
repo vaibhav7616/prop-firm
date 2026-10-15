@@ -69,9 +69,23 @@ export function PricingPage() {
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                   {typeChallenges.map((c) => (
-                    <div key={c.id} className="card-elevated p-5 text-center">
+                    <div key={c.id} className="card-elevated p-5 text-center relative overflow-hidden">
+                      {c.offer_active && (
+                        <div className="mb-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold-400/20 text-gold-500 border border-gold-400/30">
+                            {c.discount_badge || 'SPECIAL OFFER'}
+                          </span>
+                        </div>
+                      )}
                       <p className="font-display text-xl font-bold mb-1">{formatAccountSize(c.account_size)}</p>
-                      <p className="text-2xl font-display font-bold text-brand-600 mb-3">{formatCurrency(c.price)}</p>
+                      <div className="mb-3">
+                        {c.offer_active && c.original_price && c.original_price > c.price && (
+                          <span className="text-xs line-through text-muted-foreground font-mono block">
+                            {formatCurrency(c.original_price)}
+                          </span>
+                        )}
+                        <p className="text-2xl font-display font-bold text-brand-600">{formatCurrency(c.price)}</p>
+                      </div>
                       <div className="text-xs text-muted-foreground space-y-1 mb-4">
                         <p>Split: up to {c.rules.profit_split}%</p>
                         <p>Leverage: 1:{c.rules.leverage}</p>

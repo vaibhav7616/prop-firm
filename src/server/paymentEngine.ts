@@ -29,33 +29,53 @@ export class CheckoutPaymentService implements PaymentProvider {
       return { success: false, error: 'User not found.' };
     }
 
-    // Look up authoritative pricing from challenges or plans
-    const challenge = (db.challenges || []).find((c) => (c.id === params.planId || c.account_size === params.accountSize) && c.is_active);
-    const plan = db.account_plans.find((p) => p.id === params.planId || p.account_size === params.accountSize);
+    // Look up authoritative pricing from challenges or plans with exact ID & type/size matching
+    let challenge = (db.challenges || []).find((c) => c.id === params.planId && c.is_active);
+    if (!challenge && params.accountSize) {
+      const pId = (params.planId || '').toLowerCase();
+      const targetType = pId.includes('one') || pId.includes('1step')
+        ? 'one_step'
+        : pId.includes('inst') || pId.includes('instant')
+        ? 'instant_funding'
+        : 'two_step';
+      challenge = (db.challenges || []).find((c) => c.account_size === params.accountSize && c.type === targetType && c.is_active);
+    }
+    if (!challenge) {
+      challenge = (db.challenges || []).find((c) => c.account_size === params.accountSize && c.is_active);
+    }
+
+    let plan = db.account_plans.find((p) => p.id === params.planId && p.is_active);
+    if (!plan && challenge) {
+      plan = db.account_plans.find((p) => p.account_size === challenge!.account_size && p.type === challenge!.type);
+    }
 
     const basePrice = challenge ? challenge.price : plan ? plan.price : 99;
     const planName = challenge ? challenge.name : plan ? plan.name : `FundedShift $${params.accountSize.toLocaleString()} Challenge`;
     const challengeType = challenge ? challenge.type : plan ? plan.type : 'two_step';
 
-    let discountAmount = 0;
+    let couponDiscount = 0;
     if (params.couponCode) {
       const codeUpper = params.couponCode.trim().toUpperCase();
       const promo = db.promo_codes.find((p) => p.code.toUpperCase() === codeUpper && p.is_active);
       if (promo && promo.usage_count < promo.max_uses) {
         if (promo.discount_type === 'PERCENTAGE') {
-          discountAmount = (basePrice * promo.discount_value) / 100;
+          couponDiscount = (basePrice * promo.discount_value) / 100;
         } else {
-          discountAmount = Math.min(basePrice, promo.discount_value);
+          couponDiscount = Math.min(basePrice, promo.discount_value);
         }
         promo.usage_count += 1;
       } else if (codeUpper === 'PROPFIRM20') {
-        discountAmount = basePrice * 0.2;
+        couponDiscount = basePrice * 0.2;
       } else if (codeUpper === 'VAIBHAV100') {
-        discountAmount = basePrice;
+        couponDiscount = basePrice;
       }
     }
 
-    const totalAmount = Math.max(0, Number((basePrice - discountAmount).toFixed(2)));
+    const totalAmount = Math.max(0, Number((basePrice - couponDiscount).toFixed(2)));
+    const directOfferDiscount = challenge?.offer_active && challenge.original_price && challenge.original_price > basePrice
+      ? Number((challenge.original_price - basePrice).toFixed(2))
+      : 0;
+    const totalRecordedDiscount = Number((directOfferDiscount + couponDiscount).toFixed(2));
 
     // Duplicate submission safeguard (prevent duplicate orders submitted within 5 seconds)
     const recentDuplicate = db.orders.find(
@@ -84,7 +104,7 @@ export class CheckoutPaymentService implements PaymentProvider {
       platform: params.platform,
       addons: [],
       coupon_code: params.couponCode,
-      discount_amount: Number(discountAmount.toFixed(2)),
+      discount_amount: Number(totalRecordedDiscount.toFixed(2)),
       total_amount: totalAmount,
       status: 'PAID',
       payment_method: params.paymentMethod,

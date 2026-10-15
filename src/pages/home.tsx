@@ -17,11 +17,14 @@ import {
   Zap,
   Wallet,
   Target,
+  Flame,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { fetchChallengesApi } from '@/lib/api-client';
+import { DEFAULT_CHALLENGES } from '@/lib/default-data';
 import { LivePayoutTicker } from '@/components/home/payout-ticker';
 import { PayoutCalculator } from '@/components/home/payout-calculator';
 import { CertificateModal } from '@/components/home/certificate-modal';
@@ -256,6 +259,31 @@ const TESTIMONIALS = [
 
 /* ---------- Home Page ---------- */
 export function HomePage() {
+  const [liveChallenges, setLiveChallenges] = useState<any[]>(DEFAULT_CHALLENGES);
+
+  useEffect(() => {
+    fetchChallengesApi().then((data) => {
+      if (data && data.length > 0) {
+        setLiveChallenges(data);
+      }
+    });
+  }, []);
+
+  const getStartingPriceInfo = (typeName: string, fallbackPrice: string) => {
+    const typeKey = typeName.toLowerCase().replace(' ', '_');
+    const matching = liveChallenges.filter((c: any) => c.type === typeKey);
+    if (!matching || matching.length === 0) {
+      return { price: fallbackPrice, originalPrice: null, hasOffer: false, badge: null };
+    }
+    const lowest = matching.reduce((min: any, curr: any) => (curr.price < min.price ? curr : min), matching[0]);
+    return {
+      price: `$${lowest.price}`,
+      originalPrice: lowest.offer_active && lowest.original_price && lowest.original_price > lowest.price ? `$${lowest.original_price}` : null,
+      hasOffer: Boolean(lowest.offer_active),
+      badge: lowest.discount_badge,
+    };
+  };
+
   return (
     <div>
       {/* ===== HERO ===== */}
@@ -358,7 +386,9 @@ export function HomePage() {
             subtitle="Three evaluation models designed for different trading styles. All with transparent rules and no time pressure."
           />
           <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PROGRAMS.map((program, idx) => (
+            {PROGRAMS.map((program, idx) => {
+              const info = getStartingPriceInfo(program.name, program.price);
+              return (
               <RevealOnScroll key={program.name} delay={idx * 0.08} variant="fadeUp">
                 <TiltCard
                   maxTilt={4}
@@ -367,18 +397,33 @@ export function HomePage() {
                     program.highlight && 'ring-2 ring-brand-500 shadow-soft-lg'
                   )}
                 >
-                  {program.highlight && (
-                    <div className="mb-4">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    {program.highlight ? (
                       <span className="badge-brand">Most Popular</span>
-                    </div>
-                  )}
+                    ) : (
+                      <span />
+                    )}
+                    {info.hasOffer && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold-400/20 text-gold-500 border border-gold-400/30">
+                        <Flame className="h-2.5 w-2.5" />
+                        {info.badge || 'SPECIAL OFFER'}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-display text-xl font-bold">{program.name}</h3>
                   <p className="text-sm text-muted-foreground mt-1 mb-4">{program.tagline}</p>
                   <TiltDepthLayer z={20}>
-                    <p className="font-display text-3xl font-bold text-brand-600 mb-6">
-                      {program.price}
-                      <span className="text-sm font-normal text-muted-foreground"> / starting</span>
-                    </p>
+                    <div className="flex items-baseline gap-2 mb-6 flex-wrap">
+                      <p className="font-display text-3xl font-bold text-brand-600">
+                        {info.price}
+                        <span className="text-sm font-normal text-muted-foreground"> / starting</span>
+                      </p>
+                      {info.originalPrice && (
+                        <span className="text-sm line-through text-muted-foreground font-mono">
+                          {info.originalPrice}
+                        </span>
+                      )}
+                    </div>
                   </TiltDepthLayer>
                   <ul className="space-y-3 mb-8 flex-1">
                     {program.features.map((f) => (
@@ -404,7 +449,8 @@ export function HomePage() {
                   </TiltDepthLayer>
                 </TiltCard>
               </RevealOnScroll>
-            ))}
+            );
+          })}
           </div>
         </div>
       </section>

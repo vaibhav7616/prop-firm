@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { supabase } from '@/lib/supabase';
@@ -126,15 +126,35 @@ export function ChallengesPage() {
                       <h3 className="font-display text-2xl font-bold text-foreground">
                         {formatAccountSize(challenge.account_size)}
                       </h3>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                        {CHALLENGE_TYPE_LABELS[challenge.type]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {challenge.offer_active && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold-400/20 text-gold-400 border border-gold-400/30 flex items-center gap-1 animate-pulse">
+                            <Flame className="h-2.5 w-2.5" />
+                            {challenge.discount_badge || 'SPECIAL OFFER'}
+                          </span>
+                        )}
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                          {CHALLENGE_TYPE_LABELS[challenge.type]}
+                        </span>
+                      </div>
                     </div>
 
                     <TiltDepthLayer z={15}>
-                      <p className="font-display text-3xl font-bold text-brand-600 mb-6">
-                        {formatCurrency(challenge.price)}
-                      </p>
+                      <div className="flex items-baseline gap-2 mb-6 flex-wrap">
+                        <p className="font-display text-3xl font-bold text-brand-600">
+                          {formatCurrency(challenge.price)}
+                        </p>
+                        {challenge.offer_active && challenge.original_price && challenge.original_price > challenge.price && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm line-through text-muted-foreground font-mono">
+                              {formatCurrency(challenge.original_price)}
+                            </span>
+                            <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                              Save ${challenge.original_price - challenge.price}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </TiltDepthLayer>
 
                     <div className="space-y-2.5 mb-6 flex-1">

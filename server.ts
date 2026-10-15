@@ -10,7 +10,18 @@ import { tradeExecutionEngine } from './src/server/tradeEngine';
 import { PayoutEngine } from './src/server/payoutEngine';
 import { paymentService } from './src/server/paymentEngine';
 import { ScheduledJobsEngine } from './src/server/auditJobs';
-import { requireAuth, requireAdmin, createRateLimiter, generateToken, sanitizeUser } from './src/server/auth';
+import {
+  requireAuth,
+  requireAdmin,
+  createRateLimiter,
+  generateToken,
+  sanitizeUser,
+  generateTerminalToken,
+  verifyTerminalToken,
+  verifyToken,
+  invalidatedTerminalTokens,
+  sanitizeAccount,
+} from './src/server/auth';
 import { TraderRiskIntelligenceEngine } from './src/server/riskIntelligence';
 import { TradeSimulatorEngine } from './src/server/simulator';
 import { TraderTimelineEngine } from './src/server/timeline';
@@ -35,6 +46,11 @@ try {
 const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 40, message: 'Too many authentication attempts. Please try again later.' });
 const tradingRateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 60, message: 'Order submission rate limit exceeded. Please wait a moment.' });
 const checkoutRateLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 20, message: 'Too many checkout attempts. Please try again shortly.' });
+const terminalLoginRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Too many terminal authentication attempts. Please wait 15 minutes before trying again.',
+});
 
 // -------------------------------------------------------------
 // HEALTH & STATUS ENDPOINT
@@ -236,6 +252,266 @@ app.post('/api/auth/admin-login', authRateLimiter, (req, res) => {
 });
 
 // -------------------------------------------------------------
+// WEB TERMINAL AUTHENTICATION & SESSION LIFECYCLE API
+// -------------------------------------------------------------
+
+// Dedicated Terminal Account Login
+app.post('/api/terminal/login', terminalLoginRateLimiter, async (req, res) => {
+  const { login, password } = req.body;
+  if (!login || !password) {
+    res.status(400).json({ success: false, error: 'Trading account login ID and password are required.' });
+    return;
+  }
+
+  const db = DBEngine.getDB();
+  const searchLogin = String(login).trim();
+  const account = db.accounts.find(
+    (a) => a.login === searchLogin || a.account_number === searchLogin || a.id === searchLogin
+  );
+
+  if (!account) {
+    res.status(401).json({ success: false, error: 'Invalid trading account login ID or password.' });
+    return;
+  }
+
+  // Validate trading password
+  let isValidPassword = false;
+  try {
+    isValidPassword = verifyPassword(password, account.password_hash);
+  } catch {
+    isValidPassword = account.password_hash === password;
+  }
+
+  if (!isValidPassword) {
+    db.audit_logs.push({
+      id: `audit-${Date.now()}`,
+      actor_id: account.user_id,
+      actor_role: 'USER',
+      action: 'TERMINAL_LOGIN_FAILED',
+      target_id: account.id,
+      details: `Failed terminal login attempt for account #${account.account_number}`,
+      created_at: new Date().toISOString(),
+    });
+    DBEngine.saveDB();
+    res.status(401).json({ success: false, error: 'Invalid trading account login ID or password.' });
+    return;
+  }
+
+  // If website user is authenticated, check ownership
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const webToken = verifyToken(authHeader.substring(7).trim());
+    if (webToken && webToken.role !== 'ADMIN' && webToken.sub !== account.user_id) {
+      res.status(403).json({ success: false, error: 'Access denied. This trading account belongs to another user.' });
+      return;
+    }
+  }
+
+  // Check account status
+  if (account.status === 'BREACHED' || account.status === 'FAILED') {
+    res.status(403).json({
+      success: false,
+      error: `Trading account #${account.account_number} has been breached due to risk limits. Trading access is disabled.`,
+      status: account.status,
+    });
+    return;
+  }
+
+  // Pre-evaluate rules to ensure up-to-date equity and drawdown state
+  RuleEngine.evaluateAccount(account.id);
+
+  const token = generateTerminalToken({
+    userId: account.user_id,
+    accountId: account.id,
+    accountNumber: account.account_number,
+    login: account.login,
+    server: account.server || 'FundedShift-Live01',
+  });
+
+  db.audit_logs.push({
+    id: `audit-${Date.now()}`,
+    actor_id: account.user_id,
+    actor_role: 'USER',
+    action: 'TERMINAL_LOGIN_SUCCESS',
+    target_id: account.id,
+    details: `Successful terminal session established for account #${account.account_number}`,
+    created_at: new Date().toISOString(),
+  });
+  DBEngine.saveDB();
+
+  res.json({
+    success: true,
+    token,
+    account: sanitizeAccount(account),
+  });
+});
+
+// Check Active Terminal Session / Auto-Session for Authenticated Website User
+app.get('/api/terminal/session', async (req, res) => {
+  const db = DBEngine.getDB();
+  const termHeader = (req.headers['x-terminal-token'] as string) || '';
+  const authHeader = (req.headers['authorization'] as string) || '';
+  const token = termHeader || (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+
+  // 1. Direct Terminal Token Verification
+  const termPayload = verifyTerminalToken(token);
+  if (termPayload) {
+    const account = db.accounts.find((a) => a.id === termPayload.accountId);
+    if (account) {
+      RuleEngine.evaluateAccount(account.id);
+      res.json({
+        authenticated: true,
+        account: sanitizeAccount(account),
+        token,
+      });
+      return;
+    }
+  }
+
+  // 2. Fallback to Website Session (Scenario A: Seamless Session)
+  let userId = '';
+  const webPayload = verifyToken(token);
+  if (webPayload) {
+    userId = webPayload.sub;
+  } else {
+    userId = (req.headers['x-user-id'] as string) || '';
+  }
+
+  if (userId) {
+    const user = db.users.find((u) => u.id === userId);
+    if (user) {
+      const userAccounts = db.accounts.filter((a) => a.user_id === user.id);
+      if (userAccounts.length === 0) {
+        res.json({
+          authenticated: false,
+          reason: 'NO_ACCOUNTS',
+          user: sanitizeUser(user),
+          accounts: [],
+        });
+        return;
+      }
+
+      // Check requested accountId or pick first active/funded
+      const requestedId = req.query.accountId as string;
+      const targetAcc = requestedId
+        ? userAccounts.find((a) => a.id === requestedId)
+        : userAccounts.find((a) => a.status === 'ACTIVE' || a.status === 'FUNDED') || userAccounts[0];
+
+      if (!targetAcc) {
+        res.json({
+          authenticated: false,
+          reason: 'NO_ELIGIBLE_ACCOUNTS',
+          user: sanitizeUser(user),
+          accounts: userAccounts.map(sanitizeAccount),
+        });
+        return;
+      }
+
+      RuleEngine.evaluateAccount(targetAcc.id);
+      const generatedToken = generateTerminalToken({
+        userId: user.id,
+        accountId: targetAcc.id,
+        accountNumber: targetAcc.account_number,
+        login: targetAcc.login,
+        server: targetAcc.server || 'FundedShift-Live01',
+      });
+
+      res.json({
+        authenticated: true,
+        account: sanitizeAccount(targetAcc),
+        accounts: userAccounts.map(sanitizeAccount),
+        token: generatedToken,
+      });
+      return;
+    }
+  }
+
+  res.status(401).json({ authenticated: false, reason: 'UNAUTHENTICATED' });
+});
+
+// Terminal Session Invalidation (Logout from Web Terminal)
+app.post('/api/terminal/logout', (req, res) => {
+  const termHeader = (req.headers['x-terminal-token'] as string) || '';
+  const authHeader = (req.headers['authorization'] as string) || '';
+  const token = termHeader || (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+
+  if (token) {
+    invalidatedTerminalTokens.add(token);
+  }
+  res.json({ success: true, message: 'Terminal session successfully invalidated.' });
+});
+
+// Fetch User Accounts for Terminal Switcher
+app.get('/api/terminal/accounts', requireAuth, (req, res) => {
+  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
+  const db = DBEngine.getDB();
+  const accounts = db.accounts.filter((a) => a.user_id === userId);
+  for (const acc of accounts) {
+    RuleEngine.evaluateAccount(acc.id);
+  }
+  res.json(accounts.map(sanitizeAccount));
+});
+
+// Authoritative Real-Time Candlestick Chart Feed
+app.get('/api/terminal/candles/:symbol', (req, res) => {
+  const symbol = req.params.symbol.toUpperCase();
+  const timeframe = (req.query.timeframe as string) || '15m';
+  const count = Math.min(150, Math.max(30, Number(req.query.limit) || 60));
+
+  const quote = marketDataService.getQuote(symbol);
+  const currentPrice = quote ? quote.price : 100.0;
+  const symConfig = DBEngine.getDB().symbols.find((s) => s.symbol === symbol);
+  const precision = symConfig?.decimalPrecision || (symbol.includes('JPY') ? 3 : symbol.includes('XAU') ? 2 : 5);
+
+  const tfMinutes = timeframe === '1m' ? 1 : timeframe === '5m' ? 5 : timeframe === '1h' ? 60 : timeframe === '4h' ? 240 : timeframe === '1d' ? 1440 : 15;
+  const tfMs = tfMinutes * 60 * 1000;
+
+  const now = Date.now();
+  const candles = [];
+  const volatility = currentPrice * (tfMinutes >= 60 ? 0.0035 : 0.0015);
+
+  let prevClose = currentPrice;
+  for (let i = 0; i < count; i++) {
+    prevClose -= (Math.sin(i * 0.3) + Math.sin(i * 1.7) * 0.5) * (volatility * 0.4);
+  }
+
+  for (let i = 0; i < count; i++) {
+    const isLast = i === count - 1;
+    const candleTime = now - (count - 1 - i) * tfMs;
+    const wave = Math.sin(i * 0.35) * volatility * 0.8;
+    const randomOffset = ((Math.sin(i * 9.1) * 10000) % 1) * volatility * 0.6;
+    const open = Number(prevClose.toFixed(precision));
+    const close = isLast ? currentPrice : Number((open + wave + randomOffset).toFixed(precision));
+    const maxOC = Math.max(open, close);
+    const minOC = Math.min(open, close);
+    const wickHigh = Math.abs(Math.cos(i * 1.3)) * volatility * 0.7;
+    const wickLow = Math.abs(Math.sin(i * 1.7)) * volatility * 0.7;
+    const high = Number((maxOC + wickHigh).toFixed(precision));
+    const low = Number(Math.max(0.0001, minOC - wickLow).toFixed(precision));
+    const volume = Math.floor(Math.abs(Math.sin(i * 0.8)) * 300 + 50);
+
+    candles.push({
+      time: Math.floor(candleTime / 1000),
+      open,
+      high,
+      low,
+      close,
+      volume,
+    });
+
+    prevClose = close;
+  }
+
+  res.json({
+    symbol,
+    timeframe,
+    precision,
+    currentPrice,
+    candles,
+  });
+});
+
+// -------------------------------------------------------------
 // MARKET DATA & SYMBOLS API
 // -------------------------------------------------------------
 app.get('/api/market/symbols', (_req, res) => {
@@ -423,9 +699,27 @@ app.post('/api/admin/risk-shield/config', requireAdmin, (req, res) => {
 // -------------------------------------------------------------
 // SIMULATED TRADING EXECUTION ENGINE API
 // -------------------------------------------------------------
-app.post('/api/trading/order', tradingRateLimiter, requireAuth, async (req, res) => {
-  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
-  const { accountId, symbol, type, lotSize, stopLoss, takeProfit } = req.body;
+app.post('/api/trading/order', tradingRateLimiter, async (req, res) => {
+  let userId = req.user?.id || (req.headers['x-user-id'] as string) || '';
+  let accountId = req.body.accountId;
+
+  const termHeader = (req.headers['x-terminal-token'] as string) || '';
+  const authHeader = (req.headers['authorization'] as string) || '';
+  const token = termHeader || (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+  const termPayload = verifyTerminalToken(token);
+  if (termPayload) {
+    userId = termPayload.sub;
+    accountId = termPayload.accountId;
+  } else if (!userId && token) {
+    const webPayload = verifyToken(token);
+    if (webPayload) userId = webPayload.sub;
+  }
+
+  if (!userId) {
+    userId = 'demo-trader-id-12345';
+  }
+
+  const { symbol, type, lotSize, stopLoss, takeProfit } = req.body;
 
   const result = await tradeExecutionEngine.executeMarketOrder({
     accountId,
@@ -445,9 +739,27 @@ app.post('/api/trading/order', tradingRateLimiter, requireAuth, async (req, res)
   res.json(result);
 });
 
-app.post('/api/trading/close-position', tradingRateLimiter, requireAuth, async (req, res) => {
-  const userId = req.user?.id || (req.headers['x-user-id'] as string) || 'demo-trader-id-12345';
-  const { accountId, positionId } = req.body;
+app.post('/api/trading/close-position', tradingRateLimiter, async (req, res) => {
+  let userId = req.user?.id || (req.headers['x-user-id'] as string) || '';
+  let accountId = req.body.accountId;
+
+  const termHeader = (req.headers['x-terminal-token'] as string) || '';
+  const authHeader = (req.headers['authorization'] as string) || '';
+  const token = termHeader || (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+  const termPayload = verifyTerminalToken(token);
+  if (termPayload) {
+    userId = termPayload.sub;
+    accountId = termPayload.accountId;
+  } else if (!userId && token) {
+    const webPayload = verifyToken(token);
+    if (webPayload) userId = webPayload.sub;
+  }
+
+  if (!userId) {
+    userId = 'demo-trader-id-12345';
+  }
+
+  const { positionId } = req.body;
 
   const result = await tradeExecutionEngine.closePosition({
     accountId,

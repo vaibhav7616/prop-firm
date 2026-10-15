@@ -63,6 +63,9 @@ export interface Challenge {
   type: ChallengeType;
   account_size: number;
   price: number;
+  original_price?: number;
+  offer_active?: boolean;
+  discount_badge?: string;
   is_active: boolean;
   sort_order: number;
   rules: ChallengeRules;

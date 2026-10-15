@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
@@ -11,10 +11,13 @@ import {
   Zap,
   Sliders,
   Award,
+  Flame,
 } from 'lucide-react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { formatCurrency } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/motion/animated-number';
+import { fetchChallengesApi } from '@/lib/api-client';
+import { DEFAULT_CHALLENGES } from '@/lib/default-data';
 
 const ACCOUNT_SIZES = [
   { value: 5000, label: '$5,000' },
@@ -45,18 +48,31 @@ export function PayoutCalculator() {
     expressPayout: true,
   });
 
-  // Calculate base price
-  const sizePrices: { [key: number]: number } = {
-    5000: 29,
-    10000: 49,
-    25000: 119,
-    50000: 199,
-    100000: 349,
-    200000: 649,
+  const [liveChallenges, setLiveChallenges] = useState<any[]>(DEFAULT_CHALLENGES);
+
+  useEffect(() => {
+    fetchChallengesApi().then((data) => {
+      if (data && data.length > 0) {
+        setLiveChallenges(data);
+      }
+    });
+  }, []);
+
+  const matchedChallenge = liveChallenges.find(
+    (c: any) => c.account_size === accountSize && c.type === evalStep
+  );
+
+  const fallbackPrices: { [key: number]: number } = {
+    5000: 24,
+    10000: 45,
+    25000: 99,
+    50000: 179,
+    100000: 299,
+    200000: 549,
   };
 
   const currentStepObj = EVAL_STEPS.find((s) => s.id === evalStep) || EVAL_STEPS[1];
-  const rawPrice = Math.round((sizePrices[accountSize] || 499) * currentStepObj.basePriceMult);
+  const rawPrice = matchedChallenge ? matchedChallenge.price : Math.round((fallbackPrices[accountSize] || 299) * currentStepObj.basePriceMult);
 
   // Addon price multipliers
   let priceAddonMultiplier = 1;
@@ -65,6 +81,9 @@ export function PayoutCalculator() {
   if (addons.expressPayout) priceAddonMultiplier += 0.1;
 
   const finalChallengePrice = Math.round(rawPrice * priceAddonMultiplier);
+  const originalChallengePrice = matchedChallenge?.offer_active && matchedChallenge.original_price
+    ? Math.round(matchedChallenge.original_price * priceAddonMultiplier)
+    : null;
 
   // Profit calculation
   const totalMonthlyGainDollars = accountSize * (monthlyReturn / 100);
@@ -78,7 +97,7 @@ export function PayoutCalculator() {
   };
 
   const challengePrefix = evalStep === 'one_step' ? 'ch-one-' : evalStep === 'two_step' ? 'ch-two-' : 'ch-inst-';
-  const challengeId = `${challengePrefix}${accountSize / 1000}k`;
+  const challengeId = matchedChallenge?.id || `${challengePrefix}${accountSize / 1000}k`;
 
   return (
     <section className="section-pad bg-secondary/30 border-y border-border relative overflow-hidden">
@@ -302,10 +321,25 @@ export function PayoutCalculator() {
               <div className="pt-6 space-y-4">
                 <div className="flex items-baseline justify-between">
                   <div>
-                    <p className="text-[11px] text-brand-300 uppercase font-medium">One-Time Fee</p>
-                    <p className="text-2xl font-extrabold font-mono text-white mt-0.5">
-                      {formatCurrency(finalChallengePrice)}
-                    </p>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className="text-[11px] text-brand-300 uppercase font-medium">One-Time Fee</p>
+                      {matchedChallenge?.offer_active && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gold-400/20 text-gold-400 border border-gold-400/30 flex items-center gap-0.5">
+                          <Flame className="h-2.5 w-2.5" />
+                          {matchedChallenge.discount_badge || 'OFFER'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <p className="text-2xl font-extrabold font-mono text-white">
+                        {formatCurrency(finalChallengePrice)}
+                      </p>
+                      {originalChallengePrice && originalChallengePrice > finalChallengePrice && (
+                        <span className="text-sm line-through text-brand-400/80 font-mono">
+                          {formatCurrency(originalChallengePrice)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/80 border border-emerald-800/60 px-2.5 py-1 rounded-full">
                     Refundable Registration
