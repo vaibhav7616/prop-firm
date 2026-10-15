@@ -13,9 +13,6 @@ export interface MarketDataProvider {
 }
 
 const TV_SYMBOL_MAP: Record<string, { symbol: string; precision: number; defaultSpreadPips: number }> = {
-  'OANDA:XAUUSD': { symbol: 'XAUUSD', precision: 2, defaultSpreadPips: 0.15 },
-  'TVC:SILVER': { symbol: 'XAGUSD', precision: 3, defaultSpreadPips: 0.02 },
-  'NYMEX:CL1!': { symbol: 'USOIL', precision: 2, defaultSpreadPips: 0.03 },
   'OANDA:EURUSD': { symbol: 'EURUSD', precision: 5, defaultSpreadPips: 0.2 },
   'OANDA:GBPUSD': { symbol: 'GBPUSD', precision: 5, defaultSpreadPips: 0.3 },
   'OANDA:USDJPY': { symbol: 'USDJPY', precision: 3, defaultSpreadPips: 0.3 },
@@ -26,13 +23,17 @@ const TV_SYMBOL_MAP: Record<string, { symbol: string; precision: number; default
   'OANDA:EURGBP': { symbol: 'EURGBP', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:EURJPY': { symbol: 'EURJPY', precision: 3, defaultSpreadPips: 0.4 },
   'OANDA:GBPJPY': { symbol: 'GBPJPY', precision: 3, defaultSpreadPips: 0.5 },
-  'OANDA:US30USD': { symbol: 'US30', precision: 2, defaultSpreadPips: 1.2 },
-  'OANDA:DE30EUR': { symbol: 'GER40', precision: 2, defaultSpreadPips: 1.0 },
-  'NASDAQ:NDX': { symbol: 'NAS100', precision: 2, defaultSpreadPips: 1.0 },
-  'SP:SPX': { symbol: 'SPX500', precision: 2, defaultSpreadPips: 0.4 },
-  'BINANCE:BTCUSDT': { symbol: 'BTCUSD', precision: 2, defaultSpreadPips: 0.5 },
-  'BINANCE:ETHUSDT': { symbol: 'ETHUSD', precision: 2, defaultSpreadPips: 0.1 },
-  'BINANCE:SOLUSDT': { symbol: 'SOLUSD', precision: 2, defaultSpreadPips: 0.02 },
+  'OANDA:EURAUD': { symbol: 'EURAUD', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:EURCAD': { symbol: 'EURCAD', precision: 5, defaultSpreadPips: 0.5 },
+  'OANDA:EURCHF': { symbol: 'EURCHF', precision: 5, defaultSpreadPips: 0.5 },
+  'OANDA:GBPAUD': { symbol: 'GBPAUD', precision: 5, defaultSpreadPips: 0.7 },
+  'OANDA:GBPCAD': { symbol: 'GBPCAD', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:GBPCHF': { symbol: 'GBPCHF', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:AUDCAD': { symbol: 'AUDCAD', precision: 5, defaultSpreadPips: 0.5 },
+  'OANDA:AUDJPY': { symbol: 'AUDJPY', precision: 3, defaultSpreadPips: 0.5 },
+  'OANDA:CADJPY': { symbol: 'CADJPY', precision: 3, defaultSpreadPips: 0.5 },
+  'OANDA:CHFJPY': { symbol: 'CHFJPY', precision: 3, defaultSpreadPips: 0.5 },
+  'OANDA:NZDJPY': { symbol: 'NZDJPY', precision: 3, defaultSpreadPips: 0.6 },
 };
 
 class RealtimeLiveMarketDataProvider implements MarketDataProvider {
@@ -51,26 +52,20 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
     this.startHttpFallbackPoller();
   }
 
-  public checkIsMarketOpen(symbol: string): boolean {
-    const upper = symbol.toUpperCase();
-
-    // Crypto operates 24/7/365
-    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(upper)) {
-      return true;
-    }
-
+  public checkIsMarketOpen(_symbol: string): boolean {
     const now = new Date();
     const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday
     const hour = now.getUTCHours();
 
+    // Institutional Forex Market Hours: Sunday 22:00 UTC through Friday 22:00 UTC
     if (day === 6) {
-      return false;
+      return false; // Saturday closed
     }
     if (day === 0 && hour < 22) {
-      return false;
+      return false; // Sunday before 22:00 UTC closed
     }
     if (day === 5 && hour >= 22) {
-      return false;
+      return false; // Friday after 22:00 UTC closed
     }
 
     return true;
@@ -325,16 +320,17 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
       EURGBP: { price: 0.8564, precision: 5, spread: 0.00006 },
       EURJPY: { price: 185.56, precision: 3, spread: 0.003 },
       GBPJPY: { price: 216.66, precision: 3, spread: 0.003 },
-      XAUUSD: { price: 4518.80, precision: 2, spread: 0.10 },
-      XAGUSD: { price: 68.24, precision: 3, spread: 0.02 },
-      USOIL:  { price: 86.78, precision: 2, spread: 0.04 },
-      NAS100: { price: 29195.00, precision: 2, spread: 1.0 },
-      US30:   { price: 53028.00, precision: 2, spread: 1.5 },
-      SPX500: { price: 7672.00, precision: 2, spread: 0.4 },
-      GER40:  { price: 25997.00, precision: 2, spread: 1.0 },
-      BTCUSD: { price: 72480.00, precision: 2, spread: 1.50 },
-      ETHUSD: { price: 2333.00, precision: 2, spread: 0.20 },
-      SOLUSD: { price: 87.32, precision: 2, spread: 0.02 },
+      EURAUD: { price: 1.6405, precision: 5, spread: 0.00006 },
+      EURCAD: { price: 1.6095, precision: 5, spread: 0.00005 },
+      EURCHF: { price: 0.9345, precision: 5, spread: 0.00005 },
+      GBPAUD: { price: 1.9155, precision: 5, spread: 0.00007 },
+      GBPCAD: { price: 1.8790, precision: 5, spread: 0.00006 },
+      GBPCHF: { price: 1.0910, precision: 5, spread: 0.00006 },
+      AUDCAD: { price: 0.9810, precision: 5, spread: 0.00005 },
+      AUDJPY: { price: 113.10, precision: 3, spread: 0.005 },
+      CADJPY: { price: 115.28, precision: 3, spread: 0.005 },
+      CHFJPY: { price: 198.58, precision: 3, spread: 0.005 },
+      NZDJPY: { price: 94.42, precision: 3, spread: 0.006 },
     };
 
     const symbols = DBEngine.getDB().symbols;

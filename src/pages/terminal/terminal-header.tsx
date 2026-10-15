@@ -30,8 +30,8 @@ interface TerminalHeaderProps {
 }
 
 export function TerminalHeader({
-  account,
-  accounts,
+  account = null,
+  accounts = [],
   onSelectAccount,
   onTerminalLogout,
   onOpenLoginModal,

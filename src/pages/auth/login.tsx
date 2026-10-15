@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTarget = searchParams.get('redirect') || '/dashboard';
   const { refreshProfile, demoLogin, setUserSession } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +32,7 @@ export function LoginPage() {
         localStorage.setItem('auth_token', loginData.token);
         setUserSession(loginData.user);
         toast.success(`Welcome back, ${loginData.user.full_name || 'Trader'}!`);
-        navigate('/dashboard');
+        navigate(redirectTarget);
         return;
       }
 
@@ -40,7 +42,7 @@ export function LoginPage() {
         if (!error) {
           await refreshProfile();
           toast.success('Welcome back!');
-          navigate('/dashboard');
+          navigate(redirectTarget);
           return;
         }
       } catch {
@@ -55,7 +57,7 @@ export function LoginPage() {
         role: 'trader',
       });
       toast.success('Signed in successfully!');
-      navigate('/dashboard');
+      navigate(redirectTarget);
     } catch (err: any) {
       const msg = err?.message || 'Login failed.';
       if (msg.toLowerCase().includes('invalid')) {
@@ -63,7 +65,7 @@ export function LoginPage() {
       } else {
         demoLogin('trader');
         toast.success('Signed in successfully!');
-        navigate('/dashboard');
+        navigate(redirectTarget);
       }
     } finally {
       setLoading(false);

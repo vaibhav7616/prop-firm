@@ -730,7 +730,7 @@ export function DashboardObjectives() {
               </span>
             </div>
             <div className="flex items-center gap-2.5">
-              <Link to={`/dashboard/trading`}>
+              <Link to="/terminal">
                 <Button size="sm" className="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs gap-1.5 shadow-xs">
                   <LineChart className="h-3.5 w-3.5" />
                   Launch Web Terminal

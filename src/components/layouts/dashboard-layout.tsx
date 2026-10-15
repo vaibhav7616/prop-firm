@@ -30,7 +30,6 @@ import { cn } from '@/lib/utils';
 
 const TRADER_NAV = [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Web Terminal', to: '/terminal', icon: LineChart },
   { label: 'Trading Accounts', to: '/dashboard/accounts', icon: Wallet },
   { label: 'Trading Objectives', to: '/dashboard/objectives', icon: Target },
   { label: 'Trader Leaderboard', to: '/dashboard/leaderboard', icon: Trophy },
@@ -182,6 +181,17 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
 
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <ThemeToggle />
+            {variant === 'trader' && (
+              <Link to="/terminal" className="shrink-0">
+                <button
+                  type="button"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs sm:text-sm border border-slate-700/80 flex items-center gap-1.5 sm:gap-2 transition-all shadow-xs cursor-pointer active:scale-97"
+                >
+                  <LineChart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-400" />
+                  <span>Web Terminal</span>
+                </button>
+              </Link>
+            )}
             {/* Trigger Motion Buy Challenge / Get Funded Button */}
             <Link to={variant === 'admin' ? '/dashboard' : '/challenges'} className="shrink-0">
               <motion.button

@@ -72,6 +72,34 @@ export function CandlestickChart({
     price: number;
     candle: Candle | null;
   } | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  const isJpy = symbol.toUpperCase().endsWith('JPY');
+  const pricePrecision = isJpy ? 3 : 5;
+
+  // Responsive ResizeObserver for smooth 60fps canvas resizing
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      setContainerSize({
+        width: container.clientWidth,
+        height: container.clientHeight,
+      });
+    };
+
+    updateSize();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(updateSize);
+      ro.observe(container);
+      return () => ro.disconnect();
+    } else {
+      window.addEventListener('resize', updateSize);
+      return () => window.removeEventListener('resize', updateSize);
+    }
+  }, [isFullscreen]);
 
   // Load authoritative candles from backend on symbol/timeframe change
   const loadCandles = useCallback(async () => {
@@ -300,7 +328,9 @@ export function CandlestickChart({
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 9px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(activeQuote.ask.toFixed(activeQuote.price > 500 ? 2 : 5), width - paddingRight / 2, askY + 3);
+      const isJpy = symbol.toUpperCase().endsWith('JPY');
+      const askPrecision = isJpy ? 3 : 5;
+      ctx.fillText(Number(activeQuote.ask || 0).toFixed(askPrecision), width - paddingRight / 2, askY + 3);
 
       // BID line (Sell Execution - Rose)
       const bidY = priceToY(activeQuote.bid);
@@ -319,7 +349,8 @@ export function CandlestickChart({
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 9px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(activeQuote.bid.toFixed(activeQuote.price > 500 ? 2 : 5), width - paddingRight / 2, bidY + 3);
+      const bidPrecision = isJpy ? 3 : 5;
+      ctx.fillText(Number(activeQuote.bid || 0).toFixed(bidPrecision), width - paddingRight / 2, bidY + 3);
     }
 
     // 6. Interactive Crosshair Lines
@@ -343,13 +374,15 @@ export function CandlestickChart({
       ctx.setLineDash([]);
 
       // Crosshair Price tag
-      const crossPrice = yToPrice(crosshair.y);
+      const crossPrice = Number(yToPrice(crosshair.y)) || 0;
       ctx.fillStyle = '#1E293B';
       ctx.fillRect(width - paddingRight + 2, crosshair.y - 8, paddingRight - 4, 16);
       ctx.fillStyle = '#FFFFFF';
       ctx.font = '10px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(crossPrice.toFixed(activeQuote?.price && activeQuote.price > 500 ? 2 : 5), width - paddingRight / 2, crosshair.y + 4);
+      const isJpy = symbol.toUpperCase().endsWith('JPY');
+      const crossPrecision = isJpy ? 3 : 5;
+      ctx.fillText(crossPrice.toFixed(crossPrecision), width - paddingRight / 2, crosshair.y + 4);
     }
 
     // Time Axis Labels (Bottom)
@@ -360,12 +393,14 @@ export function CandlestickChart({
 
     for (let i = 0; i < candleCount; i += timeStep) {
       const c = candles[i];
+      if (!c) continue;
       const x = paddingLeft + (i + 0.5) * candleSlotW;
-      const d = new Date(c.time * 1000);
-      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const rawTime = c.time ? (c.time > 1e11 ? c.time : c.time * 1000) : Date.now();
+      const d = new Date(rawTime);
+      const timeStr = isNaN(d.getTime()) ? '-' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       ctx.fillText(timeStr, x, heightVal - 8);
     }
-  }, [candles, activeQuote, chartType, showIndicators, crosshair]);
+  }, [candles, activeQuote, chartType, showIndicators, crosshair, containerSize, isFullscreen]);
 
   // Handle Mouse Move for Crosshair
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -516,37 +551,41 @@ export function CandlestickChart({
           {crosshair?.candle ? (
             <>
               <span>
-                Time: <strong className="text-foreground">{new Date(crosshair.candle.time * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</strong>
+                Time: <strong className="text-foreground">{(() => {
+                  const raw = crosshair.candle?.time ? (crosshair.candle.time > 1e11 ? crosshair.candle.time : crosshair.candle.time * 1000) : Date.now();
+                  const d = new Date(raw);
+                  return isNaN(d.getTime()) ? '-' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                })()}</strong>
               </span>
               <span>
-                O: <strong className="text-foreground">${crosshair.candle.open}</strong>
+                O: <strong className="text-foreground">{Number(crosshair.candle?.open || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                H: <strong className="text-emerald-500">${crosshair.candle.high}</strong>
+                H: <strong className="text-emerald-500">{Number(crosshair.candle?.high || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                L: <strong className="text-rose-500">${crosshair.candle.low}</strong>
+                L: <strong className="text-rose-500">{Number(crosshair.candle?.low || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                C: <strong className="text-foreground">${crosshair.candle.close}</strong>
+                C: <strong className="text-foreground">{Number(crosshair.candle?.close || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                Vol: <strong className="text-foreground">{crosshair.candle.volume}</strong>
+                Vol: <strong className="text-foreground">{crosshair.candle?.volume || 0}</strong>
               </span>
             </>
           ) : (
             <>
               <span>
-                Live Price: <strong className="text-foreground">${activeQuote?.price || 0}</strong>
+                Live Price: <strong className="text-foreground">{Number(activeQuote?.price || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                24h High: <strong className="text-emerald-500">${activeQuote?.high || 0}</strong>
+                24h High: <strong className="text-emerald-500">{Number(activeQuote?.high || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span>
-                24h Low: <strong className="text-rose-500">${activeQuote?.low || 0}</strong>
+                24h Low: <strong className="text-rose-500">{Number(activeQuote?.low || 0).toFixed(pricePrecision)}</strong>
               </span>
               <span className={cn('font-bold', (activeQuote?.change24h || 0) >= 0 ? 'text-emerald-500' : 'text-rose-500')}>
-                {(activeQuote?.change24h || 0) >= 0 ? '+' : ''}{activeQuote?.change24h}%
+                {(activeQuote?.change24h || 0) >= 0 ? '+' : ''}{Number(activeQuote?.change24h || 0).toFixed(2)}%
               </span>
             </>
           )}

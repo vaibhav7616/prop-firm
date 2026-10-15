@@ -714,7 +714,7 @@ Investor Pass:    ${invPass}
                     {/* Bottom Action Bar */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/60">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link to="/dashboard/trading">
+                        <Link to="/terminal">
                           <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 shadow-sm">
                             <Terminal className="h-3.5 w-3.5" /> Launch Web Terminal
                           </Button>

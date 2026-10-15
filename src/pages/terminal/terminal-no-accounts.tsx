@@ -30,9 +30,9 @@ export function TerminalNoAccounts({
   const hasBreached = breachedAccounts.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-amber-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-brand-500/30">
       {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(217,119,6,0.12),rgba(255,255,255,0))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(12,145,234,0.15),rgba(255,255,255,0))]" />
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
 
       {/* Top Bar */}
@@ -44,7 +44,7 @@ export function TerminalNoAccounts({
           <ChevronLeft className="w-4 h-4" />
           <span>Back to Dashboard</span>
         </Link>
-        <div className="flex items-center gap-2 text-xs font-mono text-amber-400 bg-amber-950/40 border border-amber-800/40 px-3 py-1 rounded-full">
+        <div className="flex items-center gap-2 text-xs font-mono text-brand-400 bg-brand-950/40 border border-brand-800/40 px-3 py-1 rounded-full">
           <span>Terminal Access Gate</span>
         </div>
       </div>
@@ -53,7 +53,7 @@ export function TerminalNoAccounts({
       <div className="w-full max-w-xl bg-slate-900/90 border border-slate-800/90 rounded-2xl shadow-2xl backdrop-blur-xl p-8 z-10 relative">
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 shadow-inner">
               <Briefcase className="w-7 h-7" />
             </div>
           </div>
@@ -143,7 +143,7 @@ export function TerminalNoAccounts({
         <div className="space-y-3">
           <Link
             to="/challenges"
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 flex items-center justify-center gap-2 text-xs uppercase tracking-wider group"
+            className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 flex items-center justify-center gap-2 text-xs uppercase tracking-wider group"
           >
             <Sparkles className="w-4 h-4" />
             <span>Choose an Evaluation Challenge</span>

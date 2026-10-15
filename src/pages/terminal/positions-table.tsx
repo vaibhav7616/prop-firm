@@ -222,9 +222,9 @@ export function PositionsTable({
                           </span>
                         </td>
                         <td className="py-2 px-3 font-bold">{pos.lot_size} Lots</td>
-                        <td className="py-2 px-3">${pos.open_price}</td>
+                        <td className="py-2 px-3">{pos.open_price}</td>
                         <td className="py-2 px-3 text-muted-foreground">
-                          {pos.stop_loss ? `$${pos.stop_loss}` : '-'} / {pos.take_profit ? `$${pos.take_profit}` : '-'}
+                          {pos.stop_loss || '-'} / {pos.take_profit || '-'}
                         </td>
                         <td className="py-2 px-3 text-muted-foreground">-${pos.commission || 0}</td>
                         <td className="py-2 px-3">
@@ -300,8 +300,8 @@ export function PositionsTable({
                           </span>
                         </td>
                         <td className="py-2 px-3 font-bold">{pos.lot_size}L</td>
-                        <td className="py-2 px-3">${pos.open_price}</td>
-                        <td className="py-2 px-3">${pos.close_price || '-'}</td>
+                        <td className="py-2 px-3">{pos.open_price}</td>
+                        <td className="py-2 px-3">{pos.close_price || '-'}</td>
                         <td className="py-2 px-3 text-muted-foreground text-[10px]">{pos.close_reason || 'MANUAL'}</td>
                         <td className="py-2 px-3 font-bold">
                           <span className={isProfit ? 'text-emerald-500' : 'text-rose-500'}>

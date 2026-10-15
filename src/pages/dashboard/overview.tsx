@@ -267,7 +267,7 @@ export function DashboardOverview() {
           )}
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <Link to="/dashboard/trading">
+            <Link to="/terminal">
               <Button className="bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl px-3 sm:px-4 py-2 shadow-md shadow-brand-500/20 flex items-center gap-1.5 whitespace-nowrap">
                 <Play className="h-3.5 w-3.5 fill-white" /> Web Terminal
               </Button>
@@ -650,7 +650,7 @@ export function DashboardOverview() {
                 </p>
               </div>
 
-              <Link to="/dashboard/trading">
+              <Link to="/terminal">
                 <Button size="sm" variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
                   Open Web Terminal
                 </Button>

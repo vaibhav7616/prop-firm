@@ -34,12 +34,12 @@ export function TerminalLogin({
   const navigate = useNavigate();
 
   // Find preselected account if available
-  const defaultAccount = userAccounts.find(
-    (a) => a.id === prefilledAccountId || a.account_number === prefilledAccountId
-  ) || userAccounts[0];
+  const defaultAccount = Array.isArray(userAccounts)
+    ? userAccounts.find((a) => a && (a.id === prefilledAccountId || a.account_number === prefilledAccountId)) || userAccounts[0]
+    : null;
 
   const [loginId, setLoginId] = useState(
-    defaultAccount ? defaultAccount.account_number || defaultAccount.id : ''
+    defaultAccount ? String(defaultAccount.account_number || defaultAccount.id || '') : ''
   );
   const [password, setPassword] = useState('');
   const [server, setServer] = useState(defaultAccount?.server || 'FundedShift-Live');
@@ -101,9 +101,9 @@ export function TerminalLogin({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-amber-500/30">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-brand-500/30">
       {/* Background Gradients & Grid Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(217,119,6,0.15),rgba(255,255,255,0))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(12,145,234,0.18),rgba(255,255,255,0))]" />
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
 
       {/* Top Bar Navigation */}
@@ -136,39 +136,42 @@ export function TerminalLogin({
         </div>
 
         {/* Quick Account Switcher (if user has accounts) */}
-        {userAccounts.length > 0 && (
+        {Array.isArray(userAccounts) && userAccounts.filter(Boolean).length > 0 && (
           <div className="mb-5 bg-slate-950/60 border border-slate-800/70 rounded-xl p-3">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
               Select Your Trading Account
             </span>
             <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
-              {userAccounts.map((acc) => {
-                const isSelected = loginId === (acc.account_number || acc.id);
+              {userAccounts.filter(Boolean).map((acc, idx) => {
+                const accId = String(acc.id || `acc-${idx}`);
+                const accNum = String(acc.account_number || accId);
+                const isSelected = loginId === accNum || loginId === accId;
+                const sizeVal = Number(acc.current_balance || acc.account_size || 0);
                 return (
                   <button
-                    key={acc.id}
+                    key={accId}
                     type="button"
                     onClick={() => handleSelectPreloadedAccount(acc)}
                     className={`flex items-center justify-between p-2 rounded-lg text-left text-xs transition-all border ${
                       isSelected
-                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+                        ? 'bg-brand-500/10 border-brand-500/40 text-brand-300'
                         : 'bg-slate-900/50 border-slate-800/50 hover:bg-slate-800/60 text-slate-300'
                     }`}
                   >
                     <div>
                       <div className="font-mono font-bold text-white flex items-center gap-1.5">
-                        <span>#{acc.account_number || acc.id}</span>
+                        <span>#{accNum}</span>
                         {acc.is_funded && (
-                          <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded font-sans uppercase">
+                          <span className="text-[9px] bg-brand-500/20 text-brand-300 px-1.5 py-0.2 rounded font-sans uppercase">
                             Funded
                           </span>
                         )}
                       </div>
                       <span className="text-[10px] text-slate-400">
-                        ${Number(acc.current_balance || acc.account_size).toLocaleString()} • {acc.phase ? `Phase ${acc.phase}` : 'Standard'}
+                        ${sizeVal.toLocaleString()} • {acc.phase ? `Phase ${acc.phase}` : 'Standard'}
                       </span>
                     </div>
-                    {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+                    {isSelected && <CheckCircle2 className="w-4 h-4 text-brand-400 flex-shrink-0" />}
                   </button>
                 );
               })}
@@ -196,7 +199,7 @@ export function TerminalLogin({
               <select
                 value={server}
                 onChange={(e) => setServer(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white appearance-none cursor-pointer"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white appearance-none cursor-pointer"
               >
                 <option value="FundedShift-Live">FundedShift-Live (Ultra Low Latency)</option>
                 <option value="FundedShift-Evaluation">FundedShift-Evaluation (Simulated Bridge)</option>
@@ -217,7 +220,7 @@ export function TerminalLogin({
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
                 placeholder="e.g. 8820491 or acc-101"
-                className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 font-mono"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-500 font-mono"
                 required
               />
             </div>
@@ -240,7 +243,7 @@ export function TerminalLogin({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter trading account password"
-                className="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/50 rounded-xl pl-9 pr-10 py-2.5 text-xs text-white placeholder-slate-500 font-mono"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-10 py-2.5 text-xs text-white placeholder-slate-500 font-mono"
                 required
               />
               <button
@@ -257,11 +260,11 @@ export function TerminalLogin({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 flex items-center justify-center gap-2 text-xs uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 <span>Authenticating Gateway...</span>
               </>
             ) : (
@@ -276,10 +279,10 @@ export function TerminalLogin({
         {/* Security / Help Info */}
         <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
           <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-500/70" />
+            <ShieldCheck className="w-3.5 h-3.5 text-brand-500/70" />
             <span>256-bit Encrypted Session</span>
           </div>
-          <Link to="/dashboard/accounts" className="text-amber-400/80 hover:text-amber-300 underline underline-offset-2">
+          <Link to="/dashboard/accounts" className="text-brand-400/80 hover:text-brand-300 underline underline-offset-2">
             Forgot Password?
           </Link>
         </div>

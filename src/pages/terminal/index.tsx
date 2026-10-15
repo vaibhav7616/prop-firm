@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LineChart, Layers, Zap, Shield, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -10,11 +11,14 @@ import {
 import type { MarketQuote } from '@/server/types';
 import { TerminalHeader } from './terminal-header';
 import { MarketWatch } from './market-watch';
-import { CandlestickChart } from './candlestick-chart';
+import { TradingViewChart } from './tradingview-chart';
 import { OrderPanel } from './order-panel';
 import { PositionsTable } from './positions-table';
 import { TerminalLogin } from './terminal-login';
 import { TerminalNoAccounts } from './terminal-no-accounts';
+import { cn } from '@/lib/utils';
+
+type MobileTab = 'CHART' | 'WATCH' | 'TRADE' | 'POSITIONS';
 
 export default function WebTerminalPage() {
   const { user, loading: authLoading } = useAuth();
@@ -33,11 +37,12 @@ export default function WebTerminalPage() {
   const [breachedAccounts, setBreachedAccounts] = useState<any[]>([]);
   const [positions, setPositions] = useState<any[]>([]);
 
-  // Market data & UI state
+  // Market data & UI state (Forex default EURUSD)
   const [quotes, setQuotes] = useState<MarketQuote[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('XAUUSD');
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('EURUSD');
   const [timeframe, setTimeframe] = useState<string>('15m');
   const [sseConnected, setSseConnected] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>('CHART');
 
   // SSE event source ref
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -55,7 +60,7 @@ export default function WebTerminalPage() {
         setAuthScenario('A');
       } else {
         setTerminalAuthenticated(false);
-        if (res.reason === 'NO_ELIGIBLE_ACCOUNTS') {
+        if (res.reason === 'NO_ELIGIBLE_ACCOUNTS' || res.reason === 'NO_ACCOUNTS') {
           setAuthScenario('B');
           if (Array.isArray(res.pending_orders)) setPendingOrders(res.pending_orders);
           if (Array.isArray(res.accounts)) {
@@ -135,19 +140,19 @@ export default function WebTerminalPage() {
     };
   }, [terminalAuthenticated]);
 
-  // Find active quote for selected symbol
+  // Find active quote for selected symbol (Default Forex values)
   const activeQuote = useMemo(() => {
     const found = quotes.find((q) => q.symbol === selectedSymbol);
     if (found) return found;
     return {
       symbol: selectedSymbol,
-      price: 2650.5,
-      bid: 2650.4,
-      ask: 2650.6,
-      high: 2665.0,
-      low: 2640.0,
-      change24h: 0.45,
-      spread: 0.2,
+      price: 1.08500,
+      bid: 1.08495,
+      ask: 1.08505,
+      high: 1.08900,
+      low: 1.08200,
+      change24h: 0.15,
+      spread: 0.1,
       isMarketOpen: true,
       timestamp: new Date().toISOString(),
     };
@@ -168,7 +173,7 @@ export default function WebTerminalPage() {
       if (p.status !== 'OPEN') continue;
       const q = quotesMap.get(p.symbol);
       const currentPrice = q ? (p.type === 'BUY' ? q.bid : q.ask) : p.entry_price;
-      const contractSize = p.contract_size || 100;
+      const contractSize = p.contract_size || 100000;
       const diff = p.type === 'BUY' ? currentPrice - p.entry_price : p.entry_price - currentPrice;
       total += diff * p.lot_size * contractSize;
     }
@@ -176,9 +181,9 @@ export default function WebTerminalPage() {
   }, [positions, quotesMap]);
 
   // Refresh active account & positions from backend
-  const refreshTerminalState = useCallback(async () => {
+  const refreshTerminalState = useCallback(async (targetAccountId?: string) => {
     try {
-      const res = await fetchTerminalSessionApi();
+      const res = await fetchTerminalSessionApi(targetAccountId);
       if (res.authenticated && res.account) {
         setAccount(res.account);
         setPositions(res.active_positions || []);
@@ -192,13 +197,15 @@ export default function WebTerminalPage() {
   // Switch active account (Scenario A multiple accounts)
   const handleSelectAccount = async (accountId: string) => {
     try {
-      const target = accounts.find((a) => a.id === accountId);
-      if (!target) return;
-
-      // In auto-mode, switch account
-      setAccount(target);
-      toast.success(`Switched to account #${target.account_number || target.id}`);
-      refreshTerminalState();
+      const res = await fetchTerminalSessionApi(accountId);
+      if (res.authenticated && res.account) {
+        setAccount(res.account);
+        setPositions(res.active_positions || []);
+        if (Array.isArray(res.accounts)) setAccounts(res.accounts);
+        toast.success(`Switched to account #${res.account.account_number || res.account.id}`);
+      } else {
+        toast.error('Failed to switch account.');
+      }
     } catch (err) {
       toast.error('Failed to switch account.');
     }
@@ -236,12 +243,16 @@ export default function WebTerminalPage() {
     }
   };
 
+  const isJpy = selectedSymbol.toUpperCase().endsWith('JPY');
+  const priceDecimals = isJpy ? 3 : 5;
+  const openCount = positions.filter((p) => p.status === 'OPEN').length;
+
   // Initial loading spinner
   if (authLoading || initLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-100">
         <div className="relative">
-          <div className="w-12 h-12 rounded-full border-2 border-amber-500/20 border-t-amber-500 animate-spin" />
+          <div className="w-12 h-12 rounded-full border-2 border-brand-500/20 border-t-brand-500 animate-spin" />
         </div>
         <p className="text-xs text-slate-400 mt-4 font-mono tracking-wider uppercase">
           Initializing Institutional Gateway...
@@ -251,7 +262,7 @@ export default function WebTerminalPage() {
   }
 
   // Scenario B: User is logged in to website but has no eligible trading account
-  if (authScenario === 'B' && !terminalAuthenticated) {
+  if (authScenario === 'B' || (!terminalAuthenticated && authScenario === 'B')) {
     return (
       <TerminalNoAccounts
         pendingOrders={pendingOrders}
@@ -261,8 +272,8 @@ export default function WebTerminalPage() {
     );
   }
 
-  // Scenario D: User has account but must authenticate credentials
-  if (authScenario === 'D' && !terminalAuthenticated) {
+  // Scenario D: User must authenticate credentials or has logged out
+  if (!terminalAuthenticated || !account || authScenario === 'D') {
     return (
       <TerminalLogin
         userAccounts={accounts}
@@ -285,9 +296,154 @@ export default function WebTerminalPage() {
         floatingPnL={floatingPnL}
       />
 
-      {/* 2. Main Terminal Workspace Body */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Column: Market Watch / Instruments List */}
+      {/* 2. Responsive Mobile Tab Navigation Strip (< 1024px) */}
+      <div className="lg:hidden flex items-center justify-around bg-slate-900 border-b border-slate-800 px-2 py-1.5 shrink-0 z-20">
+        <button
+          type="button"
+          onClick={() => setMobileTab('CHART')}
+          className={cn(
+            'flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+            mobileTab === 'CHART'
+              ? 'bg-brand-500 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          )}
+        >
+          <LineChart className="h-3.5 w-3.5" />
+          <span>Chart</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('WATCH')}
+          className={cn(
+            'flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+            mobileTab === 'WATCH'
+              ? 'bg-brand-500 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          )}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>Forex</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('TRADE')}
+          className={cn(
+            'flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+            mobileTab === 'TRADE'
+              ? 'bg-brand-500 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          )}
+        >
+          <Zap className="h-3.5 w-3.5" />
+          <span>Trade</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMobileTab('POSITIONS')}
+          className={cn(
+            'flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+            mobileTab === 'POSITIONS'
+              ? 'bg-brand-500 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white'
+          )}
+        >
+          <Shield className="h-3.5 w-3.5" />
+          <span>Trades</span>
+          {openCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-[10px] text-slate-950 font-bold font-mono">
+              {openCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* 3. Mobile View Container (< 1024px) */}
+      <div className="lg:hidden flex-1 flex flex-col overflow-hidden min-h-0 bg-slate-950">
+        {mobileTab === 'CHART' && (
+          <div className="flex-1 flex flex-col min-h-0 relative">
+            <div className="flex-1 min-h-0">
+              <TradingViewChart
+                symbol={selectedSymbol}
+                activeQuote={activeQuote}
+                timeframe={timeframe}
+                onTimeframeChange={(tf) => setTimeframe(tf)}
+                className="w-full h-full rounded-none border-none"
+              />
+            </div>
+            {/* Quick Trading Floating Dock for Mobile Chart View */}
+            <div className="bg-slate-900 border-t border-slate-800 p-2 flex items-center justify-between gap-2 shrink-0">
+              <div className="font-mono text-xs">
+                <span className="font-bold text-white block">{selectedSymbol}</span>
+                <span className="text-[10px] text-slate-400">
+                  Spread: {activeQuote.spread || '0.2'} pips
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('TRADE')}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 font-mono font-bold text-xs flex items-center gap-1"
+                >
+                  <ArrowDownRight className="h-3.5 w-3.5" />
+                  <span>{activeQuote.bid ? activeQuote.bid.toFixed(priceDecimals) : '0.00000'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileTab('TRADE')}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-mono font-bold text-xs flex items-center gap-1"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  <span>{activeQuote.ask ? activeQuote.ask.toFixed(priceDecimals) : '0.00000'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mobileTab === 'WATCH' && (
+          <div className="flex-1 overflow-hidden p-2 bg-slate-900">
+            <MarketWatch
+              quotes={quotes}
+              selectedSymbol={selectedSymbol}
+              onSelectSymbol={(sym) => {
+                setSelectedSymbol(sym);
+                setMobileTab('CHART');
+              }}
+              className="h-full border-none rounded-xl"
+            />
+          </div>
+        )}
+
+        {mobileTab === 'TRADE' && (
+          <div className="flex-1 overflow-y-auto p-3 bg-slate-950">
+            <OrderPanel
+              account={account}
+              selectedSymbol={selectedSymbol}
+              activeQuote={activeQuote}
+              onOrderExecuted={refreshTerminalState}
+              className="max-w-md mx-auto"
+            />
+          </div>
+        )}
+
+        {mobileTab === 'POSITIONS' && (
+          <div className="flex-1 overflow-hidden p-2 bg-slate-950">
+            <PositionsTable
+              account={account}
+              positions={positions}
+              onRefresh={refreshTerminalState}
+              className="h-full rounded-xl"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 4. Desktop Main Terminal Workspace Body (>= 1024px) */}
+      <div className="hidden lg:flex flex-1 overflow-hidden min-h-0">
+        {/* Left Column: Market Watch / Forex Instruments List */}
         <div className="w-80 flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-900/90 overflow-hidden">
           <MarketWatch
             quotes={quotes}
@@ -297,11 +453,11 @@ export default function WebTerminalPage() {
           />
         </div>
 
-        {/* Center Column: High-Performance Canvas Candlestick Chart & Bottom Orders / Positions Table */}
+        {/* Center Column: High-Performance Canvas Candlestick Chart & Bottom Positions Table */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-slate-950">
-          {/* Top Half: Candlestick Chart */}
+          {/* Top Half: Official Real-Time TradingView Forex Chart */}
           <div className="flex-1 min-h-0 relative border-b border-slate-800/80">
-            <CandlestickChart
+            <TradingViewChart
               symbol={selectedSymbol}
               activeQuote={activeQuote}
               timeframe={timeframe}

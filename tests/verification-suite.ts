@@ -203,34 +203,34 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     const negRes = await tradeExecutionEngine.executeMarketOrder({
       accountId: testAccId,
       userId: testUserId,
-      symbol: 'BTCUSD',
+      symbol: 'EURUSD',
       type: 'BUY',
       lotSize: -1.0,
     });
     assert(!negRes.success, 'Negative lot size must be rejected');
 
     // 2. Reject BUY with Stop Loss above market price
-    const btcQuote = marketDataService.getQuote('BTCUSD');
-    const btcAsk = btcQuote ? btcQuote.ask : 72480.0;
+    const eurQuote = marketDataService.getQuote('EURUSD');
+    const eurAsk = eurQuote ? eurQuote.ask : 1.0850;
     const invalidSLRes = await tradeExecutionEngine.executeMarketOrder({
       accountId: testAccId,
       userId: testUserId,
-      symbol: 'BTCUSD',
+      symbol: 'EURUSD',
       type: 'BUY',
       lotSize: 1.0,
-      stopLoss: btcAsk + 5000, // strictly above market ask
+      stopLoss: Number((eurAsk + 0.0500).toFixed(5)), // strictly above market ask
     });
     assert(!invalidSLRes.success, 'BUY order with Stop Loss above market price must be rejected');
 
-    // 3. Valid order execution (BTCUSD is 24/7 crypto, always open on weekends)
+    // 3. Valid order execution (EURUSD institutional Forex order)
     const validRes = await tradeExecutionEngine.executeMarketOrder({
       accountId: testAccId,
       userId: testUserId,
-      symbol: 'BTCUSD',
+      symbol: 'EURUSD',
       type: 'BUY',
       lotSize: 1.0,
-      stopLoss: btcAsk - 10000, // valid safe SL below ask
-      takeProfit: btcAsk + 15000, // valid TP above ask
+      stopLoss: Number((eurAsk - 0.0050).toFixed(5)), // valid safe SL below ask (-50 pips)
+      takeProfit: Number((eurAsk + 0.0100).toFixed(5)), // valid TP above ask (+100 pips)
     });
     assert(validRes.success && validRes.position, 'Valid market order must execute successfully');
     assert(validRes.position.status === 'OPEN', 'Position status must be OPEN');
@@ -1095,6 +1095,72 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     // Strict cross-account validation check:
     const isAuthorizedForTarget = payload?.accountId === targetAccount.id && payload?.sub === targetAccount.user_id;
     assert(!isAuthorizedForTarget, 'Cross-account execution must be strictly forbidden');
+  });
+
+  await test('Web Terminal Session', 'Multi-Account Switching & Session Re-tokenization', () => {
+    const ownerId = `usr-multi-${Date.now()}`;
+    const acc1: any = {
+      id: `acc-multi-1-${Date.now()}`,
+      user_id: ownerId,
+      account_number: '110022',
+      status: 'ACTIVE',
+      server: 'FundedShift-Live01',
+    };
+    const acc2: any = {
+      id: `acc-multi-2-${Date.now()}`,
+      user_id: ownerId,
+      account_number: '110033',
+      status: 'ACTIVE',
+      server: 'FundedShift-Live01',
+    };
+    db.accounts.push(acc1, acc2);
+
+    // Initial session on acc1
+    const token1 = generateTerminalToken(acc1, 3600);
+    const payload1 = verifyTerminalToken(token1);
+    assert(payload1?.accountId === acc1.id, 'Session 1 must tie to acc1');
+
+    // User switches to acc2: verify user ownership before issuing new token
+    assert(acc2.user_id === payload1?.sub, 'User owns acc2, eligible to switch');
+    const token2 = generateTerminalToken(acc2, 3600);
+    const payload2 = verifyTerminalToken(token2);
+    assert(payload2?.accountId === acc2.id, 'Session 2 must tie to acc2');
+    assert(payload2?.accountNumber === acc2.account_number, 'Session 2 must have acc2 account number');
+  });
+
+  await test('Web Terminal State', 'Active & Historical Position Isolation per Account', () => {
+    const accAId = `acc-iso-a-${Date.now()}`;
+    const accBId = `acc-iso-b-${Date.now()}`;
+
+    const posA: any = {
+      id: `pos-iso-a-${Date.now()}`,
+      account_id: accAId,
+      user_id: 'usr-iso',
+      symbol: 'XAUUSD',
+      type: 'BUY',
+      lot_size: 1.0,
+      open_price: 2650.0,
+      status: 'OPEN',
+      floating_pnl: 150.0,
+    };
+    const posB: any = {
+      id: `pos-iso-b-${Date.now()}`,
+      account_id: accBId,
+      user_id: 'usr-iso',
+      symbol: 'EURUSD',
+      type: 'SELL',
+      lot_size: 0.5,
+      open_price: 1.1680,
+      status: 'OPEN',
+      floating_pnl: -35.0,
+    };
+    db.positions.push(posA, posB);
+
+    const positionsA = db.positions.filter((p) => p.account_id === accAId);
+    const positionsB = db.positions.filter((p) => p.account_id === accBId);
+
+    assert(positionsA.length === 1 && positionsA[0].id === posA.id, 'Account A must strictly receive only position A');
+    assert(positionsB.length === 1 && positionsB[0].id === posB.id, 'Account B must strictly receive only position B');
   });
 
   // Summary

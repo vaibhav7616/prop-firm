@@ -192,6 +192,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setDemoUser(null);
     localStorage.removeItem('demo_user_session');
     localStorage.removeItem('demo_user_profile');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('terminal_token');
   };
 
   const refreshProfile = async () => {
