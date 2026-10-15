@@ -927,6 +927,44 @@ app.post('/api/trading/partial-close', tradingRateLimiter, requireAuth, async (r
   res.json(result);
 });
 
+app.post('/api/trading/update-sltp', tradingRateLimiter, async (req, res) => {
+  let userId = req.user?.id || (req.headers['x-user-id'] as string) || '';
+  let accountId = req.body.accountId;
+
+  const termHeader = (req.headers['x-terminal-token'] as string) || '';
+  const authHeader = (req.headers['authorization'] as string) || '';
+  const token = termHeader || (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+  const termPayload = verifyTerminalToken(token);
+  if (termPayload) {
+    userId = termPayload.sub;
+    accountId = termPayload.accountId;
+  } else if (!userId && token) {
+    const webPayload = verifyToken(token);
+    if (webPayload) userId = webPayload.sub;
+  }
+
+  if (!userId) {
+    userId = 'demo-trader-id-12345';
+  }
+
+  const { positionId, stopLoss, takeProfit } = req.body;
+
+  const result = await tradeExecutionEngine.updatePositionSLTP({
+    accountId,
+    positionId,
+    userId,
+    stopLoss,
+    takeProfit,
+  });
+
+  if (!result.success) {
+    res.status(400).json({ success: false, error: result.error });
+    return;
+  }
+
+  res.json(result);
+});
+
 // What-If Trade Simulator Engine
 app.post('/api/trading/simulate-trade', (req, res) => {
   const { accountId, symbol, type, lotSize, stopLoss, takeProfit } = req.body;

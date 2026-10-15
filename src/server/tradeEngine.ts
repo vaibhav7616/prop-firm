@@ -407,6 +407,41 @@ export class TradeExecutionService implements TradingProvider {
 
     return { success: true, closedLotSize: lotsToClose, remainingPosition: position };
   }
+
+  /**
+   * Modifies Stop Loss and Take Profit on an active open position
+   */
+  public async updatePositionSLTP(params: {
+    positionId: string;
+    accountId: string;
+    userId: string;
+    stopLoss?: number | null;
+    takeProfit?: number | null;
+  }): Promise<{ success: boolean; position?: PositionEntity; error?: string }> {
+    const db = DBEngine.getDB();
+    const position = db.positions.find(
+      (p) => p.id === params.positionId && p.account_id === params.accountId && p.user_id === params.userId
+    );
+
+    if (!position || position.status !== 'OPEN') {
+      return { success: false, error: 'Open position not found or already closed.' };
+    }
+
+    if (params.stopLoss !== undefined) {
+      position.stop_loss = params.stopLoss === null || isNaN(Number(params.stopLoss)) || Number(params.stopLoss) <= 0
+        ? undefined
+        : Number(params.stopLoss);
+    }
+
+    if (params.takeProfit !== undefined) {
+      position.take_profit = params.takeProfit === null || isNaN(Number(params.takeProfit)) || Number(params.takeProfit) <= 0
+        ? undefined
+        : Number(params.takeProfit);
+    }
+
+    DBEngine.saveDB();
+    return { success: true, position };
+  }
 }
 
 export const tradeExecutionEngine = new TradeExecutionService();

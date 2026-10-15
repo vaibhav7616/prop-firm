@@ -36,6 +36,30 @@ const SYMBOL_METADATA: Record<string, { name: string; category: 'MAJORS' | 'CROS
 
 type CategoryFilter = 'ALL' | 'MAJORS' | 'CROSSES' | 'MINORS';
 
+const DEFAULT_FOREX_QUOTES: MarketQuote[] = [
+  { symbol: 'EURUSD', price: 1.16730, bid: 1.16720, ask: 1.16740, high: 1.1710, low: 1.1640, change24h: 0.18, spread: 0.2, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPUSD', price: 1.36290, bid: 1.36270, ask: 1.36310, high: 1.3680, low: 1.3590, change24h: 0.25, spread: 0.4, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDJPY', price: 158.960, bid: 158.945, ask: 158.975, high: 159.40, low: 158.50, change24h: -0.12, spread: 0.3, isMarketOpen: true, timestamp: '' },
+  { symbol: 'AUDUSD', price: 0.71140, bid: 0.71120, ask: 0.71160, high: 0.7150, low: 0.7080, change24h: 0.32, spread: 0.4, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDCAD', price: 1.37890, bid: 1.37870, ask: 1.37910, high: 1.3820, low: 1.3750, change24h: -0.08, spread: 0.4, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDCHF', price: 0.80050, bid: 0.80030, ask: 0.80070, high: 0.8040, low: 0.7980, change24h: -0.15, spread: 0.4, isMarketOpen: true, timestamp: '' },
+  { symbol: 'NZDUSD', price: 0.59400, bid: 0.59375, ask: 0.59425, high: 0.5980, low: 0.5910, change24h: 0.22, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURGBP', price: 0.85640, bid: 0.85615, ask: 0.85665, high: 0.8590, low: 0.8540, change24h: -0.06, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURJPY', price: 185.560, bid: 185.540, ask: 185.580, high: 186.10, low: 185.10, change24h: 0.15, spread: 0.4, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPJPY', price: 216.660, bid: 216.635, ask: 216.685, high: 217.30, low: 216.00, change24h: 0.28, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURAUD', price: 1.64050, bid: 1.64020, ask: 1.64080, high: 1.6460, low: 1.6370, change24h: -0.14, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURCAD', price: 1.60950, bid: 1.60925, ask: 1.60975, high: 1.6140, low: 1.6050, change24h: 0.09, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURCHF', price: 0.93450, bid: 0.93425, ask: 0.93475, high: 0.9380, low: 0.9310, change24h: 0.04, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPAUD', price: 1.91550, bid: 1.91515, ask: 1.91585, high: 1.9220, low: 1.9100, change24h: 0.11, spread: 0.7, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPCAD', price: 1.87900, bid: 1.87870, ask: 1.87930, high: 1.8840, low: 1.8740, change24h: 0.18, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPCHF', price: 1.09100, bid: 1.09070, ask: 1.09130, high: 1.0960, low: 1.0870, change24h: 0.10, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'AUDCAD', price: 0.98100, bid: 0.98075, ask: 0.98125, high: 0.9850, low: 0.9780, change24h: 0.05, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'AUDJPY', price: 113.100, bid: 113.075, ask: 113.125, high: 113.60, low: 112.70, change24h: 0.19, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'CADJPY', price: 115.280, bid: 115.255, ask: 115.305, high: 115.80, low: 114.90, change24h: 0.21, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'CHFJPY', price: 198.580, bid: 198.555, ask: 198.605, high: 199.20, low: 198.10, change24h: 0.26, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'NZDJPY', price: 94.420, bid: 94.390, ask: 94.450, high: 94.90, low: 94.00, change24h: 0.12, spread: 0.6, isMarketOpen: true, timestamp: '' },
+];
+
 export function MarketWatch({
   quotes,
   selectedSymbol,
@@ -47,13 +71,25 @@ export function MarketWatch({
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
   const [tickFlash, setTickFlash] = useState<Record<string, 'up' | 'down'>>({});
 
+  // Merge incoming quotes with base quotes
+  const mergedQuotes = useMemo(() => {
+    const map = new Map<string, MarketQuote>();
+    DEFAULT_FOREX_QUOTES.forEach((q) => map.set(q.symbol, q));
+    quotes.forEach((q) => {
+      if (SYMBOL_METADATA[q.symbol]) {
+        map.set(q.symbol, q);
+      }
+    });
+    return Array.from(map.values());
+  }, [quotes]);
+
   // Detect price ticks to show micro-flashes
   useEffect(() => {
     const nextPrev = { ...prevPrices };
     const nextFlash: Record<string, 'up' | 'down'> = {};
     let hasChanges = false;
 
-    quotes.forEach((q) => {
+    mergedQuotes.forEach((q) => {
       const old = prevPrices[q.symbol];
       if (old !== undefined && old !== q.bid) {
         nextFlash[q.symbol] = q.bid > old ? 'up' : 'down';
@@ -70,10 +106,10 @@ export function MarketWatch({
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [quotes]);
+  }, [mergedQuotes]);
 
   const filteredQuotes = useMemo(() => {
-    return quotes.filter((q) => {
+    return mergedQuotes.filter((q) => {
       const meta = SYMBOL_METADATA[q.symbol];
       if (!meta) return false; // Exclude commodities/crypto/indices - Pure Forex prop firm pairs only
 

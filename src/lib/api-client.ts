@@ -128,6 +128,61 @@ export async function closePositionApi(params: {
   }
 }
 
+export async function partialClosePositionApi(params: {
+  userId: string;
+  accountId: string;
+  positionId: string;
+  lotsToClose: number;
+}) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-user-id': params.userId,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (termToken) headers['x-terminal-token'] = termToken;
+
+    const res = await fetch('/api/trading/partial-close', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Partial close failed.' };
+  }
+}
+
+export async function updatePositionSLTPApi(params: {
+  userId: string;
+  accountId: string;
+  positionId: string;
+  stopLoss?: number | null;
+  takeProfit?: number | null;
+}) {
+  try {
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-user-id': params.userId,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (termToken) headers['x-terminal-token'] = termToken;
+
+    const res = await fetch('/api/trading/update-sltp', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(params),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, error: err.message || 'SL/TP update failed.' };
+  }
+}
+
 export async function fetchAccountPositionsApi(accountId: string) {
   try {
     const res = await fetch(`/api/accounts/${accountId}/positions`);

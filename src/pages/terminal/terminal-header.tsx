@@ -14,6 +14,7 @@ import {
   Sliders,
   DollarSign,
   Briefcase,
+  Wifi,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -72,61 +73,61 @@ export function TerminalHeader({
   const overallLossPct = ((currentOverallLoss / maxOverallAllowed) * 100).toFixed(1);
 
   return (
-    <header className="bg-card/95 backdrop-blur-md border-b border-slate-300 dark:border-slate-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none sticky top-0 z-40 shadow-xs">
-      {/* Left: Brand Logo & Navigation Back */}
+    <header className="bg-slate-900 border-b border-slate-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none sticky top-0 z-40 text-slate-100 shadow-md">
+      {/* 1. Left: Brand Logo & Back to Dashboard */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <Link
           to="/dashboard"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground font-semibold text-xs transition-all shadow-xs"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-950/60 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs transition-all shadow-xs"
           title="Return to Main Dashboard"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="hidden md:inline">Dashboard</span>
         </Link>
 
-        <div className="flex items-center gap-2 pl-1 border-l border-border/70">
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
           <Logo size="sm" />
-          <span className="hidden xl:inline text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse mr-1" />
-            Direct ECN Matcher
-          </span>
+          <div className="hidden xl:flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>24ms · London LD4 · Direct Forex ECN</span>
+          </div>
         </div>
       </div>
 
-      {/* Center: Account Selector Dropdown & Core Metrics */}
-      <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center">
+      {/* 2. Center: Account Selector Dropdown & Live Account Balance Metrics */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
         {/* Account Selector Pill */}
         <div ref={dropdownRef} className="relative">
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-brand-500/30 bg-brand-500/5 hover:bg-brand-500/10 text-foreground font-medium transition-all shadow-xs"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-brand-500/40 bg-slate-950 hover:bg-slate-800/80 text-white font-medium transition-all shadow-xs cursor-pointer"
           >
-            <div className="h-5 w-5 rounded-md bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-[10px]">
+            <div className="h-5 w-5 rounded-md bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-[10px]">
               #
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-mono font-bold text-xs">
+                <span className="font-mono font-bold text-xs text-white">
                   #{account?.account_number || account?.login || 'Active'}
                 </span>
-                <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   {account?.status === 'FUNDED' ? 'Funded' : `Phase ${account?.phase || 1}`}
                 </span>
               </div>
-              <p className="text-[10px] text-muted-foreground truncate max-w-[130px] sm:max-w-[180px] leading-tight mt-0.5">
+              <p className="text-[10px] text-slate-400 truncate max-w-[130px] sm:max-w-[170px] leading-tight mt-0.5">
                 {account?.plan_name || `$${(account?.account_size || 100000).toLocaleString()} Challenge`}
               </p>
             </div>
-            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform', dropdownOpen && 'rotate-180')} />
+            <ChevronDown className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', dropdownOpen && 'rotate-180')} />
           </button>
 
           {/* Account Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-card border border-slate-300 dark:border-slate-800 rounded-2xl shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-2.5 py-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between border-b border-border/60 mb-1">
+            <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2.5 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between border-b border-slate-800 mb-1">
                 <span>Select Trading Account</span>
-                <span className="font-mono text-[10px]">{accounts.length} Available</span>
+                <span className="font-mono text-[10px] text-brand-400">{accounts.length} Available</span>
               </div>
 
               <div className="max-h-60 overflow-y-auto space-y-1">
@@ -141,26 +142,26 @@ export function TerminalHeader({
                         setDropdownOpen(false);
                       }}
                       className={cn(
-                        'w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between',
+                        'w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer',
                         isSelected
-                          ? 'bg-brand-500/10 border-brand-500/40 text-foreground font-semibold shadow-xs'
-                          : 'border-transparent hover:bg-secondary/60 text-muted-foreground'
+                          ? 'bg-brand-500/15 border-brand-500/40 text-white font-semibold shadow-xs'
+                          : 'border-transparent hover:bg-slate-800 text-slate-400 hover:text-white'
                       )}
                     >
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-xs text-foreground">#{acc.account_number}</span>
-                          <span className="text-[9px] uppercase px-1 rounded bg-secondary font-bold">
+                          <span className="font-mono font-bold text-xs text-white">#{acc.account_number}</span>
+                          <span className="text-[9px] uppercase px-1 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
                             {acc.status}
                           </span>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{acc.plan_name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{acc.plan_name}</p>
                       </div>
                       <div className="text-right">
-                        <span className="font-mono font-bold text-xs text-foreground block">
+                        <span className="font-mono font-bold text-xs text-white block">
                           ${Number(acc.current_balance || acc.account_size).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </span>
-                        <span className="text-[10px] text-muted-foreground font-mono">
+                        <span className="text-[10px] text-slate-400 font-mono">
                           Eq: ${Number(acc.current_equity || acc.current_balance || acc.account_size).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
@@ -170,16 +171,16 @@ export function TerminalHeader({
               </div>
 
               {onOpenLoginModal && (
-                <div className="pt-1.5 border-t border-border/60">
+                <div className="pt-1.5 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={() => {
                       setDropdownOpen(false);
                       onOpenLoginModal();
                     }}
-                    className="w-full text-center py-2 px-3 rounded-xl bg-secondary/80 hover:bg-secondary text-foreground text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                    className="w-full text-center py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Sliders className="h-3.5 w-3.5 text-brand-500" />
+                    <Sliders className="h-3.5 w-3.5 text-brand-400" />
                     <span>Login With Another Trading ID</span>
                   </button>
                 </div>
@@ -189,43 +190,48 @@ export function TerminalHeader({
         </div>
 
         {/* Live Balance & Equity Metrics Strip */}
-        <div className="hidden lg:flex items-center gap-3 font-mono text-xs">
-          <div className="px-2.5 py-1 rounded-lg bg-secondary/40 border border-border/60">
-            <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">Balance</span>
-            <span className="font-bold text-foreground">
+        <div className="hidden lg:flex items-center gap-2.5 font-mono text-xs">
+          <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans font-semibold">Balance</span>
+            <span className="font-bold text-white">
               ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-secondary/40 border border-border/60">
-            <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">Equity</span>
+          <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans font-semibold">Equity</span>
             <span
               className={cn(
                 'font-bold transition-colors',
-                equity >= balance ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500'
+                equity >= balance ? 'text-emerald-400' : 'text-rose-400'
               )}
             >
               ${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-secondary/40 border border-border/60">
-            <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">Free Margin</span>
-            <span className="font-bold text-foreground">
+          <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans font-semibold">Free Margin</span>
+            <span className="font-bold text-white">
               ${freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
-          <div className="px-2.5 py-1 rounded-lg bg-secondary/40 border border-border/60">
-            <span className="text-[10px] text-muted-foreground uppercase block font-sans font-semibold">Floating P/L</span>
+          <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans font-semibold">Margin Level</span>
+            <span className="font-bold text-brand-400">{marginLevel}%</span>
+          </div>
+
+          <div className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase block font-sans font-semibold">Floating P/L</span>
             <span
               className={cn(
                 'font-bold font-mono',
                 floatingPnL > 0
-                  ? 'text-emerald-500'
+                  ? 'text-emerald-400'
                   : floatingPnL < 0
-                  ? 'text-rose-500'
-                  : 'text-muted-foreground'
+                  ? 'text-rose-400'
+                  : 'text-slate-400'
               )}
             >
               {floatingPnL > 0 ? '+' : ''}${floatingPnL.toFixed(2)}
@@ -235,14 +241,14 @@ export function TerminalHeader({
 
         {/* Prop Firm Safeguard Badges */}
         <div className="hidden 2xl:flex items-center gap-2 text-[10px] font-mono">
-          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+          <div className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 flex items-center gap-1.5">
             <Shield className="h-3 w-3 text-emerald-400" />
             <span>Daily Loss: </span>
             <strong className={cn(Number(dailyLossPct) > 75 ? 'text-rose-400' : 'text-emerald-400')}>
               {dailyLossPct}% / {account?.rules?.daily_loss_limit_percent || 5}%
             </strong>
           </div>
-          <div className="px-2 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-1.5">
+          <div className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 flex items-center gap-1.5">
             <Activity className="h-3 w-3 text-brand-400" />
             <span>Max DD: </span>
             <strong className={cn(Number(overallLossPct) > 75 ? 'text-rose-400' : 'text-emerald-400')}>
@@ -252,14 +258,14 @@ export function TerminalHeader({
         </div>
       </div>
 
-      {/* Right: Theme Toggle & Explicit Terminal Logout */}
+      {/* 3. Right: Theme Toggle & Explicit Terminal Logout */}
       <div className="flex items-center gap-2 shrink-0">
         <ThemeToggle />
 
         <button
           type="button"
           onClick={onTerminalLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
           title="Sign out of trading terminal (website session will remain active)"
         >
           <LogOut className="h-3.5 w-3.5" />
