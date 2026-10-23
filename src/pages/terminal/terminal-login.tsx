@@ -42,7 +42,7 @@ export function TerminalLogin({
     defaultAccount ? String(defaultAccount.account_number || defaultAccount.id || '') : ''
   );
   const [password, setPassword] = useState('');
-  const [server, setServer] = useState(defaultAccount?.server || 'FundedShift-Live');
+  const [server, setServer] = useState('FundedShift-Live');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function TerminalLogin({
       const res = await loginTerminalApi({
         login: cleanLogin,
         password: cleanPass,
-        server,
+        server: 'FundedShift-Live',
       });
 
       if (!res.success) {
@@ -96,7 +96,7 @@ export function TerminalLogin({
 
   const handleSelectPreloadedAccount = (acc: any) => {
     setLoginId(acc.account_number || acc.id);
-    if (acc.server) setServer(acc.server);
+    setServer('FundedShift-Live');
     setError(null);
   };
 
@@ -141,34 +141,55 @@ export function TerminalLogin({
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
               Select Your Trading Account
             </span>
-            <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto pr-1">
               {userAccounts.filter(Boolean).map((acc, idx) => {
                 const accId = String(acc.id || `acc-${idx}`);
                 const accNum = String(acc.account_number || accId);
                 const isSelected = loginId === accNum || loginId === accId;
                 const sizeVal = Number(acc.current_balance || acc.account_size || 0);
+                const isFunded =
+                  acc.is_funded === true ||
+                  String(acc.status).toUpperCase() === 'FUNDED' ||
+                  String(acc.type).toLowerCase() === 'instant_funding' ||
+                  (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
+                const planTitle = isFunded
+                  ? (acc.plan_name && acc.plan_name.toLowerCase().includes('funded')
+                      ? acc.plan_name
+                      : `$${sizeVal.toLocaleString()} Funded Account`)
+                  : (acc.plan_name || `$${sizeVal.toLocaleString()} Challenge`);
+                const subLabel = isFunded
+                  ? `$${sizeVal.toLocaleString()} • Live Funded Account`
+                  : `$${sizeVal.toLocaleString()} • ${acc.phase ? `Phase ${acc.phase}` : 'Evaluation'}`;
+
                 return (
                   <button
                     key={accId}
                     type="button"
                     onClick={() => handleSelectPreloadedAccount(acc)}
-                    className={`flex items-center justify-between p-2 rounded-lg text-left text-xs transition-all border ${
+                    className={`flex items-center justify-between p-2.5 rounded-lg text-left text-xs transition-all border ${
                       isSelected
                         ? 'bg-brand-500/10 border-brand-500/40 text-brand-300'
                         : 'bg-slate-900/50 border-slate-800/50 hover:bg-slate-800/60 text-slate-300'
                     }`}
                   >
-                    <div>
+                    <div className="min-w-0 pr-2">
                       <div className="font-mono font-bold text-white flex items-center gap-1.5">
                         <span>#{accNum}</span>
-                        {acc.is_funded && (
-                          <span className="text-[9px] bg-brand-500/20 text-brand-300 px-1.5 py-0.2 rounded font-sans uppercase">
+                        {isFunded ? (
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-sans uppercase font-bold tracking-wide">
                             Funded
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-brand-500/20 text-brand-300 px-1.5 py-0.2 rounded font-sans uppercase">
+                            Phase {acc.phase || 1}
                           </span>
                         )}
                       </div>
+                      <div className="text-[11px] font-semibold text-slate-200 mt-0.5 truncate">
+                        {planTitle}
+                      </div>
                       <span className="text-[10px] text-slate-400">
-                        ${sizeVal.toLocaleString()} • {acc.phase ? `Phase ${acc.phase}` : 'Standard'}
+                        {subLabel}
                       </span>
                     </div>
                     {isSelected && <CheckCircle2 className="w-4 h-4 text-brand-400 flex-shrink-0" />}
@@ -199,11 +220,9 @@ export function TerminalLogin({
               <select
                 value={server}
                 onChange={(e) => setServer(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white appearance-none cursor-pointer"
+                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white appearance-none cursor-default font-mono"
               >
-                <option value="FundedShift-Live">FundedShift-Live (Ultra Low Latency)</option>
-                <option value="FundedShift-Evaluation">FundedShift-Evaluation (Simulated Bridge)</option>
-                <option value="FundedShift-Demo">FundedShift-Demo (Test Environment)</option>
+                <option value="FundedShift-Live">FundedShift-Live</option>
               </select>
             </div>
           </div>

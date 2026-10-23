@@ -774,7 +774,7 @@ export class DBEngine {
             login: '8820491',
             password_hash: hashPassword('TraderSecret99!'),
             investor_password_hash: hashPassword('InvRead44#'),
-            server: 'FundedShift-Live01',
+            server: 'FundedShift-Live',
             plan_id: 'plan-2step-100k',
             plan_name: 'FundedShift $100k 2-Step Challenge',
             type: 'two_step',
@@ -924,15 +924,23 @@ export class DBEngine {
       if (!loaded.email_logs) {
         loaded.email_logs = [];
       }
-      // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true
+      // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true and server is FundedShift-Live
       if (loaded.accounts && Array.isArray(loaded.accounts)) {
         for (const acc of loaded.accounts) {
-          if (acc.phase === 3 || acc.status === 'FUNDED' || acc.type === 'instant_funding') {
+          acc.server = 'FundedShift-Live';
+          const isFunded =
+            acc.phase === 3 ||
+            acc.status === 'FUNDED' ||
+            (acc.status || '').toLowerCase() === 'funded' ||
+            acc.type === 'instant_funding' ||
+            acc.is_funded === true ||
+            (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
+          if (isFunded) {
             acc.phase = 1;
             acc.is_funded = true;
             acc.status = 'FUNDED';
             if (acc.rules) acc.rules.profit_target_percent = 0;
-            if (!acc.plan_name || acc.plan_name.includes('Phase 3')) {
+            if (!acc.plan_name || acc.plan_name.includes('Phase 3') || !acc.plan_name.toLowerCase().includes('funded')) {
               acc.plan_name = `$${Number(acc.account_size).toLocaleString()} Funded Account`;
             }
           }

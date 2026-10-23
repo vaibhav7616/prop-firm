@@ -529,7 +529,7 @@ export class RuleEngine {
         login: newAccNumber,
         password_hash: traderPassword,
         investor_password_hash: investorPassword,
-        server: 'FundedShift-Live01',
+        server: 'FundedShift-Live',
         plan_name: `$${parent.account_size.toLocaleString()} 2-Step Challenge - Step 2`,
         type: 'two_step',
         phase: 2,
@@ -578,7 +578,7 @@ export class RuleEngine {
         login: newAccNumber,
         password_hash: traderPassword,
         investor_password_hash: investorPassword,
-        server: 'FundedShift-Live01',
+        server: 'FundedShift-Live',
         plan_name: `$${parent.account_size.toLocaleString()} Live Funded Account`,
         type: isOneStep ? 'one_step' : parent.type === 'instant_funding' ? 'instant_funding' : 'two_step',
         phase: 1, // Funded accounts are live stage

@@ -94,7 +94,7 @@ export function DashboardAccounts() {
 
   const copyAllCredentials = (account: TradingAccount) => {
     const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
-    const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
+    const server = 'FundedShift-Live';
     const accNum = account.account_number || '7829401';
     const pass = getAccountPassword(account);
     const invPass = account.investor_password || `InvPass${accNum}!`;
@@ -106,7 +106,7 @@ export function DashboardAccounts() {
 
   const downloadCredentials = (account: TradingAccount) => {
     const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
-    const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
+    const server = 'FundedShift-Live';
     const accNum = account.account_number || '7829401';
     const pass = getAccountPassword(account);
     const invPass = account.investor_password || `InvPass${accNum}!`;
@@ -360,26 +360,33 @@ Investor Pass:    ${invPass}
 
             const isBreached = account.status === 'BREACHED' || dailyBufferRemaining <= 0 || maxLossBufferRemaining <= 0;
 
-            const accountTitle =
-              account.plan_name && account.plan_name.startsWith(`$${accountSize.toLocaleString()}`)
-                ? account.plan_name
-                : `$${accountSize.toLocaleString()} ${
-                    account.type === 'one_step'
-                      ? 'One-Step Challenge'
-                      : account.type === 'instant_funding'
-                      ? 'Instant Funded'
-                      : 'Two-Step Evaluation'
-                  }`;
+            const isFunded =
+              account.is_funded === true ||
+              (account.status || '').toLowerCase() === 'funded' ||
+              account.phase >= 3 ||
+              account.type === 'instant_funding' ||
+              (account.plan_name && account.plan_name.toLowerCase().includes('funded'));
+
+            const accountTitle = isFunded
+              ? (account.plan_name && account.plan_name.toLowerCase().includes('funded')
+                  ? account.plan_name
+                  : `$${accountSize.toLocaleString()} Funded Account`)
+              : (account.plan_name && account.plan_name.startsWith(`$${accountSize.toLocaleString()}`)
+                  ? account.plan_name
+                  : `$${accountSize.toLocaleString()} ${
+                      account.type === 'one_step'
+                        ? 'One-Step Challenge'
+                        : 'Two-Step Evaluation'
+                    }`);
 
             const hasEarnedCert =
               (account.status || '').toLowerCase() === 'passed' ||
-              (account.status || '').toLowerCase() === 'funded' ||
-              account.is_funded ||
+              isFunded ||
               account.phase > 1;
 
             // Fallback credentials formatting
             const broker = account.broker && account.broker !== 'N/A' ? account.broker : 'FundedShift Direct ECN';
-            const server = account.server && account.server !== 'N/A' ? account.server : 'FundedShift-Live01';
+            const server = 'FundedShift-Live';
             const accNumber = account.account_number || '7829401';
             const masterPass = getAccountPassword(account);
             const investorPass = account.investor_password || `InvPass${accNumber}!`;

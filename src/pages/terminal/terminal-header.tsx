@@ -107,17 +107,40 @@ export function TerminalHeader({
               #
             </div>
             <div className="text-left min-w-0">
-              <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-mono font-bold text-xs text-white">
-                  #{account?.account_number || account?.login || 'Active'}
-                </span>
-                <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  {account?.status === 'FUNDED' ? 'Funded' : `Phase ${account?.phase || 1}`}
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 truncate max-w-[130px] sm:max-w-[170px] leading-tight mt-0.5">
-                {account?.plan_name || `$${(account?.account_size || 100000).toLocaleString()} Challenge`}
-              </p>
+              {(() => {
+                const isFunded =
+                  account?.is_funded === true ||
+                  String(account?.status).toUpperCase() === 'FUNDED' ||
+                  String(account?.type).toLowerCase() === 'instant_funding' ||
+                  (account?.plan_name && account.plan_name.toLowerCase().includes('funded'));
+                const headerPlanTitle = isFunded
+                  ? (account?.plan_name && account.plan_name.toLowerCase().includes('funded')
+                      ? account.plan_name
+                      : `$${(account?.account_size || 100000).toLocaleString()} Funded Account`)
+                  : (account?.plan_name || `$${(account?.account_size || 100000).toLocaleString()} Challenge`);
+
+                return (
+                  <>
+                    <div className="flex items-center gap-1.5 leading-none">
+                      <span className="font-mono font-bold text-xs text-white">
+                        #{account?.account_number || account?.login || 'Active'}
+                      </span>
+                      {isFunded ? (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Funded
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          Phase {account?.phase || 1}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-300 truncate max-w-[130px] sm:max-w-[170px] leading-tight mt-0.5 font-medium">
+                      {headerPlanTitle}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
             <ChevronDown className={cn('h-3.5 w-3.5 text-slate-400 transition-transform', dropdownOpen && 'rotate-180')} />
           </button>
@@ -133,6 +156,17 @@ export function TerminalHeader({
               <div className="max-h-60 overflow-y-auto space-y-1">
                 {accounts.map((acc) => {
                   const isSelected = acc.id === account?.id;
+                  const accIsFunded =
+                    acc.is_funded === true ||
+                    String(acc.status).toUpperCase() === 'FUNDED' ||
+                    String(acc.type).toLowerCase() === 'instant_funding' ||
+                    (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
+                  const accPlanTitle = accIsFunded
+                    ? (acc.plan_name && acc.plan_name.toLowerCase().includes('funded')
+                        ? acc.plan_name
+                        : `$${Number(acc.account_size || 100000).toLocaleString()} Funded Account`)
+                    : (acc.plan_name || `$${Number(acc.account_size || 100000).toLocaleString()} Challenge`);
+
                   return (
                     <button
                       key={acc.id}
@@ -151,11 +185,17 @@ export function TerminalHeader({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono font-bold text-xs text-white">#{acc.account_number}</span>
-                          <span className="text-[9px] uppercase px-1 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
-                            {acc.status}
-                          </span>
+                          {accIsFunded ? (
+                            <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">
+                              Funded
+                            </span>
+                          ) : (
+                            <span className="text-[9px] uppercase px-1 rounded bg-slate-800 text-slate-300 font-bold border border-slate-700">
+                              {acc.status || `Phase ${acc.phase || 1}`}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{acc.plan_name}</p>
+                        <p className="text-[10px] text-slate-300 mt-0.5 font-medium">{accPlanTitle}</p>
                       </div>
                       <div className="text-right">
                         <span className="font-mono font-bold text-xs text-white block">

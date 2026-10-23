@@ -301,7 +301,7 @@ export function generateTerminalToken(params: {
     accountId: params.accountId,
     accountNumber: params.accountNumber,
     login: params.login,
-    server: params.server,
+    server: params.server || 'FundedShift-Live',
     iat: now,
     exp: now + (params.expiresInSeconds || 86400 * 2), // 48 hours terminal session
   };
@@ -355,6 +355,18 @@ export function verifyTerminalToken(token: string): TerminalTokenPayload | null 
 export function sanitizeAccount(account: any): any {
   if (!account) return null;
   const { password_hash, investor_password_hash, ...safe } = account;
+  safe.server = 'FundedShift-Live';
+  const isFunded =
+    safe.is_funded === true ||
+    String(safe.status).toUpperCase() === 'FUNDED' ||
+    String(safe.type).toLowerCase() === 'instant_funding' ||
+    (safe.plan_name && safe.plan_name.toLowerCase().includes('funded'));
+  if (isFunded) {
+    safe.is_funded = true;
+    if (!safe.plan_name || !safe.plan_name.toLowerCase().includes('funded')) {
+      safe.plan_name = `$${Number(safe.account_size || 100000).toLocaleString()} Funded Account`;
+    }
+  }
   return safe;
 }
 

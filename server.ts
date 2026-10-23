@@ -325,7 +325,7 @@ app.post('/api/terminal/login', terminalLoginRateLimiter, async (req, res) => {
     accountId: account.id,
     accountNumber: account.account_number,
     login: account.login,
-    server: account.server || 'FundedShift-Live01',
+    server: 'FundedShift-Live',
   });
 
   db.audit_logs.push({
@@ -376,7 +376,7 @@ app.get('/api/terminal/session', async (req, res) => {
         accountId: account.id,
         accountNumber: account.account_number,
         login: account.login,
-        server: account.server || 'FundedShift-Live01',
+        server: 'FundedShift-Live',
       });
 
       res.json({
@@ -438,7 +438,7 @@ app.get('/api/terminal/session', async (req, res) => {
         accountId: targetAcc.id,
         accountNumber: targetAcc.account_number,
         login: targetAcc.login,
-        server: targetAcc.server || 'FundedShift-Live01',
+        server: 'FundedShift-Live',
       });
       const activePositions = db.positions.filter((p) => p.account_id === targetAcc.id);
 
