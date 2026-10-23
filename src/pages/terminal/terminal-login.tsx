@@ -167,7 +167,7 @@ export function TerminalLogin({
 
                 const planTitle = isFunded
                   ? `$${sizeVal.toLocaleString()} Funded Account`
-                  : (acc.plan_name && !acc.plan_name.toLowerCase().includes('fundedshift')
+                  : (typeof acc.plan_name === 'string' && !acc.plan_name.toLowerCase().includes('fundedshift')
                       ? acc.plan_name
                       : `$${sizeVal.toLocaleString()} Evaluation Challenge`);
                 const subLabel = isFunded

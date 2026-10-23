@@ -66,9 +66,10 @@ export function DashboardOverview() {
   const isDark = resolvedTheme === 'dark';
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       if (!user) {
-        setLoading(false);
+        if (active) setLoading(false);
         return;
       }
       try {
@@ -77,17 +78,21 @@ export function DashboardOverview() {
           fetchUserOrders(user.id),
           fetchNotificationsApi(user.id),
         ]);
+        if (!active) return;
+        const isDemo = user?.id === 'demo-trader-id-12345';
         const accountsToSet = (userAccs && userAccs.length > 0)
           ? userAccs
-          : (user.id === 'demo-trader-id-12345' ? DEFAULT_ACCOUNTS : []);
+          : (isDemo ? DEFAULT_ACCOUNTS : []);
         setAccounts(accountsToSet);
         if (accountsToSet.length > 0) {
           setSelectedAccountId(accountsToSet[0].id);
         }
         setOrders(userOrds);
-        setNotifications(user.id === 'demo-trader-id-12345' && (!userNotifs || userNotifs.length === 0) ? DEFAULT_NOTIFICATIONS : (userNotifs || []));
+        setNotifications(isDemo && (!userNotifs || userNotifs.length === 0) ? DEFAULT_NOTIFICATIONS : (userNotifs || []));
       } catch (_) {
-        if (user.id === 'demo-trader-id-12345') {
+        if (!active) return;
+        const isDemo = user?.id === 'demo-trader-id-12345';
+        if (isDemo) {
           setAccounts(DEFAULT_ACCOUNTS);
           if (DEFAULT_ACCOUNTS.length > 0) {
             setSelectedAccountId(DEFAULT_ACCOUNTS[0].id);
@@ -101,10 +106,13 @@ export function DashboardOverview() {
           setNotifications([]);
         }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     load();
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   // Selected Account Data

@@ -66,8 +66,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ variant }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { profile, signOut, isAdmin } = useAuth();
+  const { profile, signOut, isAdmin, user } = useAuth();
 
   const nav = variant === 'admin' ? ADMIN_NAV : TRADER_NAV;
 
@@ -78,9 +77,12 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
 
   const handleSignOut = async () => {
     setSidebarOpen(false);
-    await signOut();
-    navigate('/');
+    await signOut(variant === 'admin' ? '/admin/login' : '/login');
   };
+
+  if (!user) {
+    return null;
+  }
 
   const isActive = (to: string) =>
     to === `/${variant}` ? location.pathname === to : location.pathname.startsWith(to);

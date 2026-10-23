@@ -86,6 +86,7 @@ class GlobalErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const errorMessage = this.state.error?.message;
       return (
         <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
@@ -93,9 +94,14 @@ class GlobalErrorBoundary extends React.Component<
               ⚠️
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
-            <p className="text-xs text-slate-400 mb-6">
-              The application encountered an unexpected state. You can reload the page or return to the dashboard.
+            <p className="text-xs text-slate-400 mb-4">
+              The application encountered an unexpected state. Please choose an option below to continue.
             </p>
+            {errorMessage && (
+              <div className="mb-5 p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-rose-400 text-left overflow-x-auto max-h-24">
+                {errorMessage}
+              </div>
+            )}
             <div className="flex flex-col gap-2.5">
               <button
                 type="button"
@@ -111,11 +117,21 @@ class GlobalErrorBoundary extends React.Component<
                 type="button"
                 onClick={() => {
                   this.setState({ hasError: false });
-                  window.location.href = '/dashboard';
+                  window.location.replace('/login');
+                }}
+                className="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Go to Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false });
+                  window.location.replace('/');
                 }}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl text-xs transition-colors border border-slate-700 cursor-pointer"
               >
-                Return to Dashboard
+                Return to Home
               </button>
             </div>
           </div>
@@ -137,7 +153,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="h-8 w-8 rounded-full border-2 border-gold-400 border-t-transparent animate-spin" /></div>;
-  if (!user || !isAdmin) return <AdminLoginPage />;
+  if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
   return <>{children}</>;
 }
 

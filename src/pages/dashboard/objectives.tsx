@@ -68,14 +68,16 @@ export function DashboardObjectives() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       if (!user) {
-        setLoading(false);
+        if (active) setLoading(false);
         return;
       }
       try {
         const { fetchUserAccounts } = await import('@/lib/api-client');
         const accs = await fetchUserAccounts(user.id);
+        if (!active) return;
         setAccounts(accs);
         const queryAccount = searchParams.get('account');
         if (queryAccount && accs.some((a) => a.id === queryAccount)) {
@@ -84,7 +86,9 @@ export function DashboardObjectives() {
           setSelectedId(accs[0].id);
         }
       } catch (_) {
-        if (user.id === 'demo-trader-id-12345') {
+        if (!active) return;
+        const isDemo = user?.id === 'demo-trader-id-12345';
+        if (isDemo) {
           const { DEFAULT_ACCOUNTS } = await import('@/lib/default-data');
           setAccounts(DEFAULT_ACCOUNTS);
           const queryAccount = searchParams.get('account');
@@ -98,10 +102,13 @@ export function DashboardObjectives() {
           setSelectedId('');
         }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     load();
+    return () => {
+      active = false;
+    };
   }, [user, searchParams]);
 
   const handleSelectAccount = (accId: string, scrollToDetail = false) => {

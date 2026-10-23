@@ -9,7 +9,7 @@ interface AuthContextValue {
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
-  signOut: () => Promise<void>;
+  signOut: (redirectTo?: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
   demoLogin: (role?: 'trader' | 'admin') => void;
   adminLogin: (username: string, password: string) => Promise<void>;
@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [demoUser]);
 
-  const signOut = async () => {
+  const signOut = async (redirectTo: string = '/login') => {
     try {
       await supabase.auth.signOut();
     } catch (_) {
@@ -190,10 +190,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setSession(null);
     setDemoUser(null);
-    localStorage.removeItem('demo_user_session');
-    localStorage.removeItem('demo_user_profile');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('terminal_token');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('demo_user_session');
+      localStorage.removeItem('demo_user_profile');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('terminal_token');
+      localStorage.removeItem('admin_token');
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
+    if (typeof window !== 'undefined') {
+      window.location.replace(redirectTo);
+    }
   };
 
   const refreshProfile = async () => {

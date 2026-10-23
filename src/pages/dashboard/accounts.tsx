@@ -56,32 +56,42 @@ export function DashboardAccounts() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
       if (!user) {
-        setAccounts([]);
-        setLoading(false);
+        if (active) {
+          setAccounts([]);
+          setLoading(false);
+        }
         return;
       }
       try {
         const userAccs = await fetchUserAccounts(user.id);
+        if (!active) return;
+        const isDemo = user?.id === 'demo-trader-id-12345';
         if (userAccs && userAccs.length > 0) {
           setAccounts(userAccs);
-        } else if (user.id === 'demo-trader-id-12345') {
+        } else if (isDemo) {
           setAccounts(DEFAULT_ACCOUNTS);
         } else {
           setAccounts([]);
         }
       } catch (_) {
-        if (user.id === 'demo-trader-id-12345') {
+        if (!active) return;
+        const isDemo = user?.id === 'demo-trader-id-12345';
+        if (isDemo) {
           setAccounts(DEFAULT_ACCOUNTS);
         } else {
           setAccounts([]);
         }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     load();
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const copyToClipboard = (text: string, label: string, key: string) => {
