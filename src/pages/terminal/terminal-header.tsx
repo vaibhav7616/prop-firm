@@ -86,7 +86,7 @@ export function TerminalHeader({
         </Link>
 
         <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-          <Logo size="sm" />
+          <Logo size="sm" variant="light" />
           <div className="hidden xl:flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>24ms · London LD4 · Direct Forex ECN</span>

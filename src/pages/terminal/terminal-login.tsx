@@ -125,10 +125,10 @@ export function TerminalLogin({
       <div className="w-full max-w-md bg-slate-900/90 border border-slate-800/90 rounded-2xl shadow-2xl backdrop-blur-xl p-8 z-10 relative">
         <div className="text-center mb-6">
           <div className="flex justify-center mb-3">
-            <Logo />
+            <Logo variant="light" size="lg" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center justify-center gap-2">
-            <span>Web Terminal Login</span>
+            <span>FundedShift Web Terminal</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Connect to your institutional MT5 simulation account

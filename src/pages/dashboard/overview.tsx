@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/button';
 import { AnimatedNumber } from '@/components/motion/animated-number';
 import { AnimatedAccountSelector } from '@/components/dashboard/animated-account-selector';
 import { toast } from 'sonner';
-import { getAccountPassword } from '@/lib/utils';
+import { cn, getAccountPassword } from '@/lib/utils';
 
 import { DEFAULT_ACCOUNTS, DEFAULT_ORDERS, DEFAULT_NOTIFICATIONS } from '@/lib/default-data';
 import { fetchUserAccounts, fetchUserOrders, fetchAccountPositionsApi, fetchNotificationsApi } from '@/lib/api-client';
