@@ -461,6 +461,7 @@ export const DEFAULT_ACCOUNTS: TradingAccount[] = [
     max_trading_days: 0,
     status: 'active',
     phase: 1,
+    plan_name: '$100,000 Evaluation Challenge',
     rules: DEFAULT_CHALLENGES[4].rules,
     assigned_at: new Date(Date.now() - 12 * 86400000).toISOString(),
     created_at: new Date(Date.now() - 12 * 86400000).toISOString(),

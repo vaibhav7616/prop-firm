@@ -97,7 +97,7 @@ export function DashboardCertificates() {
               recipient_name: traderName,
               account_size: acc.account_size,
               account_number: acc.account_number || `884019${idx}`,
-              challenge_name: acc.challenge?.name || acc.plan_name || `${formatAccountSize(acc.account_size)} Funded Account`,
+              challenge_name: `${formatAccountSize(acc.account_size)} Funded Account`,
               certificate_number: `FS-FND-2026-${2000 + idx * 83}`,
               issued_at: acc.assigned_at || acc.created_at,
             });

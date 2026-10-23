@@ -146,17 +146,21 @@ export function TerminalLogin({
                 const accId = String(acc.id || `acc-${idx}`);
                 const accNum = String(acc.account_number || accId);
                 const isSelected = loginId === accNum || loginId === accId;
-                const sizeVal = Number(acc.current_balance || acc.account_size || 0);
+                const sizeVal = Number(acc.account_size || acc.current_balance || 100000);
+                const rawPlan = String(acc.plan_name || '').toLowerCase();
                 const isFunded =
                   acc.is_funded === true ||
                   String(acc.status).toUpperCase() === 'FUNDED' ||
                   String(acc.type).toLowerCase() === 'instant_funding' ||
-                  (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
+                  rawPlan.includes('funded account') ||
+                  rawPlan.includes('live funded') ||
+                  rawPlan.includes('instant funded');
+
                 const planTitle = isFunded
-                  ? (acc.plan_name && acc.plan_name.toLowerCase().includes('funded')
+                  ? `$${sizeVal.toLocaleString()} Funded Account`
+                  : (acc.plan_name && !acc.plan_name.toLowerCase().includes('fundedshift')
                       ? acc.plan_name
-                      : `$${sizeVal.toLocaleString()} Funded Account`)
-                  : (acc.plan_name || `$${sizeVal.toLocaleString()} Challenge`);
+                      : `$${sizeVal.toLocaleString()} Evaluation Challenge`);
                 const subLabel = isFunded
                   ? `$${sizeVal.toLocaleString()} • Live Funded Account`
                   : `$${sizeVal.toLocaleString()} • ${acc.phase ? `Phase ${acc.phase}` : 'Evaluation'}`;
@@ -176,7 +180,7 @@ export function TerminalLogin({
                       <div className="font-mono font-bold text-white flex items-center gap-1.5">
                         <span>#{accNum}</span>
                         {isFunded ? (
-                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-sans uppercase font-bold tracking-wide">
+                          <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded font-sans uppercase font-bold tracking-wide">
                             Funded
                           </span>
                         ) : (
@@ -212,18 +216,21 @@ export function TerminalLogin({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Server Selection */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Trading Server
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Trading Server
+              </label>
+              <span className="text-[10px] font-mono text-emerald-400 font-medium">Single Official Server</span>
+            </div>
             <div className="relative">
-              <Server className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <select
-                value={server}
-                onChange={(e) => setServer(e.target.value)}
-                className="w-full bg-slate-950/80 border border-slate-800 focus:border-brand-500/80 focus:ring-1 focus:ring-brand-500/50 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white appearance-none cursor-default font-mono"
-              >
-                <option value="FundedShift-Live">FundedShift-Live</option>
-              </select>
+              <Server className="w-4 h-4 text-emerald-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                readOnly
+                value="FundedShift-Live"
+                className="w-full bg-slate-950/90 border border-slate-800 text-slate-100 rounded-xl pl-9 pr-9 py-2.5 text-xs font-mono font-semibold cursor-default select-none focus:outline-none"
+              />
+              <Lock className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 

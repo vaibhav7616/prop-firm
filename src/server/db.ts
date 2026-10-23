@@ -776,7 +776,7 @@ export class DBEngine {
             investor_password_hash: hashPassword('InvRead44#'),
             server: 'FundedShift-Live',
             plan_id: 'plan-2step-100k',
-            plan_name: 'FundedShift $100k 2-Step Challenge',
+            plan_name: '$100,000 Funded Account',
             type: 'two_step',
             account_size: 100000,
             starting_balance: 100000,
@@ -786,11 +786,15 @@ export class DBEngine {
             highest_equity: 106420,
             start_of_day_balance: 100000,
             start_of_day_equity: 100000,
-            status: 'ACTIVE',
+            status: 'FUNDED',
+            is_funded: true,
             phase: 1,
             trading_days: 8,
             leverage: 100,
-            rules: DEFAULT_PLANS[1].rules,
+            rules: {
+              ...DEFAULT_PLANS[1].rules,
+              profit_target_percent: 0,
+            },
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
@@ -924,25 +928,48 @@ export class DBEngine {
       if (!loaded.email_logs) {
         loaded.email_logs = [];
       }
-      // Migrate and normalize accounts: ensure funded accounts have phase 1 and is_funded true and server is FundedShift-Live
+      // Migrate and normalize accounts: ensure server is always FundedShift-Live and funded accounts have proper name & status
       if (loaded.accounts && Array.isArray(loaded.accounts)) {
+        let changed = false;
         for (const acc of loaded.accounts) {
-          acc.server = 'FundedShift-Live';
-          const isFunded =
-            acc.phase === 3 ||
-            acc.status === 'FUNDED' ||
-            (acc.status || '').toLowerCase() === 'funded' ||
-            acc.type === 'instant_funding' ||
-            acc.is_funded === true ||
-            (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
-          if (isFunded) {
-            acc.phase = 1;
+          if (acc.server !== 'FundedShift-Live') {
+            acc.server = 'FundedShift-Live';
+            changed = true;
+          }
+          // Explicit check for demo trader account 8820491
+          if (acc.account_number === '8820491' || acc.login === '8820491' || acc.id === 'acc-demo-1') {
             acc.is_funded = true;
             acc.status = 'FUNDED';
+            acc.phase = 1;
+            acc.plan_name = '$100,000 Funded Account';
             if (acc.rules) acc.rules.profit_target_percent = 0;
-            if (!acc.plan_name || acc.plan_name.includes('Phase 3') || !acc.plan_name.toLowerCase().includes('funded')) {
-              acc.plan_name = `$${Number(acc.account_size).toLocaleString()} Funded Account`;
+            changed = true;
+          } else {
+            const rawPlan = (acc.plan_name || '').toLowerCase();
+            const isFunded =
+              acc.phase === 3 ||
+              acc.status === 'FUNDED' ||
+              (acc.status || '').toLowerCase() === 'funded' ||
+              acc.type === 'instant_funding' ||
+              acc.is_funded === true ||
+              rawPlan.includes('funded account') ||
+              rawPlan.includes('instant funded') ||
+              rawPlan.includes('live funded');
+            if (isFunded) {
+              acc.phase = 1;
+              acc.is_funded = true;
+              acc.status = 'FUNDED';
+              if (acc.rules) acc.rules.profit_target_percent = 0;
+              acc.plan_name = `$${Number(acc.account_size || 100000).toLocaleString()} Funded Account`;
+              changed = true;
             }
+          }
+        }
+        if (changed) {
+          try {
+            fs.writeFileSync(DB_FILE, JSON.stringify(loaded, null, 2), 'utf8');
+          } catch (e) {
+            console.error('Failed to persist migrated database file:', e);
           }
         }
       }

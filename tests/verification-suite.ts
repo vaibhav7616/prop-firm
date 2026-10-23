@@ -114,6 +114,28 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     assert(safe.id === 'u-1' && safe.email === 'trader@propfirm.com', 'Public fields must be preserved');
   });
 
+  await test('Authentication', 'Account Sanitization & FundedShift-Live Server Normalization', () => {
+    const rawAccount: any = {
+      id: 'acc-demo-1',
+      account_number: '8820491',
+      login: '8820491',
+      password_hash: 'secret_hash_trader',
+      investor_password_hash: 'secret_hash_inv',
+      server: 'FundedShift-Live01',
+      plan_name: 'FundedShift $100k 2-Step Challenge',
+      account_size: 100000,
+      status: 'FUNDED',
+      is_funded: true,
+    };
+    const sanitized = sanitizeAccount(rawAccount);
+    assert(!('password_hash' in sanitized), 'password_hash must be stripped');
+    assert(!('investor_password_hash' in sanitized), 'investor_password_hash must be stripped');
+    assert(sanitized.server === 'FundedShift-Live', 'Server must be normalized strictly to FundedShift-Live');
+    assert(sanitized.plan_name === '$100,000 Funded Account', 'Funded account plan name must be normalized to $100,000 Funded Account');
+    assert(sanitized.is_funded === true, 'is_funded must be true');
+    assert(sanitized.status === 'FUNDED', 'status must be FUNDED');
+  });
+
   // =============================================================
   // 2. PROP FIRM TRADING ENGINE & MT5 CALCULATIONS
   // =============================================================

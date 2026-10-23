@@ -124,7 +124,8 @@ export function getAccountPhaseLabel(acc: {
     status === 'FUNDED' ||
     phase >= 3 ||
     acc.is_funded ||
-    plan.includes('funded') ||
+    plan.includes('funded account') ||
+    plan.includes('live funded') ||
     plan.includes('instant')
   ) {
     return 'Funded';

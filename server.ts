@@ -722,7 +722,7 @@ app.get(['/api/accounts', '/api/user/accounts'], requireAuth, (req, res) => {
     RuleEngine.evaluateAccount(acc.id);
   }
 
-  res.json(userAccounts);
+  res.json(userAccounts.map(sanitizeAccount));
 });
 
 app.get('/api/accounts/:id', requireAuth, (req, res) => {
@@ -733,7 +733,7 @@ app.get('/api/accounts/:id', requireAuth, (req, res) => {
     return;
   }
   RuleEngine.evaluateAccount(acc.id);
-  res.json(acc);
+  res.json(sanitizeAccount(acc));
 });
 
 app.get('/api/accounts/:id/positions', (req, res) => {
@@ -1742,7 +1742,7 @@ app.post('/api/admin/accounts/issue-manual', requireAdmin, (req, res) => {
     login: newAccNumber,
     password_hash: traderPassword,
     investor_password_hash: investorPassword,
-    server: 'FundedShift-Live01',
+    server: 'FundedShift-Live',
     broker: broker || 'FundedShift Direct ECN',
     platform: platform || 'fundedshift_terminal',
     plan_id: planId,
@@ -1803,7 +1803,7 @@ app.post('/api/admin/accounts/issue-manual', requireAdmin, (req, res) => {
     accountNumber: newAccNumber,
     traderPassword: traderPassword,
     investorPassword: investorPassword,
-    server: 'FundedShift-Live01',
+    server: 'FundedShift-Live',
     platform: platform || 'fundedshift_terminal',
     rules: rulesConfig,
   }).catch((err) => console.error('[EmailService] Failed to send manual issue credentials email:', err));

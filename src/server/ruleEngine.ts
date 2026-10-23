@@ -579,7 +579,7 @@ export class RuleEngine {
         password_hash: traderPassword,
         investor_password_hash: investorPassword,
         server: 'FundedShift-Live',
-        plan_name: `$${parent.account_size.toLocaleString()} Live Funded Account`,
+        plan_name: `$${parent.account_size.toLocaleString()} Funded Account`,
         type: isOneStep ? 'one_step' : parent.type === 'instant_funding' ? 'instant_funding' : 'two_step',
         phase: 1, // Funded accounts are live stage
         status: 'FUNDED',

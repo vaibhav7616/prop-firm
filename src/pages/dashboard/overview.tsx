@@ -242,11 +242,27 @@ export function DashboardOverview() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <h1 className="text-lg sm:text-xl font-bold font-display text-foreground leading-tight">Overview Dashboard</h1>
-              {selectedAccount && (
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 whitespace-nowrap">
-                  {selectedAccount.status === 'FUNDED' ? 'Funded • Active' : 'Phase 1 Evaluation'}
-                </span>
-              )}
+              {selectedAccount && (() => {
+                const rawPlan = String(selectedAccount.plan_name || '').toLowerCase();
+                const isFunded =
+                  selectedAccount.is_funded === true ||
+                  String(selectedAccount.status).toUpperCase() === 'FUNDED' ||
+                  String((selectedAccount as any).type).toLowerCase() === 'instant_funding' ||
+                  rawPlan.includes('funded account') ||
+                  rawPlan.includes('live funded') ||
+                  rawPlan.includes('instant funded');
+
+                return (
+                  <span className={cn(
+                    "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-0.5 rounded-full whitespace-nowrap border",
+                    isFunded
+                      ? "bg-amber-500/15 text-amber-500 dark:text-amber-400 border-amber-500/30"
+                      : "bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800"
+                  )}>
+                    {isFunded ? 'Funded Account • Live' : selectedAccount.phase ? `Phase ${selectedAccount.phase} Evaluation` : 'Evaluation Challenge'}
+                  </span>
+                );
+              })()}
               <span className="text-[10px] sm:text-[11px] font-mono font-medium px-1.5 sm:px-2 py-0.5 rounded-md bg-secondary text-foreground border border-border whitespace-nowrap">
                 Account #{selectedAccount?.account_number}
               </span>
@@ -767,10 +783,10 @@ export function DashboardOverview() {
                   <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase">Server</p>
-                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedAccount.server || 'FundedShift-Live01'}</p>
+                      <p className="font-bold text-slate-900 dark:text-white font-mono mt-0.5">{selectedAccount.server || 'FundedShift-Live'}</p>
                     </div>
                     <button
-                      onClick={() => copyToClipboard(selectedAccount.server || 'FundedShift-Live01', 'Server')}
+                      onClick={() => copyToClipboard(selectedAccount.server || 'FundedShift-Live', 'Server')}
                       className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
                     >
                       <Copy className="h-3.5 w-3.5" />

@@ -360,18 +360,19 @@ Investor Pass:    ${invPass}
 
             const isBreached = account.status === 'BREACHED' || dailyBufferRemaining <= 0 || maxLossBufferRemaining <= 0;
 
+            const rawPlan = String(account.plan_name || '').toLowerCase();
             const isFunded =
               account.is_funded === true ||
-              (account.status || '').toLowerCase() === 'funded' ||
+              String(account.status).toUpperCase() === 'FUNDED' ||
               account.phase >= 3 ||
-              account.type === 'instant_funding' ||
-              (account.plan_name && account.plan_name.toLowerCase().includes('funded'));
+              String(account.type).toLowerCase() === 'instant_funding' ||
+              rawPlan.includes('funded account') ||
+              rawPlan.includes('instant funded') ||
+              rawPlan.includes('live funded');
 
             const accountTitle = isFunded
-              ? (account.plan_name && account.plan_name.toLowerCase().includes('funded')
-                  ? account.plan_name
-                  : `$${accountSize.toLocaleString()} Funded Account`)
-              : (account.plan_name && account.plan_name.startsWith(`$${accountSize.toLocaleString()}`)
+              ? `$${accountSize.toLocaleString()} Funded Account`
+              : (account.plan_name && !account.plan_name.toLowerCase().includes('fundedshift')
                   ? account.plan_name
                   : `$${accountSize.toLocaleString()} ${
                       account.type === 'one_step'

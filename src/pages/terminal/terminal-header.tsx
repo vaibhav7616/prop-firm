@@ -108,16 +108,21 @@ export function TerminalHeader({
             </div>
             <div className="text-left min-w-0">
               {(() => {
+                const sizeVal = Number(account?.account_size || account?.current_balance || 100000);
+                const rawPlan = String(account?.plan_name || '').toLowerCase();
                 const isFunded =
                   account?.is_funded === true ||
                   String(account?.status).toUpperCase() === 'FUNDED' ||
                   String(account?.type).toLowerCase() === 'instant_funding' ||
-                  (account?.plan_name && account.plan_name.toLowerCase().includes('funded'));
+                  rawPlan.includes('funded account') ||
+                  rawPlan.includes('live funded') ||
+                  rawPlan.includes('instant funded');
+
                 const headerPlanTitle = isFunded
-                  ? (account?.plan_name && account.plan_name.toLowerCase().includes('funded')
+                  ? `$${sizeVal.toLocaleString()} Funded Account`
+                  : (account?.plan_name && !account.plan_name.toLowerCase().includes('fundedshift')
                       ? account.plan_name
-                      : `$${(account?.account_size || 100000).toLocaleString()} Funded Account`)
-                  : (account?.plan_name || `$${(account?.account_size || 100000).toLocaleString()} Challenge`);
+                      : `$${sizeVal.toLocaleString()} Challenge`);
 
                 return (
                   <>
@@ -156,16 +161,21 @@ export function TerminalHeader({
               <div className="max-h-60 overflow-y-auto space-y-1">
                 {accounts.map((acc) => {
                   const isSelected = acc.id === account?.id;
+                  const accSizeVal = Number(acc.account_size || acc.current_balance || 100000);
+                  const rawAccPlan = String(acc.plan_name || '').toLowerCase();
                   const accIsFunded =
                     acc.is_funded === true ||
                     String(acc.status).toUpperCase() === 'FUNDED' ||
                     String(acc.type).toLowerCase() === 'instant_funding' ||
-                    (acc.plan_name && acc.plan_name.toLowerCase().includes('funded'));
+                    rawAccPlan.includes('funded account') ||
+                    rawAccPlan.includes('live funded') ||
+                    rawAccPlan.includes('instant funded');
+
                   const accPlanTitle = accIsFunded
-                    ? (acc.plan_name && acc.plan_name.toLowerCase().includes('funded')
+                    ? `$${accSizeVal.toLocaleString()} Funded Account`
+                    : (acc.plan_name && !acc.plan_name.toLowerCase().includes('fundedshift')
                         ? acc.plan_name
-                        : `$${Number(acc.account_size || 100000).toLocaleString()} Funded Account`)
-                    : (acc.plan_name || `$${Number(acc.account_size || 100000).toLocaleString()} Challenge`);
+                        : `$${accSizeVal.toLocaleString()} Challenge`);
 
                   return (
                     <button

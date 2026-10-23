@@ -15,15 +15,27 @@ export function getCleanPlanName(account: TradingAccount | undefined): string {
   if (!account) return '$5,000 Challenge';
   const size = account.account_size || 5000;
   const sizeStr = `$${size.toLocaleString()}`;
-  if (account.plan_name && account.plan_name.startsWith(sizeStr)) {
+  const rawPlan = String(account.plan_name || '').toLowerCase();
+  const isFunded =
+    account.is_funded === true ||
+    String(account.status).toUpperCase() === 'FUNDED' ||
+    String((account as any)?.type).toLowerCase() === 'instant_funding' ||
+    rawPlan.includes('funded account') ||
+    rawPlan.includes('live funded') ||
+    rawPlan.includes('instant funded');
+
+  if (isFunded) {
+    return `${sizeStr} Funded Account`;
+  }
+
+  if (account.plan_name && !account.plan_name.toLowerCase().includes('fundedshift')) {
     return account.plan_name;
   }
+
   const accType = (account as any)?.type;
   const typeStr =
     accType === 'one_step'
       ? 'One-Step Challenge'
-      : accType === 'instant_funding'
-      ? 'Instant Funded'
       : 'Two-Step Evaluation';
   return `${sizeStr} ${typeStr}`;
 }
@@ -48,6 +60,10 @@ export function AnimatedAccountSelector({
   }, []);
 
   const active = selectedAccount || accounts[0];
+  const isActiveFunded =
+    active?.is_funded === true ||
+    String(active?.status).toUpperCase() === 'FUNDED' ||
+    String((active as any)?.type).toLowerCase() === 'instant_funding';
 
   return (
     <div ref={dropdownRef} className={cn('relative inline-block text-left', className)}>
@@ -73,14 +89,16 @@ export function AnimatedAccountSelector({
               <span
                 className={cn(
                   'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md font-mono',
-                  String(active?.status).toLowerCase() === 'active' || String(active?.status).toLowerCase() === 'funded'
+                  isActiveFunded
+                    ? 'bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30'
+                    : String(active?.status).toLowerCase() === 'active'
                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                     : String(active?.status).toLowerCase() === 'passed'
                     ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
                     : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
                 )}
               >
-                {String(active?.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : active?.status || 'active'}
+                {isActiveFunded ? 'FUNDED' : String(active?.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : active?.status || 'active'}
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground truncate max-w-[200px] sm:max-w-[240px]">
@@ -118,6 +136,10 @@ export function AnimatedAccountSelector({
               {accounts.map((acc, idx) => {
                 const isSelected = acc.id === active?.id;
                 const bal = acc.current_balance ?? acc.starting_balance ?? acc.account_size;
+                const accIsFunded =
+                  acc.is_funded === true ||
+                  String(acc.status).toUpperCase() === 'FUNDED' ||
+                  String((acc as any)?.type).toLowerCase() === 'instant_funding';
                 return (
                   <motion.button
                     key={acc.id}
@@ -168,14 +190,16 @@ export function AnimatedAccountSelector({
                       <span
                         className={cn(
                           'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded font-mono',
-                          String(acc.status).toLowerCase() === 'active' || String(acc.status).toLowerCase() === 'funded'
+                          accIsFunded
+                            ? 'bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30'
+                            : String(acc.status).toLowerCase() === 'active'
                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                             : String(acc.status).toLowerCase() === 'passed'
                             ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400'
                             : 'bg-rose-500/10 text-rose-600'
                         )}
                       >
-                        {String(acc.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : acc.status}
+                        {accIsFunded ? 'FUNDED' : String(acc.status).toLowerCase() === 'passed' ? 'PASSED (LOCKED)' : acc.status}
                       </span>
                       {isSelected && <Check className="h-3.5 w-3.5 text-brand-500" />}
                     </div>
