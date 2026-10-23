@@ -77,9 +77,12 @@ export function DashboardOverview() {
           fetchUserOrders(user.id),
           fetchNotificationsApi(user.id),
         ]);
-        setAccounts(userAccs);
-        if (userAccs.length > 0) {
-          setSelectedAccountId(userAccs[0].id);
+        const accountsToSet = (userAccs && userAccs.length > 0)
+          ? userAccs
+          : (user.id === 'demo-trader-id-12345' ? DEFAULT_ACCOUNTS : []);
+        setAccounts(accountsToSet);
+        if (accountsToSet.length > 0) {
+          setSelectedAccountId(accountsToSet[0].id);
         }
         setOrders(userOrds);
         setNotifications(user.id === 'demo-trader-id-12345' && (!userNotifs || userNotifs.length === 0) ? DEFAULT_NOTIFICATIONS : (userNotifs || []));

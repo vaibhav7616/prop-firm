@@ -136,6 +136,21 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     assert(sanitized.status === 'FUNDED', 'status must be FUNDED');
   });
 
+  await test('Authentication', 'Web Terminal Explicit Logout and Session Token Invalidation', () => {
+    const termToken = generateTerminalToken({
+      userId: 'demo-trader-id-12345',
+      accountId: 'acc-demo-1',
+      accountNumber: '8820491',
+      login: '8820491',
+      server: 'FundedShift-Live',
+    });
+    assert(verifyTerminalToken(termToken) !== null, 'Generated terminal token must verify');
+
+    // Simulate explicit logout: invalidating token
+    invalidatedTerminalTokens.add(termToken);
+    assert(verifyTerminalToken(termToken) === null, 'Invalidated terminal token must be rejected');
+  });
+
   // =============================================================
   // 2. PROP FIRM TRADING ENGINE & MT5 CALCULATIONS
   // =============================================================

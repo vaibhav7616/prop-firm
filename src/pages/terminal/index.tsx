@@ -50,9 +50,10 @@ export default function WebTerminalPage() {
   // Initialize terminal session
   const checkSession = useCallback(async () => {
     try {
-      const res = await fetchTerminalSessionApi();
+      const isExplicitLogout = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('terminal_logged_out') === 'true';
+      const res = await fetchTerminalSessionApi(undefined, isExplicitLogout);
 
-      if (res.authenticated && res.account) {
+      if (res.authenticated && res.account && !isExplicitLogout) {
         setAccount(res.account);
         setPositions(res.active_positions || []);
         if (Array.isArray(res.accounts)) setAccounts(res.accounts);
@@ -60,6 +61,7 @@ export default function WebTerminalPage() {
         setAuthScenario('A');
       } else {
         setTerminalAuthenticated(false);
+        if (Array.isArray(res.accounts)) setAccounts(res.accounts);
         if (res.reason === 'NO_ELIGIBLE_ACCOUNTS' || res.reason === 'NO_ACCOUNTS') {
           setAuthScenario('B');
           if (Array.isArray(res.pending_orders)) setPendingOrders(res.pending_orders);
@@ -74,7 +76,7 @@ export default function WebTerminalPage() {
             );
           }
         } else {
-          // CREDENTIALS_REQUIRED or invalid session
+          // CREDENTIALS_REQUIRED or explicitly logged out
           setAuthScenario('D');
           if (Array.isArray(res.accounts)) setAccounts(res.accounts);
         }
@@ -217,6 +219,9 @@ export default function WebTerminalPage() {
     account: any;
     active_positions: any[];
   }) => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('terminal_logged_out');
+    }
     setAccount(sessionData.account);
     setPositions(sessionData.active_positions || []);
     setTerminalAuthenticated(true);
@@ -234,12 +239,22 @@ export default function WebTerminalPage() {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('terminal_token');
       }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('terminal_logged_out', 'true');
+      }
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
       setTerminalAuthenticated(false);
+      setAccount(null);
       setAuthScenario('D');
       toast.info('Logged out of Web Terminal session.');
+      try {
+        const res = await fetchTerminalSessionApi(undefined, true);
+        if (res && Array.isArray(res.accounts)) {
+          setAccounts(res.accounts);
+        }
+      } catch (_) {}
     }
   };
 

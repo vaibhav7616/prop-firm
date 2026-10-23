@@ -33,14 +33,23 @@ export function TerminalLogin({
 }: TerminalLoginProps) {
   const navigate = useNavigate();
 
-  // Find preselected account if available
+  // Find preselected account if available (prioritize funded account 8820491)
   const defaultAccount = Array.isArray(userAccounts)
-    ? userAccounts.find((a) => a && (a.id === prefilledAccountId || a.account_number === prefilledAccountId)) || userAccounts[0]
+    ? userAccounts.find((a) => a && (a.id === prefilledAccountId || a.account_number === prefilledAccountId)) ||
+      userAccounts.find((a) => a && a.account_number === '8820491') ||
+      userAccounts.find((a) => a && (a.status === 'FUNDED' || a.is_funded === true)) ||
+      userAccounts[0]
     : null;
 
   const [loginId, setLoginId] = useState(
     defaultAccount ? String(defaultAccount.account_number || defaultAccount.id || '') : ''
   );
+
+  React.useEffect(() => {
+    if (!loginId && defaultAccount) {
+      setLoginId(String(defaultAccount.account_number || defaultAccount.id || ''));
+    }
+  }, [defaultAccount, loginId]);
   const [password, setPassword] = useState('');
   const [server, setServer] = useState('FundedShift-Live');
   const [showPassword, setShowPassword] = useState(false);

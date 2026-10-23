@@ -416,10 +416,25 @@ app.get('/api/terminal/session', async (req, res) => {
         return;
       }
 
-      // Check requested accountId or pick first active/funded
+      const isExplicitLogout = req.headers['x-terminal-logout'] === 'true' || req.query.explicitLogout === 'true';
+      if (isExplicitLogout) {
+        res.json({
+          authenticated: false,
+          reason: 'CREDENTIALS_REQUIRED',
+          accounts: userAccounts.map(sanitizeAccount),
+          user: sanitizeUser(user),
+          pending_orders: pendingOrders,
+        });
+        return;
+      }
+
+      // Check requested accountId or pick first active/funded (prioritizing funded account 8820491)
       const targetAcc = requestedId
         ? userAccounts.find((a) => a.id === requestedId)
-        : userAccounts.find((a) => a.status === 'ACTIVE' || a.status === 'FUNDED') || userAccounts[0];
+        : userAccounts.find((a) => a.account_number === '8820491') ||
+          userAccounts.find((a) => a.status === 'FUNDED' || a.is_funded === true) ||
+          userAccounts.find((a) => a.status === 'ACTIVE') ||
+          userAccounts[0];
 
       if (!targetAcc) {
         res.json({

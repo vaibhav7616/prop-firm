@@ -1040,19 +1040,26 @@ export async function loginTerminalApi(params: { login: string; password: string
   }
 }
 
-export async function fetchTerminalSessionApi(accountId?: string) {
+export async function fetchTerminalSessionApi(accountId?: string, explicitLogout?: boolean) {
   try {
     const termToken = typeof localStorage !== 'undefined' ? localStorage.getItem('terminal_token') : null;
     const webToken = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
     const headers: Record<string, string> = {};
     if (termToken) headers['x-terminal-token'] = termToken;
     if (webToken) headers['Authorization'] = `Bearer ${webToken}`;
+    if (explicitLogout) headers['x-terminal-logout'] = 'true';
 
-    const url = accountId ? `/api/terminal/session?accountId=${encodeURIComponent(accountId)}` : '/api/terminal/session';
+    let url = '/api/terminal/session';
+    const params = new URLSearchParams();
+    if (accountId) params.set('accountId', accountId);
+    if (explicitLogout) params.set('explicitLogout', 'true');
+    const qs = params.toString();
+    if (qs) url += `?${qs}`;
+
     const res = await fetch(url, { headers });
     if (res.ok) {
       const data = await res.json();
-      if (data.token && typeof localStorage !== 'undefined') {
+      if (data.authenticated && data.token && typeof localStorage !== 'undefined') {
         localStorage.setItem('terminal_token', data.token);
       }
       return data;
