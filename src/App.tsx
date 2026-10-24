@@ -22,6 +22,9 @@ import { BlogPage } from '@/pages/blog';
 import { BlogPostPage } from '@/pages/blog-post';
 import { LeaderboardPage } from '@/pages/leaderboard';
 import { ProofOfPayoutPage } from '@/pages/proof-of-payout';
+import { TermsPage } from '@/pages/terms';
+import { PrivacyPage } from '@/pages/privacy';
+import { RefundPolicyPage } from '@/pages/refund-policy';
 
 // Auth pages
 import { LoginPage } from '@/pages/auth/login';
@@ -42,6 +45,7 @@ import { DashboardInvoices } from '@/pages/dashboard/invoices';
 import { DashboardPayouts } from '@/pages/dashboard/payouts';
 import { DashboardCertificates } from '@/pages/dashboard/certificates';
 import { DashboardLeaderboard } from '@/pages/dashboard/leaderboard';
+import { DashboardCalendar } from '@/pages/dashboard/calendar';
 import { DashboardAffiliate } from '@/pages/dashboard/affiliate';
 import { DashboardSupport } from '@/pages/dashboard/support';
 import { DashboardNotifications } from '@/pages/dashboard/notifications';
@@ -174,6 +178,9 @@ function AppRoutes() {
         <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/proof-of-payout" element={<ProofOfPayoutPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/refund-policy" element={<RefundPolicyPage />} />
       </Route>
 
       {/* Auth */}
@@ -201,6 +208,8 @@ function AppRoutes() {
         <Route path="payouts" element={<DashboardPayouts />} />
         <Route path="certificates" element={<DashboardCertificates />} />
         <Route path="leaderboard" element={<DashboardLeaderboard />} />
+        <Route path="calendar" element={<DashboardCalendar />} />
+        <Route path="news" element={<Navigate to="/dashboard/calendar" replace />} />
         <Route path="affiliate" element={<DashboardAffiliate />} />
         <Route path="support" element={<DashboardSupport />} />
         <Route path="notifications" element={<DashboardNotifications />} />

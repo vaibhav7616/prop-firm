@@ -3,6 +3,7 @@ import type { PositionEntity, TradeOrderEntity, OrderType } from './types';
 import { marketDataService } from './marketData';
 import { RuleEngine } from './ruleEngine';
 import { calculateMT5PnL, calculateInstitutionalMargin } from './mt5';
+import { NewsService } from './newsService';
 
 // Trading Provider Abstraction Interface
 export interface TradingProvider {
@@ -74,6 +75,17 @@ export class TradeExecutionService implements TradingProvider {
     const currentOverallLoss = Math.max(0, account.starting_balance - account.current_equity);
     if (currentOverallLoss >= maxOverallAllowedLoss) {
       return { success: false, error: 'Cannot open trade: Maximum overall drawdown limit has been reached.' };
+    }
+
+    // High-Impact News Buffer Enforcement (2 minutes before & after red-folder news)
+    if (account.rules?.news_trading_allowed === false) {
+      const newsStatus = await NewsService.isNewsRestricted(params.symbol);
+      if (newsStatus.restricted) {
+        return {
+          success: false,
+          error: `High-Impact News Restriction: ${newsStatus.reason}. Under evaluation rules, trading is strictly prohibited within 2 minutes of major economic data releases.`,
+        };
+      }
     }
 
     // Validate numerical lot size
@@ -249,6 +261,17 @@ export class TradeExecutionService implements TradingProvider {
     const account = db.accounts.find((a) => a.id === params.accountId);
     if (!account) {
       return { success: false, error: 'Account not found.' };
+    }
+
+    // High-Impact News Buffer Enforcement on Close
+    if (account.rules?.news_trading_allowed === false) {
+      const newsStatus = await NewsService.isNewsRestricted(position.symbol);
+      if (newsStatus.restricted) {
+        return {
+          success: false,
+          error: `High-Impact News Restriction: ${newsStatus.reason}. Under evaluation rules, closing positions is strictly prohibited within 2 minutes of major economic data releases.`,
+        };
+      }
     }
 
     const quote = marketDataService.getQuote(position.symbol);

@@ -15,6 +15,7 @@ import {
   DollarSign,
   Briefcase,
   Wifi,
+  Calendar,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -27,6 +28,7 @@ interface TerminalHeaderProps {
   onSelectAccount: (accountId: string) => void;
   onTerminalLogout: () => void;
   onOpenLoginModal?: () => void;
+  onOpenNewsCalendar?: () => void;
   floatingPnL?: number;
 }
 
@@ -36,6 +38,7 @@ export function TerminalHeader({
   onSelectAccount,
   onTerminalLogout,
   onOpenLoginModal,
+  onOpenNewsCalendar,
   floatingPnL = 0,
 }: TerminalHeaderProps) {
   const navigate = useNavigate();
@@ -308,8 +311,18 @@ export function TerminalHeader({
         </div>
       </div>
 
-      {/* 3. Right: Theme Toggle & Explicit Terminal Logout */}
+      {/* 3. Right: Economic Calendar, Theme Toggle & Explicit Terminal Logout */}
       <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onOpenNewsCalendar}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
+          title="Open Real-Time Economic News Calendar & 2-Minute Buffer Status"
+        >
+          <Calendar className="h-3.5 w-3.5 text-amber-400" />
+          <span className="hidden sm:inline">Economic News</span>
+        </button>
+
         <ThemeToggle />
 
         <button

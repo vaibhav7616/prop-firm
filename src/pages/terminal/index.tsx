@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LineChart, Layers, Zap, Shield, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { LineChart, Layers, Zap, Shield, ArrowUpRight, ArrowDownRight, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/auth-context';
 import {
@@ -16,6 +16,7 @@ import { OrderPanel } from './order-panel';
 import { PositionsTable } from './positions-table';
 import { TerminalLogin } from './terminal-login';
 import { TerminalNoAccounts } from './terminal-no-accounts';
+import { TradingViewEconomicCalendar } from '@/components/trading/tradingview-economic-calendar';
 import { cn } from '@/lib/utils';
 
 type MobileTab = 'CHART' | 'WATCH' | 'TRADE' | 'POSITIONS';
@@ -43,6 +44,7 @@ export default function WebTerminalPage() {
   const [timeframe, setTimeframe] = useState<string>('15m');
   const [sseConnected, setSseConnected] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>('CHART');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // SSE event source ref
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -142,19 +144,27 @@ export default function WebTerminalPage() {
     };
   }, [terminalAuthenticated]);
 
-  // Find active quote for selected symbol (Default Forex values)
+  // Find active quote for selected symbol (Forex & Metals defaults)
   const activeQuote = useMemo(() => {
     const found = quotes.find((q) => q.symbol === selectedSymbol);
     if (found) return found;
+
+    const s = selectedSymbol.toUpperCase();
+    const isGold = s === 'XAUUSD';
+    const isSilver = s === 'XAGUSD';
+    const isJpy = s.endsWith('JPY');
+    const defaultPrice = isGold ? 2724.50 : isSilver ? 31.850 : isJpy ? 158.960 : 1.08500;
+    const defaultSpread = isGold ? 0.30 : isSilver ? 0.030 : isJpy ? 0.03 : 0.0001;
+
     return {
       symbol: selectedSymbol,
-      price: 1.08500,
-      bid: 1.08495,
-      ask: 1.08505,
-      high: 1.08900,
-      low: 1.08200,
+      price: defaultPrice,
+      bid: defaultPrice - defaultSpread / 2,
+      ask: defaultPrice + defaultSpread / 2,
+      high: defaultPrice * 1.005,
+      low: defaultPrice * 0.995,
       change24h: 0.15,
-      spread: 0.1,
+      spread: isGold ? 0.3 : 0.1,
       isMarketOpen: true,
       timestamp: new Date().toISOString(),
     };
@@ -175,7 +185,7 @@ export default function WebTerminalPage() {
       if (p.status !== 'OPEN') continue;
       const q = quotesMap.get(p.symbol);
       const currentPrice = q ? (p.type === 'BUY' ? q.bid : q.ask) : p.entry_price;
-      const contractSize = p.contract_size || 100000;
+      const contractSize = p.contract_size || (p.symbol === 'XAUUSD' ? 100 : p.symbol === 'XAGUSD' ? 5000 : 100000);
       const diff = p.type === 'BUY' ? currentPrice - p.entry_price : p.entry_price - currentPrice;
       total += diff * p.lot_size * contractSize;
     }
@@ -258,8 +268,11 @@ export default function WebTerminalPage() {
     }
   };
 
-  const isJpy = selectedSymbol.toUpperCase().endsWith('JPY');
-  const priceDecimals = isJpy ? 3 : 5;
+  const sUpper = selectedSymbol.toUpperCase();
+  const isJpy = sUpper.endsWith('JPY');
+  const isGold = sUpper === 'XAUUSD';
+  const isSilver = sUpper === 'XAGUSD';
+  const priceDecimals = isGold ? 2 : (isJpy || isSilver ? 3 : 5);
   const openCount = positions.filter((p) => p.status === 'OPEN').length;
 
   // Initial loading spinner
@@ -308,6 +321,7 @@ export default function WebTerminalPage() {
         onSelectAccount={handleSelectAccount}
         onTerminalLogout={handleTerminalLogout}
         onOpenLoginModal={() => setAuthScenario('D')}
+        onOpenNewsCalendar={() => setCalendarOpen(true)}
         floatingPnL={floatingPnL}
       />
 
@@ -372,6 +386,16 @@ export default function WebTerminalPage() {
               {openCount}
             </span>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          className="flex-1 py-1 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-amber-400 hover:text-white"
+          title="Open Economic News Calendar"
+        >
+          <Calendar className="h-3.5 w-3.5 text-amber-400" />
+          <span>News</span>
         </button>
       </div>
 
@@ -503,6 +527,31 @@ export default function WebTerminalPage() {
           />
         </div>
       </div>
+
+      {/* Economic News Calendar Modal Overlay */}
+      {calendarOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-5xl max-h-[92vh] bg-card rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden text-foreground">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-slate-900 text-white shrink-0">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-amber-400" />
+                <span className="font-display font-bold text-base">Economic News Calendar &amp; Red-Folder Risk Monitor</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCalendarOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all cursor-pointer"
+                title="Close Calendar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 bg-background">
+              <TradingViewEconomicCalendar height={580} showNewsBufferNotice={true} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

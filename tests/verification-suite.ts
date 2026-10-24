@@ -23,6 +23,7 @@ import { TraderTimelineEngine } from '../src/server/timeline';
 import { calculateMT5PnL, calculateInstitutionalMargin } from '../src/server/mt5';
 import { marketDataService } from '../src/server/marketData';
 import { EmailService } from '../src/server/emailService';
+import { NewsService } from '../src/server/newsService';
 
 export interface TestResultItem {
   category: string;
@@ -1198,6 +1199,116 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
 
     assert(positionsA.length === 1 && positionsA[0].id === posA.id, 'Account A must strictly receive only position A');
     assert(positionsB.length === 1 && positionsB[0].id === posB.id, 'Account B must strictly receive only position B');
+  });
+
+  // =============================================================
+  // 16. FOREX & PRECIOUS METALS (XAU/USD, XAG/USD) INSTITUTIONAL TESTS
+  // =============================================================
+  await test('Forex & Metals Engine', 'XAUUSD (Gold) & XAGUSD (Silver) Contract Sizing & MT5 Margin Calculations', () => {
+    // 1. Gold CFD: 100 troy ounces per lot. 1.00 lot at 2,724.50 with 1:100 leverage = $2,724.50
+    const goldMargin = calculateInstitutionalMargin({
+      symbol: 'XAUUSD',
+      lotSize: 1.0,
+      entryPrice: 2724.50,
+      leverage: 100,
+      contractSize: 100,
+    });
+    assert(Math.abs(goldMargin - 2724.50) < 0.01, `Gold margin must be $2,724.50, received $${goldMargin}`);
+
+    // 2. Silver CFD: 5,000 troy ounces per lot. 1.00 lot at 31.85 with 1:100 leverage = $1,592.50
+    const silverMargin = calculateInstitutionalMargin({
+      symbol: 'XAGUSD',
+      lotSize: 1.0,
+      entryPrice: 31.85,
+      leverage: 100,
+      contractSize: 5000,
+    });
+    assert(Math.abs(silverMargin - 1592.50) < 0.01, `Silver margin must be $1,592.50, received $${silverMargin}`);
+
+    // 3. Gold MT5 PnL: BUY 1.0 lot at 2720.00, valued at current BID 2724.50 (+4.50 pts * 100 oz = +$450 gross PnL)
+    const goldPnl = calculateMT5PnL({
+      symbol: 'XAUUSD',
+      type: 'BUY',
+      lotSize: 1.0,
+      openPrice: 2720.00,
+      currentBid: 2724.50,
+      currentAsk: 2724.80,
+      commission: 0,
+      swap: 0,
+    });
+    assert(goldPnl.contractSize === 100, 'Gold contract size must be 100 oz');
+    assert(goldPnl.grossPnl === 450.00, `Gold BUY profit must be $450.00, received $${goldPnl.grossPnl}`);
+
+    // 4. Gold MT5 PnL: SELL 1.0 lot at 2730.00, valued at current ASK 2725.00 (+5.00 pts * 100 oz = +$500 gross PnL)
+    const goldSellPnl = calculateMT5PnL({
+      symbol: 'XAUUSD',
+      type: 'SELL',
+      lotSize: 1.0,
+      openPrice: 2730.00,
+      currentBid: 2724.70,
+      currentAsk: 2725.00,
+      commission: 6.0,
+      swap: 0,
+    });
+    assert(goldSellPnl.grossPnl === 500.00, `Gold SELL profit must be $500.00, received $${goldSellPnl.grossPnl}`);
+    assert(goldSellPnl.netPnl === 494.00, `Gold SELL net profit must be $494.00, received $${goldSellPnl.netPnl}`);
+  });
+
+  await test('Forex & Metals Engine', 'Complete Forex & Metals Catalog Verification (34 Pairs Active & Tradeable)', () => {
+    const requiredPairs = [
+      // Metals
+      'XAUUSD', 'XAGUSD',
+      // Majors
+      'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD',
+      // Crosses
+      'EURGBP', 'EURJPY', 'GBPJPY', 'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD',
+      'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD', 'AUDCAD', 'AUDCHF', 'AUDJPY',
+      'AUDNZD', 'CADCHF', 'CADJPY', 'CHFJPY', 'NZDCAD', 'NZDCHF', 'NZDJPY',
+      // Exotics
+      'USDMXN', 'USDZAR', 'USDSGD', 'USDTRY',
+    ];
+
+    const currentSymbols = db.symbols || [];
+    for (const sym of requiredPairs) {
+      const found = currentSymbols.find((s) => s.symbol === sym);
+      assert(found !== undefined, `Symbol ${sym} must be present in db.symbols catalog`);
+      assert(found?.tradingEnabled === true, `Symbol ${sym} must have tradingEnabled === true`);
+      if (sym === 'XAUUSD') {
+        assert(found?.contractSize === 100, 'XAUUSD contract size must be 100 oz');
+        assert(found?.decimalPrecision === 2, 'XAUUSD decimal precision must be 2');
+      } else if (sym === 'XAGUSD') {
+        assert(found?.contractSize === 5000, 'XAGUSD contract size must be 5000 oz');
+      } else {
+        assert(found?.contractSize === 100000, `${sym} Forex contract size must be 100,000 base currency units`);
+      }
+    }
+  });
+
+  // =============================================================
+  // 18. ECONOMIC CALENDAR & HIGH-IMPACT NEWS BUFFER TESTS
+  // =============================================================
+  await test('News Engine', 'Real-Time Macroeconomic Event Feed & Currency Mapping', async () => {
+    const events = await NewsService.getEvents();
+    assert(Array.isArray(events), 'Events must be an array');
+    assert(events.length > 0, 'Events feed must contain macroeconomic events');
+    const first = events[0];
+    assert(typeof first.name === 'string', 'Event name must be string');
+    assert(typeof first.country === 'string', 'Event country must be string');
+    assert(['high', 'medium', 'low'].includes(first.impact), 'Impact must be high, medium, or low');
+    assert(typeof first.currency === 'string', 'Currency must be mapped');
+  });
+
+  await test('News Engine', 'Upcoming Red-Folder High Impact Filtering', async () => {
+    const upcoming = await NewsService.getUpcomingHighImpactEvents(5);
+    assert(Array.isArray(upcoming), 'Upcoming events must be an array');
+    for (const evt of upcoming) {
+      assert(evt.impact === 'high', 'All filtered events must have high impact rating');
+    }
+  });
+
+  await test('News Engine', '2-Minute Buffer Trade Restriction Logic', async () => {
+    const status = await NewsService.isNewsRestricted('EURUSD');
+    assert(typeof status.restricted === 'boolean', 'isNewsRestricted must return a boolean status');
   });
 
   // Summary

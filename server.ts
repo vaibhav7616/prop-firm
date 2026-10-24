@@ -27,6 +27,7 @@ import { TraderRiskIntelligenceEngine } from './src/server/riskIntelligence';
 import { TradeSimulatorEngine } from './src/server/simulator';
 import { TraderTimelineEngine } from './src/server/timeline';
 import { EmailService } from './src/server/emailService';
+import { NewsService } from './src/server/newsService';
 import { runAutomatedVerificationTests } from './tests/verification-suite';
 
 const app = express();
@@ -714,6 +715,44 @@ app.get('/api/market/ticks/stream', (req, res) => {
     clearInterval(interval);
     res.end();
   });
+});
+
+// -------------------------------------------------------------
+// ECONOMIC CALENDAR & REAL-TIME NEWS RESTRICTION API
+// -------------------------------------------------------------
+app.get('/api/economic-calendar', async (req, res) => {
+  try {
+    const week = req.query.week === 'next' ? 'next' : 'this';
+    const forceRefresh = req.query.refresh === 'true';
+    const events = await NewsService.getEvents({ week, forceRefresh });
+    const upcomingHighImpact = await NewsService.getUpcomingHighImpactEvents(10);
+
+    res.json({
+      success: true,
+      week,
+      count: events.length,
+      events,
+      upcomingHighImpact,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/economic-calendar/status', async (req, res) => {
+  try {
+    const symbol = String(req.query.symbol || 'EURUSD');
+    const status = await NewsService.isNewsRestricted(symbol);
+    res.json({
+      success: true,
+      symbol,
+      ...status,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // -------------------------------------------------------------

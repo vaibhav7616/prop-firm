@@ -22,6 +22,7 @@ import {
   Zap,
   LineChart,
   Trophy,
+  Calendar,
 } from 'lucide-react';
 import { Logo } from '@/components/shared/logo';
 import { ThemeToggle } from '@/components/shared/theme-toggle';
@@ -32,6 +33,7 @@ const TRADER_NAV = [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Trading Accounts', to: '/dashboard/accounts', icon: Wallet },
   { label: 'Trading Objectives', to: '/dashboard/objectives', icon: Target },
+  { label: 'Economic Calendar', to: '/dashboard/calendar', icon: Calendar },
   { label: 'Trader Leaderboard', to: '/dashboard/leaderboard', icon: Trophy },
   { label: 'Orders', to: '/dashboard/orders', icon: ShoppingCart },
   { label: 'Invoices', to: '/dashboard/invoices', icon: FileText },
