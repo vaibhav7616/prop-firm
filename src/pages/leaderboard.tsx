@@ -29,6 +29,7 @@ import {
   TimeframePeriod,
 } from '@/data/top-traders';
 import { cn } from '@/lib/utils';
+import { TraderAvatar } from '@/components/shared/trader-avatar';
 
 export function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState<TimeframePeriod>('allTime');
@@ -300,10 +301,10 @@ export function LeaderboardPage() {
 
                   {/* Trader Info */}
                   <div className="text-center space-y-2 mb-5">
-                    <img
-                      src={trader.avatar}
-                      alt={trader.traderName}
-                      className="h-16 w-16 mx-auto rounded-full object-cover border-4 border-white shadow-md"
+                    <TraderAvatar
+                      name={trader.traderName}
+                      size="xl"
+                      className="mx-auto shadow-md ring-4 ring-white"
                     />
                     <div>
                       <div className="flex items-center justify-center gap-1.5">
@@ -472,10 +473,9 @@ export function LeaderboardPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={trader.avatar}
-                          alt={trader.traderName}
-                          className="h-9 w-9 rounded-full object-cover border border-slate-200"
+                        <TraderAvatar
+                          name={trader.traderName}
+                          size="sm"
                         />
                         <div>
                           <div className="flex items-center gap-1.5">

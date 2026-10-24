@@ -4,7 +4,7 @@ export interface TopTrader {
   country: string;
   countryCode: string;
   flag: string;
-  avatar: string;
+  avatar?: string;
   accountSize: string;
   accountTier: number;
   totalProfit: number;

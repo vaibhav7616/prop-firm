@@ -30,6 +30,7 @@ import {
   TimeframePeriod,
 } from '@/data/top-traders';
 import { cn } from '@/lib/utils';
+import { TraderAvatar } from '@/components/shared/trader-avatar';
 import { toast } from 'sonner';
 
 export function DashboardLeaderboard() {
@@ -320,10 +321,9 @@ export function DashboardLeaderboard() {
                 </span>
               </div>
               <div className="flex items-center gap-3 mb-3">
-                <img
-                  src={trader.avatar}
-                  alt={trader.traderName}
-                  className="h-12 w-12 rounded-full object-cover border-2 border-slate-200"
+                <TraderAvatar
+                  name={trader.traderName}
+                  size="lg"
                 />
                 <div>
                   <h3 className="font-bold text-sm text-slate-900">{trader.traderName} {trader.flag}</h3>
@@ -478,10 +478,9 @@ export function DashboardLeaderboard() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={trader.avatar}
-                        alt={trader.traderName}
-                        className="h-9 w-9 rounded-full object-cover border border-slate-200"
+                      <TraderAvatar
+                        name={trader.traderName}
+                        size="sm"
                       />
                       <div>
                         <div className="flex items-center gap-1.5">

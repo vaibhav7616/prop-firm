@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PayoutProofModal } from '@/components/shared/payout-proof-modal';
+import { TraderAvatar } from '@/components/shared/trader-avatar';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -30,7 +31,7 @@ export interface PayoutRecord {
   country: string;
   countryCode: string;
   flag: string;
-  avatar: string;
+  avatar?: string;
   amount: number;
   accountSize: string;
   accountTier: number;
@@ -449,10 +450,9 @@ export function ProofOfPayoutPage() {
                 {/* Header: Trader & Country */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={payout.avatar}
-                      alt={payout.traderName}
-                      className="h-11 w-11 rounded-full object-cover border-2 border-brand-200"
+                    <TraderAvatar
+                      name={payout.traderName}
+                      size="md"
                     />
                     <div>
                       <div className="flex items-center gap-1.5">

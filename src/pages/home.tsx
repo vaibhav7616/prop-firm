@@ -32,6 +32,7 @@ import { Hero3DPreview } from '@/components/home/hero-3d';
 import { RevealOnScroll } from '@/components/motion/reveal-on-scroll';
 import { TiltCard, TiltDepthLayer } from '@/components/motion/tilt-card';
 import { AnimatedButton } from '@/components/motion/animated-button';
+import { TraderAvatar } from '@/components/shared/trader-avatar';
 
 /* ---------- Hero Dashboard Preview ---------- */
 function HeroDashboard() {
@@ -644,10 +645,10 @@ export function HomePage() {
                 </span>
               </div>
               <div className="flex items-center gap-3 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80"
-                  alt="Marcus Vance"
-                  className="h-12 w-12 rounded-full object-cover border-2 border-amber-300"
+                <TraderAvatar
+                  name="Marcus Vance"
+                  size="lg"
+                  className="border-2 border-amber-300"
                 />
                 <div>
                   <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
@@ -688,10 +689,10 @@ export function HomePage() {
                 </span>
               </div>
               <div className="flex items-center gap-3 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80"
-                  alt="Sneha Kulkarni"
-                  className="h-12 w-12 rounded-full object-cover border-2 border-slate-300"
+                <TraderAvatar
+                  name="Sneha Kulkarni"
+                  size="lg"
+                  className="border-2 border-slate-300"
                 />
                 <div>
                   <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
@@ -732,10 +733,10 @@ export function HomePage() {
                 </span>
               </div>
               <div className="flex items-center gap-3 mb-4">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                  alt="Rajesh Sharma"
-                  className="h-12 w-12 rounded-full object-cover border-2 border-amber-600/30"
+                <TraderAvatar
+                  name="Rajesh Sharma"
+                  size="lg"
+                  className="border-2 border-amber-600/30"
                 />
                 <div>
                   <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
