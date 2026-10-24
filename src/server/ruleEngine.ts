@@ -309,6 +309,10 @@ export class RuleEngine {
         } else {
           warnings.push('Profit target reached! Close all open positions to complete evaluation.');
         }
+      } else if (currentProfit >= profitTargetAmount && account.trading_days < rules.min_trading_days) {
+        warnings.push(
+          `Profit target reached! Minimum ${rules.min_trading_days} trading days required to pass this stage (${account.trading_days}/${rules.min_trading_days} traded).`
+        );
       }
     }
 

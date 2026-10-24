@@ -1685,6 +1685,59 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
     assert(consistViolation === undefined, 'No consistency violation should exist');
   });
 
+  await test('Trading Rules Policy', 'Evaluation Profit Target Reached Requires Full 5 Min Trading Days to Pass', () => {
+    const evalDaysAccId = `acc-eval-days-${Date.now()}`;
+    const evalDaysAcc: any = {
+      id: evalDaysAccId,
+      user_id: 'user-days-test',
+      account_number: '5566778',
+      account_size: 100000,
+      starting_balance: 100000,
+      current_balance: 110000, // +$10,000 (10% target met)
+      current_equity: 110000,
+      highest_balance: 110000,
+      highest_equity: 110000,
+      start_of_day_balance: 100000,
+      start_of_day_equity: 100000,
+      status: 'ACTIVE',
+      phase: 1,
+      is_funded: false,
+      trading_days: 3, // Only 3 days traded!
+      rules: {
+        profit_target_percent: 10,
+        daily_loss_limit_percent: 4,
+        max_loss_limit_percent: 8,
+        drawdown_model: 'STATIC',
+        min_trading_days: 5,
+        leverage: 100,
+        profit_split_percent: 80,
+        max_lot_size: 50,
+        max_open_positions: 20,
+        news_trading_allowed: true,
+        weekend_holding_allowed: true,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(evalDaysAcc);
+
+    // 1. Evaluate with 3 trading days -> target reached but cannot pass yet
+    const evalRes3Days = RuleEngine.evaluateAccount(evalDaysAccId);
+    assert(evalRes3Days.passedTarget === false, 'Account must not pass before reaching 5 minimum trading days');
+    assert(evalDaysAcc.status === 'ACTIVE', 'Account status must remain ACTIVE');
+    assert(
+      evalRes3Days.warnings.some((w: string) => w.includes('5 trading days') || w.includes('5')),
+      'Warning must clearly state 5 trading days requirement'
+    );
+
+    // 2. Complete 5 trading days -> passes successfully
+    evalDaysAcc.trading_days = 5;
+    const evalRes5Days = RuleEngine.evaluateAccount(evalDaysAccId);
+    assert(evalRes5Days.passedTarget === true, 'Account must pass once 5 minimum trading days and profit target are met');
+    assert(evalDaysAcc.status === 'PASSED', 'Account status must transition to PASSED');
+  });
+
   // Summary
   const passedCount = results.filter((r) => r.passed).length;
   const failedCount = results.filter((r) => !r.passed).length;
