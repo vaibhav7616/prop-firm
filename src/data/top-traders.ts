@@ -21,6 +21,7 @@ export interface TopTrader {
     monthly: number;
     allTime: number;
   };
+  isLiveTrader?: boolean;
 }
 
 export type TimeframePeriod = 'weekly' | 'monthly' | 'allTime';

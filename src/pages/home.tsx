@@ -23,7 +23,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { fetchChallengesApi } from '@/lib/api-client';
+import { fetchChallengesApi, fetchPublicLeaderboardApi } from '@/lib/api-client';
+import { TOP_20_ALL_TIME_TRADERS } from '@/data/top-traders';
 import { DEFAULT_CHALLENGES } from '@/lib/default-data';
 import { LivePayoutTicker } from '@/components/home/payout-ticker';
 import { PayoutCalculator } from '@/components/home/payout-calculator';
@@ -261,11 +262,17 @@ const TESTIMONIALS = [
 /* ---------- Home Page ---------- */
 export function HomePage() {
   const [liveChallenges, setLiveChallenges] = useState<any[]>(DEFAULT_CHALLENGES);
+  const [topTraders, setTopTraders] = useState<any[]>([]);
 
   useEffect(() => {
     fetchChallengesApi().then((data) => {
       if (data && data.length > 0) {
         setLiveChallenges(data);
+      }
+    });
+    fetchPublicLeaderboardApi('allTime').then((traders) => {
+      if (traders && traders.length > 0) {
+        setTopTraders(traders.slice(0, 3));
       }
     });
   }, []);
@@ -629,137 +636,99 @@ export function HomePage() {
 
           {/* Top 3 Live Showcase */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <motion.div
-              whileHover={{ y: -6 }}
-              className="bg-card border-2 border-amber-300 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="h-8 w-8 rounded-full bg-amber-400 text-amber-950 font-black font-mono text-sm flex items-center justify-center">
-                    #1
-                  </span>
-                  <Trophy className="h-5 w-5 text-amber-500 fill-amber-400" />
-                </div>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                  🏆 #1 All-Time Legend
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <TraderAvatar
-                  name="Marcus Vance"
-                  size="lg"
-                  className="border-2 border-amber-300"
-                />
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
-                    Marcus Vance <span>🇬🇧</span>
-                  </h4>
-                  <span className="text-xs text-slate-500 font-mono">$200,000 Two-Step Account</span>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  VERIFIED PAYOUTS
-                </span>
-                <span className="text-2xl font-black font-mono text-emerald-600">$94,820.00</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">8 Processed Cycles · 74.2% Win Rate</span>
-              </div>
-              <Link
-                to="/leaderboard"
-                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center justify-between pt-2 border-t border-slate-100"
-              >
-                <span>View Payout Certificate</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -6 }}
-              className="bg-card border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="h-8 w-8 rounded-full bg-slate-200 text-slate-800 font-black font-mono text-sm flex items-center justify-center">
-                    #2
-                  </span>
-                  <Trophy className="h-5 w-5 text-slate-400 fill-slate-300" />
-                </div>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
-                  👑 Gold Specialist
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <TraderAvatar
-                  name="Sneha Kulkarni"
-                  size="lg"
-                  className="border-2 border-slate-300"
-                />
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
-                    Sneha Kulkarni <span>🇮🇳</span>
-                  </h4>
-                  <span className="text-xs text-slate-500 font-mono">$200,000 Two-Step Account</span>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  VERIFIED PAYOUTS
-                </span>
-                <span className="text-2xl font-black font-mono text-emerald-600">$82,450.00</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">7 Processed Cycles · 78.9% Win Rate</span>
-              </div>
-              <Link
-                to="/leaderboard"
-                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center justify-between pt-2 border-t border-slate-100"
-              >
-                <span>View Payout Certificate</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -6 }}
-              className="bg-card border border-slate-200 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="h-8 w-8 rounded-full bg-amber-700 text-white font-black font-mono text-sm flex items-center justify-center">
-                    #3
-                  </span>
-                  <Trophy className="h-5 w-5 text-amber-700 fill-amber-600" />
-                </div>
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200">
-                  ⭐ Consistent Master
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <TraderAvatar
-                  name="Rajesh Sharma"
-                  size="lg"
-                  className="border-2 border-amber-600/30"
-                />
-                <div>
-                  <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
-                    Rajesh Sharma <span>🇮🇳</span>
-                  </h4>
-                  <span className="text-xs text-slate-500 font-mono">$200,000 Two-Step Account</span>
-                </div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-4">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  VERIFIED PAYOUTS
-                </span>
-                <span className="text-2xl font-black font-mono text-emerald-600">$71,320.00</span>
-                <span className="text-[11px] text-slate-500 block mt-0.5">6 Processed Cycles · 0.62% Max Drawdown</span>
-              </div>
-              <Link
-                to="/leaderboard"
-                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center justify-between pt-2 border-t border-slate-100"
-              >
-                <span>View Payout Certificate</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </motion.div>
+            {(topTraders.length > 0 ? topTraders : TOP_20_ALL_TIME_TRADERS.slice(0, 3)).map((trader, idx) => {
+              const isGold = idx === 0;
+              const isSilver = idx === 1;
+              const isBronze = idx === 2;
+              return (
+                <motion.div
+                  key={trader.traderName}
+                  whileHover={{ y: -6 }}
+                  className={cn(
+                    'bg-card rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between border-2',
+                    isGold && 'border-amber-300',
+                    isSilver && 'border-slate-300',
+                    isBronze && 'border-amber-600/30'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'h-8 w-8 rounded-full font-black font-mono text-sm flex items-center justify-center',
+                          isGold && 'bg-amber-400 text-amber-950',
+                          isSilver && 'bg-slate-200 text-slate-800',
+                          isBronze && 'bg-amber-700 text-white'
+                        )}
+                      >
+                        #{idx + 1}
+                      </span>
+                      <Trophy
+                        className={cn(
+                          'h-5 w-5',
+                          isGold && 'text-amber-500 fill-amber-400',
+                          isSilver && 'text-slate-400 fill-slate-300',
+                          isBronze && 'text-amber-700 fill-amber-600'
+                        )}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {trader.isLiveTrader && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                          LIVE
+                        </span>
+                      )}
+                      <span
+                        className={cn(
+                          'text-[11px] font-bold px-2.5 py-0.5 rounded-full border',
+                          isGold && 'bg-amber-50 text-amber-800 border-amber-200',
+                          isSilver && 'bg-slate-100 text-slate-800 border-slate-200',
+                          isBronze && 'bg-amber-50 text-amber-900 border-amber-200'
+                        )}
+                      >
+                        {trader.badge || (isGold ? '🏆 #1 All-Time Legend' : isSilver ? '👑 Gold Specialist' : '⭐ Consistent Master')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <TraderAvatar
+                      name={trader.traderName}
+                      size="lg"
+                      className={cn(
+                        'border-2',
+                        isGold && 'border-amber-300',
+                        isSilver && 'border-slate-300',
+                        isBronze && 'border-amber-600/30'
+                      )}
+                    />
+                    <div>
+                      <h4 className="font-bold text-base text-slate-900 flex items-center gap-1.5">
+                        {trader.traderName} <span>{trader.flag}</span>
+                      </h4>
+                      <span className="text-xs text-slate-500 font-mono">{trader.accountSize} Account</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-4">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      VERIFIED PAYOUTS
+                    </span>
+                    <span className="text-2xl font-black font-mono text-emerald-600">
+                      ${trader.totalProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      {trader.payoutCount} Processed Cycles · {trader.winRate}% Win Rate
+                    </span>
+                  </div>
+                  <Link
+                    to="/leaderboard"
+                    className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center justify-between pt-2 border-t border-slate-100"
+                  >
+                    <span>View Payout Certificate</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

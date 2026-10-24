@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Trophy,
@@ -31,6 +31,7 @@ import {
 } from '@/data/top-traders';
 import { cn } from '@/lib/utils';
 import { TraderAvatar } from '@/components/shared/trader-avatar';
+import { fetchPublicLeaderboardApi } from '@/lib/api-client';
 import { toast } from 'sonner';
 
 export function DashboardLeaderboard() {
@@ -40,17 +41,19 @@ export function DashboardLeaderboard() {
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedAsset, setSelectedAsset] = useState<string>('ALL');
 
-  // Select the appropriate dataset based on timeframe
-  const currentDataset = useMemo(() => {
-    switch (timeframe) {
-      case 'weekly':
-        return TOP_20_WEEKLY_TRADERS;
-      case 'monthly':
-        return TOP_20_MONTHLY_TRADERS;
-      case 'allTime':
-      default:
-        return TOP_20_ALL_TIME_TRADERS;
-    }
+  const [currentDataset, setCurrentDataset] = useState<TopTrader[]>(TOP_20_ALL_TIME_TRADERS);
+
+  // Automatically fetch real live traders for active timeframe (weekly, monthly, allTime)
+  useEffect(() => {
+    let active = true;
+    fetchPublicLeaderboardApi(timeframe).then((data) => {
+      if (active && data) {
+        setCurrentDataset(data);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [timeframe]);
 
   // Current logged in user ranking stats according to active timeframe
@@ -326,7 +329,15 @@ export function DashboardLeaderboard() {
                   size="lg"
                 />
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">{trader.traderName} {trader.flag}</h3>
+                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                    <span>{trader.traderName}</span>
+                    <span>{trader.flag}</span>
+                    {trader.isLiveTrader && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                        LIVE
+                      </span>
+                    )}
+                  </h3>
                   <p className="text-xs text-slate-500 font-mono">{trader.accountSize} Account · {trader.topSymbol}</p>
                 </div>
               </div>
@@ -486,6 +497,11 @@ export function DashboardLeaderboard() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-900">{trader.traderName}</span>
                           <span>{trader.flag}</span>
+                          {trader.isLiveTrader && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                              LIVE
+                            </span>
+                          )}
                           {trader.rank === 14 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700">
                               YOU

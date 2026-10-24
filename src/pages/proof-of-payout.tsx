@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   ShieldCheck,
@@ -21,6 +21,7 @@ import {
 import { Link } from 'react-router-dom';
 import { PayoutProofModal } from '@/components/shared/payout-proof-modal';
 import { TraderAvatar } from '@/components/shared/trader-avatar';
+import { fetchPublicPayoutsApi } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -264,10 +265,26 @@ export function ProofOfPayoutPage() {
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedMethod, setSelectedMethod] = useState<string>('ALL');
   const [selectedCertificateTrader, setSelectedCertificateTrader] = useState<PayoutRecord | null>(null);
+  const [payoutsList, setPayoutsList] = useState<PayoutRecord[]>(VERIFIED_PAYOUTS_DATA);
+
+  // Automatically prepend live approved payouts from real traders in database
+  useEffect(() => {
+    let active = true;
+    fetchPublicPayoutsApi().then((realPayouts) => {
+      if (active && realPayouts && realPayouts.length > 0) {
+        const realIds = new Set(realPayouts.map((p) => p.id));
+        const baseline = VERIFIED_PAYOUTS_DATA.filter((p) => !realIds.has(p.id));
+        setPayoutsList([...realPayouts, ...baseline]);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Filtered Proofs
   const filteredPayouts = useMemo(() => {
-    return VERIFIED_PAYOUTS_DATA.filter((p) => {
+    return payoutsList.filter((p) => {
       const matchSearch =
         p.traderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -462,9 +479,16 @@ export function ProofOfPayoutPage() {
                       <span className="text-xs text-slate-500 font-mono">{payout.id}</span>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                    <CheckCircle2 className="h-3 w-3" /> VERIFIED
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {(payout as any).isLivePayout && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                        ⚡ LIVE
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                      <CheckCircle2 className="h-3 w-3" /> VERIFIED
+                    </span>
+                  </div>
                 </div>
 
                 {/* Amount & Account Size */}

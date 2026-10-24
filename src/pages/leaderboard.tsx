@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Trophy,
@@ -30,6 +30,7 @@ import {
 } from '@/data/top-traders';
 import { cn } from '@/lib/utils';
 import { TraderAvatar } from '@/components/shared/trader-avatar';
+import { fetchPublicLeaderboardApi } from '@/lib/api-client';
 
 export function LeaderboardPage() {
   const [timeframe, setTimeframe] = useState<TimeframePeriod>('allTime');
@@ -37,17 +38,19 @@ export function LeaderboardPage() {
   const [selectedTier, setSelectedTier] = useState<string>('ALL');
   const [selectedAsset, setSelectedAsset] = useState<string>('ALL');
 
-  // Select the appropriate dataset based on timeframe
-  const currentDataset = useMemo(() => {
-    switch (timeframe) {
-      case 'weekly':
-        return TOP_20_WEEKLY_TRADERS;
-      case 'monthly':
-        return TOP_20_MONTHLY_TRADERS;
-      case 'allTime':
-      default:
-        return TOP_20_ALL_TIME_TRADERS;
-    }
+  const [currentDataset, setCurrentDataset] = useState<TopTrader[]>(TOP_20_ALL_TIME_TRADERS);
+
+  // Automatically fetch real live traders for active timeframe (weekly, monthly, allTime)
+  useEffect(() => {
+    let active = true;
+    fetchPublicLeaderboardApi(timeframe).then((data) => {
+      if (active && data) {
+        setCurrentDataset(data);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, [timeframe]);
 
   // Filtered Leaderboard for Top 20
@@ -310,6 +313,11 @@ export function LeaderboardPage() {
                       <div className="flex items-center justify-center gap-1.5">
                         <h3 className="font-bold text-base text-slate-900">{trader.traderName}</h3>
                         <span>{trader.flag}</span>
+                        {trader.isLiveTrader && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                            LIVE
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500 font-mono">Funded Account: {trader.accountSize}</p>
                     </div>
@@ -481,6 +489,11 @@ export function LeaderboardPage() {
                           <div className="flex items-center gap-1.5">
                             <span className="font-bold text-slate-900">{trader.traderName}</span>
                             <span>{trader.flag}</span>
+                            {trader.isLiveTrader && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                                LIVE
+                              </span>
+                            )}
                           </div>
                           <span className="text-[11px] text-slate-400 font-normal">{trader.challengeType}</span>
                         </div>

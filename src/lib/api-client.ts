@@ -1117,5 +1117,67 @@ export async function fetchTerminalCandlesApi(symbol: string, timeframe: string 
   return { symbol, timeframe, candles: [] };
 }
 
+// -------------------------------------------------------------
+// PUBLIC LEADERBOARD & VERIFIED PAYOUTS REAL-TIME CLIENTS
+// -------------------------------------------------------------
+import {
+  TOP_20_ALL_TIME_TRADERS,
+  TOP_20_WEEKLY_TRADERS,
+  TOP_20_MONTHLY_TRADERS,
+  type TopTrader,
+  type TimeframePeriod,
+} from '@/data/top-traders';
+
+export async function fetchPublicLeaderboardApi(timeframe: TimeframePeriod = 'allTime'): Promise<TopTrader[]> {
+  try {
+    const res = await fetch(`/api/public/leaderboard?timeframe=${timeframe}`);
+    if (res.ok) {
+      const data = await res.json();
+      const realTraders: TopTrader[] = data.realTraders || [];
+
+      const baseline =
+        timeframe === 'weekly'
+          ? TOP_20_WEEKLY_TRADERS
+          : timeframe === 'monthly'
+          ? TOP_20_MONTHLY_TRADERS
+          : TOP_20_ALL_TIME_TRADERS;
+
+      if (realTraders.length === 0) {
+        return baseline;
+      }
+
+      // Merge real live traders at the top, then baseline filler up to 20
+      const realNames = new Set(realTraders.map((t) => t.traderName.toLowerCase()));
+      const filteredBaseline = baseline.filter((t) => !realNames.has(t.traderName.toLowerCase()));
+
+      const merged: TopTrader[] = [...realTraders, ...filteredBaseline].slice(0, 20).map((t, idx) => ({
+        ...t,
+        rank: idx + 1,
+      }));
+
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Leaderboard API fetch notice:', err);
+  }
+
+  if (timeframe === 'weekly') return TOP_20_WEEKLY_TRADERS;
+  if (timeframe === 'monthly') return TOP_20_MONTHLY_TRADERS;
+  return TOP_20_ALL_TIME_TRADERS;
+}
+
+export async function fetchPublicPayoutsApi(): Promise<any[]> {
+  try {
+    const res = await fetch('/api/public/payouts');
+    if (res.ok) {
+      const data = await res.json();
+      return data.payouts || [];
+    }
+  } catch (err) {
+    console.warn('Public payouts API fetch notice:', err);
+  }
+  return [];
+}
+
 
 
