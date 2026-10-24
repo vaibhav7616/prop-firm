@@ -139,8 +139,16 @@ export function RegisterPage() {
         </Link>
       </p>
 
-      <p className="mt-4 text-center text-xs text-muted-foreground/60">
-        By creating an account, you agree to our Terms of Service and Privacy Policy.
+      <p className="mt-4 text-center text-xs text-muted-foreground/70">
+        By creating an account, you agree to our{' '}
+        <Link to="/terms" className="underline hover:text-foreground">
+          Terms &amp; Conditions
+        </Link>{' '}
+        and{' '}
+        <Link to="/privacy" className="underline hover:text-foreground">
+          Privacy Policy
+        </Link>
+        .
       </p>
     </div>
   );

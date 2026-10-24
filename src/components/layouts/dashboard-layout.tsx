@@ -86,8 +86,12 @@ export function DashboardLayout({ variant }: DashboardLayoutProps) {
     return null;
   }
 
-  const isActive = (to: string) =>
-    to === `/${variant}` ? location.pathname === to : location.pathname.startsWith(to);
+  const isActive = (to: string) => {
+    if (to === '/dashboard' || to === '/admin') {
+      return location.pathname === to || location.pathname === `${to}/`;
+    }
+    return location.pathname.startsWith(to);
+  };
 
   return (
     <div className="min-h-screen bg-background">

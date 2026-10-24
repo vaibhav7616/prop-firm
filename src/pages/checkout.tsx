@@ -247,8 +247,25 @@ export function CheckoutPage() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Profit Target</span><span>{challenge.rules.profit_target}%</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Daily Drawdown</span><span>{challenge.rules.daily_drawdown}%</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Max Drawdown</span><span>{challenge.rules.max_drawdown}%</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Profit Split</span><span>Up to {challenge.rules.profit_split}%</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Min Trading Days</span><span>{challenge.rules.min_trading_days || 5} Days</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Profit Split</span><span>80/20 ({challenge.rules.profit_split}%)</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Leverage</span><span>1:{challenge.rules.leverage}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Weekend Holding</span>
+                    <span className={challenge.rules.weekend_holding ? 'text-emerald-500 font-medium' : 'text-rose-500 font-medium'}>
+                      {challenge.rules.weekend_holding ? 'Allowed' : 'Prohibited'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Consistency Rule</span>
+                    <span className="text-emerald-500 font-medium">No Consistency Rule</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">News Trading</span>
+                    <span className={challenge.rules.news_trading ? 'text-emerald-500 font-medium' : 'text-rose-500 font-medium'}>
+                      {challenge.rules.news_trading ? 'Allowed' : 'Prohibited'}
+                    </span>
+                  </div>
                 </div>
                 <Button onClick={() => setStep(1)} className="w-full bg-gold-gradient text-black hover:opacity-90 font-semibold h-12">
                   Continue <ArrowRight className="h-4 w-4 ml-2" />
@@ -380,9 +397,17 @@ export function CheckoutPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                  <ShieldCheck className="h-4 w-4 text-gold-400" />
-                  Your payment is secured with industry-standard encryption. This is a mock payment for demonstration.
+                <div className="p-3 rounded-xl bg-card/60 border border-border/80 text-xs text-muted-foreground mb-6 space-y-2">
+                  <div className="flex items-center gap-2 text-gold-400 font-semibold">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    <span>Bank-Grade 256-Bit SSL Encrypted Payment</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    By clicking &quot;Pay&quot;, you acknowledge that all evaluation accounts provided by FundedShift are <strong>simulated accounts with fictitious funds</strong> and that you agree to our{' '}
+                    <Link to="/terms" target="_blank" className="text-gold-400 hover:underline font-semibold">Terms & Conditions</Link>,{' '}
+                    <Link to="/privacy" target="_blank" className="text-gold-400 hover:underline font-semibold">Privacy Policy</Link>, and{' '}
+                    <Link to="/refund-policy" target="_blank" className="text-gold-400 hover:underline font-semibold">Refund Policy</Link> (including the 14-day zero-trade cancellation guarantee).
+                  </p>
                 </div>
 
                 <div className="flex gap-3">
@@ -482,9 +507,10 @@ export function CheckoutPage() {
                   </div>
                 </div>
                 <div className="mt-6 pt-6 border-t border-border/50 space-y-2 text-xs text-muted-foreground">
+                  <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> Standardized 80/20 Profit Split</p>
+                  <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> No Consistency Rule (Full Freedom)</p>
                   <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> Fee refunded on pass</p>
-                  <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> No time limits</p>
-                  <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> 7-day payouts</p>
+                  <p className="flex items-center gap-2"><Check className="h-3 w-3 text-gold-400" /> 5 Min Trading Days · No time limits</p>
                 </div>
               </div>
             </div>

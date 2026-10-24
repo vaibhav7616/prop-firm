@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Target, TrendingDown, Calendar, Gauge, Percent, Newspaper, Moon, BarChart3, ShieldCheck } from 'lucide-react';
 import { SectionHeading } from '@/components/shared/section-heading';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -6,13 +7,13 @@ const RULES = [
   { icon: Target, name: 'Profit Target', desc: 'The percentage of profit you need to achieve to pass the evaluation phase. One Step requires 8%, Two Step requires 8% in Phase 1 and 5% in Phase 2.', detail: 'One Step: 8% · Two Step: 8% / 5%' },
   { icon: TrendingDown, name: 'Daily Drawdown', desc: 'The maximum loss you can incur in a single trading day, calculated from your starting balance or equity peak. Exceeding this limit results in a breach.', detail: '5% of account balance' },
   { icon: TrendingDown, name: 'Maximum Drawdown', desc: 'The total maximum loss allowed on your account from the initial starting balance. This is a hard limit that cannot be exceeded at any point.', detail: '10% of account balance' },
-  { icon: Calendar, name: 'Minimum Trading Days', desc: 'The minimum number of days you must place trades before becoming eligible to pass. Some challenge types require zero minimum days.', detail: 'One Step: 0 · Two Step: 3' },
+  { icon: Calendar, name: 'Minimum Trading Days', desc: 'The minimum number of trading days required before becoming eligible to pass an evaluation stage or request a profit payout. Applies universally across all accounts.', detail: '5 Trading Days (All Plans)' },
   { icon: Calendar, name: 'Maximum Trading Days', desc: 'There is no maximum time limit. You can take as long as you need to pass your evaluation. Trade without the pressure of deadlines.', detail: 'No time limit' },
   { icon: Gauge, name: 'Leverage', desc: 'The leverage provided on your trading account. Default leverage is 1:100 and can be increased with the Higher Leverage add-on.', detail: '1:100 (up to 1:200 with add-on)' },
-  { icon: Percent, name: 'Profit Split', desc: 'The percentage of profits you keep when funded. Our standard split is up to 90% for evaluation challenges and 50% for instant funding.', detail: 'Up to 90% (50% for Instant)' },
-  { icon: Newspaper, name: 'News Trading', desc: 'Whether you are allowed to hold positions during high-impact news events. One Step and Instant Funding allow news trading.', detail: 'One Step & Instant: Allowed' },
-  { icon: Moon, name: 'Weekend Holding', desc: 'Whether you can hold positions over the weekend. Instant Funding allows weekend holding by default; other types can add it.', detail: 'Instant: Allowed · Others: Add-on' },
-  { icon: BarChart3, name: 'Consistency Rule', desc: 'No single trading day should account for more than 40% of your total profit. This ensures consistent trading behavior.', detail: 'Max 40% per day' },
+  { icon: Percent, name: 'Profit Split', desc: 'The percentage of profits you keep when funded. We operate a standardized 80/20 profit split pattern across all accounts (80% to the trader, 20% to the firm).', detail: '80% Trader / 20% Firm (80/20 Pattern)' },
+  { icon: Newspaper, name: 'News Trading', desc: 'Whether you are allowed to hold and execute trades during high-impact news events. One Step and Two Step evaluations allow news trading; strictly prohibited on Instant Funding accounts (triggers immediate account breach).', detail: 'One Step & Two Step: Allowed · Instant: Prohibited' },
+  { icon: Moon, name: 'Weekend Holding', desc: 'Holding positions over the weekend is allowed on One Step and Two Step evaluations. Weekend holding is strictly prohibited on Instant Funding accounts; all trades must be closed before Friday 21:00 UTC market close.', detail: 'One Step & Two Step: Allowed · Instant: Prohibited' },
+  { icon: BarChart3, name: 'Consistency Rule', desc: 'FundedShift imposes NO consistency rule. You have complete freedom to trade your strategy without artificial daily profit caps, lot sizing scaling limits, or lot consistency ratios.', detail: 'No Consistency Rule (Full Freedom)' },
 ];
 
 export function RulesPage() {
@@ -74,6 +75,14 @@ export function RulesPage() {
                   We understand that mistakes happen. That is why we offer challenge resets so you can try again
                   without paying the full price. Your success is our priority.
                 </p>
+                <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-4 text-xs">
+                  <Link to="/terms" className="text-brand-600 font-semibold hover:underline">
+                    View Formal Terms &amp; Conditions &rarr;
+                  </Link>
+                  <Link to="/refund-policy" className="text-brand-600 font-semibold hover:underline">
+                    View Refund &amp; Cancellation Policy &rarr;
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

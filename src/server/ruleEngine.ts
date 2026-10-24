@@ -317,6 +317,98 @@ export class RuleEngine {
   }
 
   /**
+   * Immediately breaches and terminates an Instant Funding account for unauthorized news trading
+   */
+  public static breachAccountForNewsTrading(
+    accountId: string,
+    symbol: string,
+    reason: string
+  ): { success: false; error: string } {
+    const db = DBEngine.getDB();
+    const account = db.accounts.find((a) => a.id === accountId);
+
+    if (!account) {
+      return { success: false, error: 'Trading account not found.' };
+    }
+
+    account.status = 'BREACHED';
+    account.breached_at = new Date().toISOString();
+
+    // Automatically liquidate all open positions
+    const openPositions = db.positions.filter((p) => p.account_id === account.id && p.status === 'OPEN');
+    for (const pos of openPositions) {
+      pos.status = 'CLOSED';
+      const quote = marketDataService.getQuote(pos.symbol);
+      pos.close_price = quote ? (pos.type === 'BUY' ? quote.bid : quote.ask) : pos.open_price;
+      pos.closed_at = new Date().toISOString();
+      pos.close_reason = 'BREACH_AUTO_CLOSE';
+      pos.realized_pnl = pos.floating_pnl;
+      pos.floating_pnl = 0;
+      account.current_balance = Number((account.current_balance + pos.realized_pnl).toFixed(2));
+    }
+    account.current_equity = account.current_balance;
+
+    const violation: RuleViolationEntity = {
+      id: `viol-${Date.now()}-${Math.random().toString(36).slice(-4)}`,
+      account_id: account.id,
+      user_id: account.user_id,
+      rule_type: 'NEWS_TRADING',
+      threshold_value: 0,
+      actual_value: 1,
+      balance_at_breach: account.current_balance,
+      equity_at_breach: account.current_equity,
+      drawdown_at_breach: 0,
+      details: `Instant Funding News Trading Violation: Unauthorized trade execution or closure on ${symbol} during red-folder macroeconomic release buffer. ${reason}. News trading is strictly prohibited on Instant Funding accounts.`,
+      created_at: new Date().toISOString(),
+    };
+    db.rule_violations.push(violation);
+
+    // Add Notification
+    db.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      user_id: account.user_id,
+      title: `Account #${account.account_number} Breached - News Trading`,
+      body: `Your Instant Funding account has been terminated due to unauthorized trading during a high-impact news event on ${symbol}. News trading is strictly prohibited on Instant Funding accounts.`,
+      type: 'error',
+      is_read: false,
+      created_at: new Date().toISOString(),
+    });
+
+    // Audit log
+    db.audit_logs.push({
+      id: `audit-${Date.now()}`,
+      actor_id: 'TRADE_ENGINE',
+      actor_role: 'SYSTEM',
+      action: 'ACCOUNT_BREACHED',
+      target_id: account.id,
+      details: `Instant Funding news trading breach on ${symbol}: ${reason}`,
+      created_at: new Date().toISOString(),
+    });
+
+    DBEngine.saveDB();
+
+    // Dispatch Rule Breach Email Alert
+    const user = db.users.find((u) => u.id === account.user_id);
+    if (user && user.email) {
+      EmailService.sendRuleBreachEmail({
+        recipientEmail: user.email,
+        recipientName: user.name || user.email.split('@')[0],
+        accountNumber: account.account_number,
+        accountSize: account.account_size,
+        ruleViolated: 'News Trading Restriction (Instant Funding)',
+        breachEquity: account.current_equity,
+        thresholdLimit: 0,
+        breachTime: violation.created_at,
+      }).catch((err) => console.error('[EmailService] Failed to send rule breach email:', err));
+    }
+
+    return {
+      success: false,
+      error: `RULE BREACH: Your Instant Funding account #${account.account_number} has been immediately breached and closed. News trading is strictly prohibited on Instant Funding accounts within 2 minutes of high-impact releases (${reason}).`,
+    };
+  }
+
+  /**
    * Generates a detailed Explainable Rule Breach report for an account
    */
   public static getExplainableBreachReport(accountId: string): any[] {
@@ -329,7 +421,16 @@ export class RuleEngine {
     }
 
     return violations.map((v) => {
-      const ruleLabel = v.rule_type === 'DAILY_LOSS' ? 'Daily Loss Limit' : v.rule_type === 'MAX_LOSS' ? 'Maximum Drawdown Limit' : v.rule_type;
+      const ruleLabel =
+        v.rule_type === 'DAILY_LOSS'
+          ? 'Daily Loss Limit'
+          : v.rule_type === 'MAX_LOSS'
+          ? 'Maximum Drawdown Limit'
+          : v.rule_type === 'NEWS_TRADING'
+          ? 'News Trading Restriction'
+          : v.rule_type === 'WEEKEND_HOLDING'
+          ? 'Weekend Holding Restriction'
+          : v.rule_type;
       const startOfDay = Math.max(account.start_of_day_balance || account.starting_balance, account.start_of_day_equity || account.starting_balance);
 
       return {
@@ -351,13 +452,22 @@ export class RuleEngine {
         math_explanation:
           v.rule_type === 'DAILY_LOSS'
             ? `Baseline ($${startOfDay.toFixed(2)}) - Equity ($${v.equity_at_breach.toFixed(2)}) = $${v.actual_value.toFixed(2)} loss, exceeding threshold of $${v.threshold_value.toFixed(2)}.`
+            : v.rule_type === 'NEWS_TRADING'
+            ? `Executed or closed an order during the prohibited 2-minute high-impact macroeconomic news window on an Instant Funding account.`
             : `Starting Balance ($${account.starting_balance.toFixed(2)}) - Equity ($${v.equity_at_breach.toFixed(2)}) = $${v.actual_value.toFixed(2)} loss, exceeding maximum drawdown limit of $${v.threshold_value.toFixed(2)}.`,
         recovery_eligible: true,
-        recommendations: [
-          'Always set a Stop Loss on entry to cap single-trade exposure.',
-          'Scale down lot sizes during high market volatility.',
-          'Consider our Account Recovery / Reset program to resume trading with a fresh balance.',
-        ],
+        recommendations:
+          v.rule_type === 'NEWS_TRADING'
+            ? [
+                'Always check the Economic Calendar before executing orders.',
+                'Instant Funding accounts strictly prohibit opening or closing positions within 2 minutes of Red-Folder news events.',
+                'Upgrade to One-Step or Two-Step evaluations if your trading strategy requires trading high-impact news.',
+              ]
+            : [
+                'Always set a Stop Loss on entry to cap single-trade exposure.',
+                'Scale down lot sizes during high market volatility.',
+                'Consider our Account Recovery / Reset program to resume trading with a fresh balance.',
+              ],
       };
     });
   }
@@ -520,7 +630,13 @@ export class RuleEngine {
     let newAccount: TradingAccountEntity;
 
     if (target_type === 'step_2') {
-      const step2Rules = { ...parent.rules, profit_target_percent: 5, min_trading_days: 0 };
+      const step2Rules = {
+        ...parent.rules,
+        profit_target_percent: 5,
+        min_trading_days: 5,
+        profit_split_percent: 80,
+        weekend_holding_allowed: true,
+      };
       newAccount = {
         ...parent,
         id: `acc-step2-${Date.now()}`,
@@ -561,13 +677,16 @@ export class RuleEngine {
       });
     } else {
       // Live Funded Account
+      const parentType = (parent.type || '').toLowerCase();
+      const parentIsInstant = parentType.includes('instant') || (parent.plan_name || '').toLowerCase().includes('instant');
       const fundedRules = {
         ...parent.rules,
         profit_target_percent: 0, // No profit target for funded accounts
-        min_trading_days: 0,
+        min_trading_days: 5,
+        profit_split_percent: 80,
+        weekend_holding_allowed: !parentIsInstant,
       };
 
-      const parentType = (parent.type || '').toLowerCase();
       const isOneStep = parentType.includes('one') || (parent.plan_name || '').toLowerCase().includes('one-step') || (parent.plan_name || '').toLowerCase().includes('1-step');
 
       newAccount = {

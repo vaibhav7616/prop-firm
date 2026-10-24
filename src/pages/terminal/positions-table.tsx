@@ -66,6 +66,7 @@ export function PositionsTable({
       onRefresh();
     } else {
       toast.error(res.error || 'Failed to close position.');
+      onRefresh();
     }
   };
 
@@ -110,6 +111,7 @@ export function PositionsTable({
       onRefresh();
     } else {
       toast.error(res.error || 'Partial close failed.');
+      onRefresh();
     }
   };
 

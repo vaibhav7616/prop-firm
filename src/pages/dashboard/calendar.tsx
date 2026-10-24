@@ -34,16 +34,16 @@ export function DashboardCalendar() {
               Prop Firm High-Impact News Buffer Policy (2-Minute Rule)
             </strong>
             <p>
-              Under our evaluation rules, opening or manually closing positions is restricted <strong>2 minutes before and 2 minutes after</strong> red-folder macroeconomic announcements (e.g., Non-Farm Payrolls, CPI, FOMC, and Central Bank Rate Decisions). Existing Stop-Loss and Take-Profit orders remain active and will execute automatically.
+              News trading is <strong>fully permitted</strong> on One Step and Two Step evaluation challenges. For <strong>Instant Funding accounts</strong>, opening or manually closing positions is strictly prohibited within <strong>2 minutes before and 2 minutes after</strong> high-impact (Red-Folder) macroeconomic announcements (e.g., NFP, CPI, FOMC, and Central Bank decisions). Any Instant Funding execution during this window will trigger an immediate rule breach and account termination. Existing Stop-Loss and Take-Profit orders remain active and will execute automatically.
             </p>
             <div className="pt-2 flex flex-wrap gap-4 text-xs font-medium text-slate-600 dark:text-slate-400">
               <span className="inline-flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                One Step &amp; Instant Funding: News Trading Permitted
+                One Step &amp; Two Step Evaluation: News Trading Permitted
               </span>
               <span className="inline-flex items-center gap-1">
-                <Info className="h-3.5 w-3.5 text-amber-500" />
-                Two Step Evaluation: 2-Minute Buffer Enforced
+                <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                Instant Funding: Strictly Prohibited (Immediate Breach)
               </span>
             </div>
           </div>

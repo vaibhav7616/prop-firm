@@ -161,12 +161,13 @@ export function ChallengesPage() {
                       <RuleRow label="Profit Target" value={`${rules.profit_target}%`} />
                       <RuleRow label="Daily Drawdown" value={`${rules.daily_drawdown}%`} />
                       <RuleRow label="Max Drawdown" value={`${rules.max_drawdown}%`} />
-                      <RuleRow label="Min Trading Days" value={`${rules.min_trading_days}`} />
+                      <RuleRow label="Min Trading Days" value={`${rules.min_trading_days || 5} Days`} />
                       <RuleRow label="Max Trading Days" value={rules.max_trading_days ? `${rules.max_trading_days}` : 'None'} />
                       <RuleRow label="Leverage" value={`1:${rules.leverage}`} />
-                      <RuleRow label="Profit Split" value={`Up to ${rules.profit_split}%`} />
-                      <RuleRow label="News Trading" value={rules.news_trading ? 'Allowed' : 'Not Allowed'} />
-                      <RuleRow label="Weekend Holding" value={rules.weekend_holding ? 'Allowed' : 'Not Allowed'} />
+                      <RuleRow label="Profit Split" value="80/20 (80%)" />
+                      <RuleRow label="News Trading" value={rules.news_trading ? 'Allowed' : 'Prohibited'} />
+                      <RuleRow label="Weekend Holding" value={rules.weekend_holding ? 'Allowed' : 'Prohibited'} />
+                      <RuleRow label="Consistency Rule" value="No Consistency Rule" />
                     </div>
 
                     <TiltDepthLayer z={20}>

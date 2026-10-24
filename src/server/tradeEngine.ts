@@ -77,14 +77,17 @@ export class TradeExecutionService implements TradingProvider {
       return { success: false, error: 'Cannot open trade: Maximum overall drawdown limit has been reached.' };
     }
 
-    // High-Impact News Buffer Enforcement (2 minutes before & after red-folder news)
-    if (account.rules?.news_trading_allowed === false) {
+    // High-Impact News Buffer Enforcement (Prohibited on Instant Funding; Allowed on 1-Step & 2-Step)
+    // If an Instant Funding trader opens a position during high-impact news, the account is immediately breached and terminated.
+    const isInstantFunding =
+      account.type === 'instant_funding' ||
+      account.rules?.news_trading_allowed === false ||
+      (account.plan_name || '').toLowerCase().includes('instant funded');
+
+    if (isInstantFunding) {
       const newsStatus = await NewsService.isNewsRestricted(params.symbol);
       if (newsStatus.restricted) {
-        return {
-          success: false,
-          error: `High-Impact News Restriction: ${newsStatus.reason}. Under evaluation rules, trading is strictly prohibited within 2 minutes of major economic data releases.`,
-        };
+        return RuleEngine.breachAccountForNewsTrading(account.id, params.symbol, newsStatus.reason);
       }
     }
 
@@ -263,14 +266,17 @@ export class TradeExecutionService implements TradingProvider {
       return { success: false, error: 'Account not found.' };
     }
 
-    // High-Impact News Buffer Enforcement on Close
-    if (account.rules?.news_trading_allowed === false) {
+    // High-Impact News Buffer Enforcement on Close (Prohibited on Instant Funding; Allowed on 1-Step & 2-Step)
+    // If an Instant Funding trader closes a position during high-impact news, the account is immediately breached and terminated.
+    const isInstantFunding =
+      account.type === 'instant_funding' ||
+      account.rules?.news_trading_allowed === false ||
+      (account.plan_name || '').toLowerCase().includes('instant funded');
+
+    if (isInstantFunding) {
       const newsStatus = await NewsService.isNewsRestricted(position.symbol);
       if (newsStatus.restricted) {
-        return {
-          success: false,
-          error: `High-Impact News Restriction: ${newsStatus.reason}. Under evaluation rules, closing positions is strictly prohibited within 2 minutes of major economic data releases.`,
-        };
+        return RuleEngine.breachAccountForNewsTrading(account.id, position.symbol, newsStatus.reason);
       }
     }
 
@@ -342,6 +348,19 @@ export class TradeExecutionService implements TradingProvider {
     const account = db.accounts.find((a) => a.id === params.accountId);
     if (!account) {
       return { success: false, error: 'Account not found.' };
+    }
+
+    // High-Impact News Buffer Enforcement on Partial Close (Prohibited on Instant Funding; Allowed on 1-Step & 2-Step)
+    const isInstantFunding =
+      account.type === 'instant_funding' ||
+      account.rules?.news_trading_allowed === false ||
+      (account.plan_name || '').toLowerCase().includes('instant funded');
+
+    if (isInstantFunding) {
+      const newsStatus = await NewsService.isNewsRestricted(position.symbol);
+      if (newsStatus.restricted) {
+        return RuleEngine.breachAccountForNewsTrading(account.id, position.symbol, newsStatus.reason);
+      }
     }
 
     const lotsToClose = Number(params.lotsToClose);

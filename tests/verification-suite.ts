@@ -3,7 +3,8 @@
  * Executes end-to-end tests across all backend engines, security layers, and differentiated features.
  */
 
-import { DBEngine, hashPassword, verifyPassword } from '../src/server/db';
+import { DBEngine, hashPassword, verifyPassword, DEFAULT_PLANS } from '../src/server/db';
+import { DEFAULT_CHALLENGES } from '../src/lib/default-data';
 import {
   generateToken,
   verifyToken,
@@ -466,7 +467,7 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
         daily_loss_limit_percent: 5,
         max_loss_limit_percent: 10,
         drawdown_model: 'STATIC',
-        min_trading_days: 0,
+        min_trading_days: 5,
         leverage: 50,
         profit_split_percent: 80, // 80% split
         max_lot_size: 50,
@@ -620,13 +621,13 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
         daily_loss_limit_percent: 3,
         max_loss_limit_percent: 6,
         drawdown_model: 'STATIC',
-        min_trading_days: 0,
+        min_trading_days: 5,
         leverage: 50,
         profit_split_percent: 80,
         max_lot_size: 35,
         max_open_positions: 15,
-        news_trading_allowed: true,
-        weekend_holding_allowed: true,
+        news_trading_allowed: false,
+        weekend_holding_allowed: false,
         ea_trading_allowed: true,
       },
       created_at: new Date().toISOString(),
@@ -909,7 +910,7 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
   await test('Pricing & Offer Engine', 'Admin Direct Account Price Change & Offer Activation', () => {
     if (!db.challenges || db.challenges.length === 0) {
       db.challenges = [
-        { id: 'ch-two-50k', name: '50K Two Step Evaluation', type: 'two_step', account_size: 50000, price: 179, is_active: true, sort_order: 10, rules: { profit_target: 8, daily_drawdown: 5, max_drawdown: 10, min_trading_days: 4, max_trading_days: 0, leverage: 100, profit_split: 85, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        { id: 'ch-two-50k', name: '50K Two Step Evaluation', type: 'two_step', account_size: 50000, price: 179, is_active: true, sort_order: 10, rules: { profit_target: 8, daily_drawdown: 5, max_drawdown: 10, min_trading_days: 5, max_trading_days: 0, leverage: 100, profit_split: 80, news_trading: true, weekend_holding: true, consistency: 0, scaling_plan: true }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
       ];
     }
 
@@ -1309,6 +1310,379 @@ export async function runAutomatedVerificationTests(): Promise<TestSuiteSummary>
   await test('News Engine', '2-Minute Buffer Trade Restriction Logic', async () => {
     const status = await NewsService.isNewsRestricted('EURUSD');
     assert(typeof status.restricted === 'boolean', 'isNewsRestricted must return a boolean status');
+  });
+
+  await test('News Engine', 'Plan Rules Policy: One-Step/Two-Step Allowed, Instant Funding Strictly Prohibited', () => {
+    const plans = db.account_plans || [];
+    const instantPlans = plans.filter((p) => p.type === 'instant_funding');
+    const evalPlans = plans.filter((p) => p.type === 'one_step' || p.type === 'two_step');
+
+    assert(instantPlans.length > 0, 'Instant Funding plans must exist');
+    for (const p of instantPlans) {
+      assert(p.rules.news_trading_allowed === false, `Instant plan ${p.id} must have news_trading_allowed === false`);
+    }
+
+    assert(evalPlans.length > 0, 'One Step and Two Step plans must exist');
+    for (const p of evalPlans) {
+      assert(p.rules.news_trading_allowed === true, `Evaluation plan ${p.id} must have news_trading_allowed === true`);
+    }
+  });
+
+  await test('News Engine', 'Instant Funding News Trading Violation Triggers Immediate Account Breach', async () => {
+    // 1. Create a mock Instant Funding account with an open position
+    const instantAccId = `acc-test-instant-news-${Date.now()}`;
+    const instantAcc: any = {
+      id: instantAccId,
+      user_id: 'user-instant-trader',
+      account_number: '9920199',
+      login: '9920199',
+      password_hash: 'pass',
+      investor_password_hash: 'inv_pass',
+      server: 'FundedShift-Live',
+      plan_name: '$50,000 Instant Funded',
+      type: 'instant_funding',
+      account_size: 50000,
+      starting_balance: 50000,
+      current_balance: 50000,
+      current_equity: 50000,
+      highest_balance: 50000,
+      highest_equity: 50000,
+      start_of_day_balance: 50000,
+      start_of_day_equity: 50000,
+      status: 'FUNDED',
+      phase: 1,
+      is_funded: true,
+      trading_days: 2,
+      rules: {
+        profit_target_percent: 0,
+        daily_loss_limit_percent: 5,
+        max_loss_limit_percent: 10,
+        drawdown_model: 'STATIC',
+        min_trading_days: 5,
+        leverage: 50,
+        profit_split_percent: 80,
+        max_lot_size: 25,
+        max_open_positions: 15,
+        news_trading_allowed: false, // strictly prohibited!
+        weekend_holding_allowed: false,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(instantAcc);
+
+    // Mock open position on EURUSD
+    const mockPos: any = {
+      id: `pos-instant-${Date.now()}`,
+      account_id: instantAccId,
+      user_id: 'user-instant-trader',
+      symbol: 'EURUSD',
+      type: 'BUY',
+      lot_size: 1.0,
+      open_price: 1.0850,
+      margin: 2170,
+      floating_pnl: 50,
+      swap: 0,
+      commission: 6.0,
+      status: 'OPEN',
+      opened_at: new Date().toISOString(),
+    };
+    db.positions.push(mockPos);
+
+    // 2. Trigger breach as if trader executed/closed during high-impact news window
+    const breachResult = RuleEngine.breachAccountForNewsTrading(
+      instantAccId,
+      'EURUSD',
+      'Test High-Impact NFP Release buffer active'
+    );
+
+    assert(breachResult.success === false, 'Breach result must indicate failed status');
+    assert(breachResult.error.includes('RULE BREACH'), 'Breach result error message must state RULE BREACH');
+    assert(instantAcc.status === 'BREACHED', 'Account status must immediately update to BREACHED');
+    assert(instantAcc.breached_at !== undefined, 'breached_at timestamp must be set');
+
+    // 3. Verify open positions were automatically liquidated
+    const closedPos = db.positions.find((p) => p.id === mockPos.id);
+    assert(closedPos?.status === 'CLOSED', 'Open positions must be auto-closed');
+    assert(closedPos?.close_reason === 'BREACH_AUTO_CLOSE', 'Close reason must be BREACH_AUTO_CLOSE');
+
+    // 4. Verify violation record in db.rule_violations
+    const violation = db.rule_violations.find((v) => v.account_id === instantAccId && v.rule_type === 'NEWS_TRADING');
+    assert(violation !== undefined, 'Rule violation must be recorded with rule_type NEWS_TRADING');
+    assert(violation?.details.includes('Instant Funding News Trading Violation'), 'Violation details must record news trading breach');
+  });
+
+  // =============================================================
+  // 21. UNIFIED PROP TRADING RULES (5 MIN DAYS, 80/20 SPLIT, WEEKEND HOLDING, ZERO CONSISTENCY)
+  // =============================================================
+  await test('Trading Rules Policy', 'Universal 5 Minimum Trading Days across all Plans and Challenges', () => {
+    // 1. Verify DEFAULT_PLANS
+    assert(DEFAULT_PLANS.length > 0, 'DEFAULT_PLANS must not be empty');
+    for (const plan of DEFAULT_PLANS) {
+      assert(
+        plan.rules.min_trading_days === 5,
+        `Plan ${plan.id} (${plan.name}) must require exactly 5 min_trading_days, got ${plan.rules.min_trading_days}`
+      );
+    }
+
+    // 2. Verify DEFAULT_CHALLENGES
+    assert(DEFAULT_CHALLENGES.length > 0, 'DEFAULT_CHALLENGES must not be empty');
+    for (const ch of DEFAULT_CHALLENGES) {
+      assert(
+        ch.rules.min_trading_days === 5,
+        `Challenge ${ch.id} (${ch.name}) must require exactly 5 min_trading_days, got ${ch.rules.min_trading_days}`
+      );
+    }
+  });
+
+  await test('Trading Rules Policy', 'Universal 80/20 Profit Split Pattern across all Plans and Challenges', () => {
+    // 1. Verify DEFAULT_PLANS
+    for (const plan of DEFAULT_PLANS) {
+      assert(
+        plan.rules.profit_split_percent === 80,
+        `Plan ${plan.id} (${plan.name}) must feature 80% profit split, got ${plan.rules.profit_split_percent}`
+      );
+    }
+
+    // 2. Verify DEFAULT_CHALLENGES
+    for (const ch of DEFAULT_CHALLENGES) {
+      assert(
+        ch.rules.profit_split === 80,
+        `Challenge ${ch.id} (${ch.name}) must feature 80% profit split, got ${ch.rules.profit_split}`
+      );
+    }
+  });
+
+  await test('Trading Rules Policy', 'Asymmetric Weekend Holding Policy (Allowed in 1-Step & 2-Step, Prohibited in Instant)', () => {
+    // 1. Verify DEFAULT_PLANS
+    for (const plan of DEFAULT_PLANS) {
+      if (plan.type === 'instant_funding') {
+        assert(
+          plan.rules.weekend_holding_allowed === false,
+          `Instant Funding Plan ${plan.id} must strictly prohibit weekend holding`
+        );
+      } else {
+        assert(
+          plan.rules.weekend_holding_allowed === true,
+          `Evaluation Plan ${plan.id} (${plan.type}) must allow weekend holding`
+        );
+      }
+    }
+
+    // 2. Verify DEFAULT_CHALLENGES
+    for (const ch of DEFAULT_CHALLENGES) {
+      if (ch.type === 'instant_funding') {
+        assert(
+          ch.rules.weekend_holding === false,
+          `Instant Funding Challenge ${ch.id} must strictly prohibit weekend holding`
+        );
+      } else {
+        assert(
+          ch.rules.weekend_holding === true,
+          `Evaluation Challenge ${ch.id} (${ch.type}) must allow weekend holding`
+        );
+      }
+    }
+  });
+
+  await test('Trading Rules Policy', 'Strict Payout Eligibility 5 Minimum Trading Days Enforcement', () => {
+    const payoutAccId = `acc-payout-min-days-${Date.now()}`;
+    const testUser = 'user-min-days-test';
+    const testFundedAcc: any = {
+      id: payoutAccId,
+      user_id: testUser,
+      account_number: '7788990',
+      account_size: 50000,
+      starting_balance: 50000,
+      current_balance: 55000, // $5,000 profit
+      current_equity: 55000,
+      highest_balance: 55000,
+      highest_equity: 55000,
+      start_of_day_balance: 50000,
+      start_of_day_equity: 50000,
+      status: 'FUNDED',
+      phase: 1,
+      is_funded: true,
+      trading_days: 4, // Only 4 days!
+      rules: {
+        profit_target_percent: 0,
+        daily_loss_limit_percent: 5,
+        max_loss_limit_percent: 10,
+        drawdown_model: 'STATIC',
+        min_trading_days: 5,
+        leverage: 50,
+        profit_split_percent: 80,
+        max_lot_size: 25,
+        max_open_positions: 15,
+        news_trading_allowed: true,
+        weekend_holding_allowed: true,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(testFundedAcc);
+
+    // 1. Check with 4 trading days -> must fail
+    const elig4Days = PayoutEngine.checkPayoutEligibility(payoutAccId, testUser);
+    assert(elig4Days.eligible === false, 'Account with only 4 trading days must not be eligible for payout');
+    assert(
+      elig4Days.error?.includes('5') || elig4Days.error?.includes('trading days'),
+      'Error message must specify minimum trading days requirement'
+    );
+
+    // 2. Update to 5 trading days -> must pass
+    testFundedAcc.trading_days = 5;
+    const elig5Days = PayoutEngine.checkPayoutEligibility(payoutAccId, testUser);
+    assert(elig5Days.eligible === true, 'Account with 5 trading days must be eligible for payout');
+    assert(elig5Days.profit === 5000, 'Eligible profit must be $5,000');
+
+    // 3. Request Payout and verify exact 80/20 calculation
+    const payoutReq = PayoutEngine.requestPayout({
+      accountId: payoutAccId,
+      userId: testUser,
+      payoutMethod: 'Crypto USDT (TRC20)',
+      payoutAddress: 'TXYZ1234567890abcdef',
+    });
+
+    assert(payoutReq.success && payoutReq.payout, 'Payout request must succeed');
+    assert(payoutReq.payout.trader_payout_amount === 4000, 'Trader payout must be exactly $4,000 (80% of $5,000)');
+    assert(payoutReq.payout.firm_share_amount === 1000, 'Firm share must be exactly $1,000 (20% of $5,000)');
+  });
+
+  await test('Trading Rules Policy', 'Weekend Holding Breach on Instant Funding Account', () => {
+    const instantAccId = `acc-weekend-test-${Date.now()}`;
+    const instantAcc: any = {
+      id: instantAccId,
+      user_id: 'user-weekend-test',
+      account_number: '9900112',
+      account_size: 25000,
+      starting_balance: 25000,
+      current_balance: 25000,
+      current_equity: 25000,
+      highest_balance: 25000,
+      highest_equity: 25000,
+      start_of_day_balance: 25000,
+      start_of_day_equity: 25000,
+      status: 'ACTIVE',
+      phase: 1,
+      is_funded: true,
+      type: 'instant_funding',
+      trading_days: 2,
+      rules: {
+        profit_target_percent: 0,
+        daily_loss_limit_percent: 5,
+        max_loss_limit_percent: 10,
+        drawdown_model: 'STATIC',
+        min_trading_days: 5,
+        leverage: 50,
+        profit_split_percent: 80,
+        max_lot_size: 15,
+        max_open_positions: 10,
+        news_trading_allowed: false,
+        weekend_holding_allowed: false, // Strictly prohibited!
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(instantAcc);
+
+    // Mock an open EURUSD position
+    const posId = `pos-weekend-${Date.now()}`;
+    db.positions.push({
+      id: posId,
+      account_id: instantAccId,
+      user_id: 'user-weekend-test',
+      symbol: 'EURUSD',
+      type: 'BUY',
+      lot_size: 1.0,
+      open_price: 1.0850,
+      margin: 2170,
+      floating_pnl: 20,
+      swap: 0,
+      commission: 6.0,
+      status: 'OPEN',
+      opened_at: new Date().toISOString(),
+    });
+
+    // Temporarily stub checkIsMarketOpen to return false (market closed over weekend)
+    const origCheck = marketDataService.checkIsMarketOpen.bind(marketDataService);
+    marketDataService.checkIsMarketOpen = () => false;
+
+    try {
+      // Evaluate account
+      const evalRes = RuleEngine.evaluateAccount(instantAccId);
+      assert(evalRes.status === 'BREACHED', 'Account must be BREACHED for holding position over weekend');
+      assert(instantAcc.status === 'BREACHED', 'Account state must be set to BREACHED');
+      
+      const violation = db.rule_violations.find(
+        (v) => v.account_id === instantAccId && v.rule_type === 'WEEKEND_HOLDING'
+      );
+      assert(violation !== undefined, 'Violation must be recorded as WEEKEND_HOLDING');
+
+      // Verify position was auto-liquidated
+      const closedPos = db.positions.find((p) => p.id === posId);
+      assert(closedPos?.status === 'CLOSED', 'Open position must be closed upon weekend holding breach');
+      assert(closedPos?.close_reason === 'BREACH_AUTO_CLOSE', 'Close reason must be BREACH_AUTO_CLOSE');
+    } finally {
+      marketDataService.checkIsMarketOpen = origCheck;
+    }
+  });
+
+  await test('Trading Rules Policy', 'No Consistency Rule across Platform (Zero Penalty / Full Freedom)', () => {
+    // 1. Verify consistency is 0 across all challenges
+    for (const ch of DEFAULT_CHALLENGES) {
+      assert(
+        ch.rules.consistency === 0,
+        `Challenge ${ch.id} must have consistency: 0 (No Consistency Rule), got ${ch.rules.consistency}`
+      );
+    }
+
+    // 2. Verify account making 100% of profit target in a single trade / day is not breached or penalized
+    const evalAccId = `acc-consistency-test-${Date.now()}`;
+    const evalAcc: any = {
+      id: evalAccId,
+      user_id: 'user-consist-test',
+      account_number: '1239900',
+      account_size: 100000,
+      starting_balance: 100000,
+      current_balance: 110000, // $10,000 profit made in single session
+      current_equity: 110000,
+      highest_balance: 110000,
+      highest_equity: 110000,
+      start_of_day_balance: 100000,
+      start_of_day_equity: 100000,
+      status: 'ACTIVE',
+      phase: 1,
+      is_funded: false,
+      trading_days: 1,
+      rules: {
+        profit_target_percent: 10,
+        daily_loss_limit_percent: 4,
+        max_loss_limit_percent: 8,
+        drawdown_model: 'STATIC',
+        min_trading_days: 5,
+        leverage: 100,
+        profit_split_percent: 80,
+        max_lot_size: 50,
+        max_open_positions: 20,
+        news_trading_allowed: true,
+        weekend_holding_allowed: true,
+        ea_trading_allowed: true,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.accounts.push(evalAcc);
+
+    const evalRes = RuleEngine.evaluateAccount(evalAccId);
+    assert(evalRes.status !== 'BREACHED', 'Large single-day profit must not trigger any breach under No Consistency Rule');
+    const consistViolation = db.rule_violations.find(
+      (v) => v.account_id === evalAccId && (v.rule_type as any) === 'CONSISTENCY'
+    );
+    assert(consistViolation === undefined, 'No consistency violation should exist');
   });
 
   // Summary

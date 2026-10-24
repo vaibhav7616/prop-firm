@@ -34,6 +34,16 @@ export class PayoutEngine {
       return { eligible: false, profit: 0, reason: 'Account has active rule violations.' };
     }
 
+    // Check minimum trading days (universal 5 trading days requirement)
+    const minTradingDays = account.rules?.min_trading_days ?? 5;
+    if ((account.trading_days || 0) < minTradingDays) {
+      return {
+        eligible: false,
+        profit: 0,
+        reason: `Minimum ${minTradingDays} trading days required before requesting a payout. Current trading days: ${account.trading_days || 0} / ${minTradingDays}.`,
+      };
+    }
+
     // Calculate total net profit
     const netProfit = Number((account.current_balance - account.starting_balance).toFixed(2));
     if (netProfit <= 0) {
@@ -102,7 +112,7 @@ export class PayoutEngine {
     const userObj = db.users.find((u) => u.id === params.userId);
 
     const profit = eligibility.profit;
-    const defaultSplit = (account.type || '').toUpperCase().includes('INSTANT') || (account.plan_name || '').toUpperCase().includes('INSTANT') ? 70 : 80;
+    const defaultSplit = 80; // Standardized 80/20 profit split pattern across all accounts
     const traderSplit = account.rules?.profit_split_percent || defaultSplit;
     const traderAmount = Number(((traderSplit / 100) * profit).toFixed(2));
     const firmAmount = Number((profit - traderAmount).toFixed(2));

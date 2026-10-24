@@ -56,6 +56,40 @@ export function verifyPassword(password: string, hash: string): boolean {
 
 // Default symbols configuration
 export const DEFAULT_SYMBOLS: SymbolConfig[] = [
+  // FOREX SPOT PRECIOUS METALS
+  {
+    symbol: 'XAUUSD',
+    displayName: 'Gold / USD',
+    assetClass: 'COMMODITIES',
+    contractSize: 100,
+    tickSize: 0.01,
+    tickValue: 1,
+    decimalPrecision: 2,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 1.2,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'XAGUSD',
+    displayName: 'Silver / USD',
+    assetClass: 'COMMODITIES',
+    contractSize: 5000,
+    tickSize: 0.001,
+    tickValue: 5,
+    decimalPrecision: 3,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 1.8,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+
   // FOREX MAJORS
   {
     symbol: 'EURUSD',
@@ -397,6 +431,184 @@ export const DEFAULT_SYMBOLS: SymbolConfig[] = [
     tradingEnabled: true,
     marketSession: '24/5',
   },
+  {
+    symbol: 'EURNZD',
+    displayName: 'EUR/NZD',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 0.59,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.8,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'GBPNZD',
+    displayName: 'GBP/NZD',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 0.59,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 1.0,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'AUDCHF',
+    displayName: 'AUD/CHF',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 1.25,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.5,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'AUDNZD',
+    displayName: 'AUD/NZD',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 0.59,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.6,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'CADCHF',
+    displayName: 'CAD/CHF',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 1.25,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.5,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'NZDCAD',
+    displayName: 'NZD/CAD',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 0.72,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.6,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'NZDCHF',
+    displayName: 'NZD/CHF',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 1.25,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 0.5,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+
+  // FOREX EXOTICS
+  {
+    symbol: 'USDMXN',
+    displayName: 'USD/MXN',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.0001,
+    tickValue: 0.05,
+    decimalPrecision: 4,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 6.0,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'USDZAR',
+    displayName: 'USD/ZAR',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.0001,
+    tickValue: 0.057,
+    decimalPrecision: 4,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 8.0,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'USDSGD',
+    displayName: 'USD/SGD',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.00001,
+    tickValue: 0.76,
+    decimalPrecision: 5,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 3.0,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
+  {
+    symbol: 'USDTRY',
+    displayName: 'USD/TRY',
+    assetClass: 'FOREX',
+    contractSize: 100000,
+    tickSize: 0.0001,
+    tickValue: 0.029,
+    decimalPrecision: 4,
+    minLot: 0.01,
+    maxLot: 50,
+    lotStep: 0.01,
+    spreadPips: 20.0,
+    marginRequirementPercent: 1.0,
+    tradingEnabled: true,
+    marketSession: '24/5',
+  },
 ];
 
 export const DEFAULT_PLANS: AccountPlan[] = [
@@ -412,10 +624,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 5,
       max_open_positions: 10,
       news_trading_allowed: true,
@@ -435,10 +647,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 4,
       max_loss_limit_percent: 8,
       drawdown_model: 'STATIC',
-      min_trading_days: 3,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 5,
       max_open_positions: 10,
       news_trading_allowed: true,
@@ -458,13 +670,13 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 7,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 50,
-      profit_split_percent: 70,
+      profit_split_percent: 80,
       max_lot_size: 5,
       max_open_positions: 10,
-      news_trading_allowed: true,
+      news_trading_allowed: false,
       weekend_holding_allowed: false,
       ea_trading_allowed: true,
     },
@@ -483,10 +695,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 4,
       max_loss_limit_percent: 8,
       drawdown_model: 'STATIC',
-      min_trading_days: 3,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 10,
       max_open_positions: 10,
       news_trading_allowed: true,
@@ -506,10 +718,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 10,
       max_open_positions: 10,
       news_trading_allowed: true,
@@ -529,13 +741,13 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 7,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 50,
-      profit_split_percent: 70,
+      profit_split_percent: 80,
       max_lot_size: 10,
       max_open_positions: 10,
-      news_trading_allowed: true,
+      news_trading_allowed: false,
       weekend_holding_allowed: false,
       ea_trading_allowed: true,
     },
@@ -554,10 +766,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 20,
       max_open_positions: 15,
       news_trading_allowed: true,
@@ -577,10 +789,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 4,
       max_loss_limit_percent: 8,
       drawdown_model: 'STATIC',
-      min_trading_days: 3,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 20,
       max_open_positions: 15,
       news_trading_allowed: true,
@@ -602,10 +814,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 35,
       max_open_positions: 20,
       news_trading_allowed: true,
@@ -625,13 +837,13 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 7,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 50,
-      profit_split_percent: 70,
+      profit_split_percent: 80,
       max_lot_size: 25,
       max_open_positions: 15,
-      news_trading_allowed: true,
+      news_trading_allowed: false,
       weekend_holding_allowed: false,
       ea_trading_allowed: true,
     },
@@ -650,10 +862,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 50,
       max_open_positions: 20,
       news_trading_allowed: true,
@@ -675,10 +887,10 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 0,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 100,
-      profit_split_percent: 90,
+      profit_split_percent: 80,
       max_lot_size: 100,
       max_open_positions: 30,
       news_trading_allowed: true,
@@ -698,13 +910,13 @@ export const DEFAULT_PLANS: AccountPlan[] = [
       daily_loss_limit_percent: 5,
       max_loss_limit_percent: 10,
       drawdown_model: 'STATIC',
-      min_trading_days: 7,
+      min_trading_days: 5,
       max_trading_days: null,
       leverage: 50,
-      profit_split_percent: 70,
+      profit_split_percent: 80,
       max_lot_size: 100,
       max_open_positions: 30,
-      news_trading_allowed: true,
+      news_trading_allowed: false,
       weekend_holding_allowed: false,
       ea_trading_allowed: true,
     },
@@ -928,9 +1140,9 @@ export class DBEngine {
       if (!loaded.email_logs) {
         loaded.email_logs = [];
       }
+      let changed = false;
       // Migrate and normalize accounts: ensure server is always FundedShift-Live and funded accounts have proper name & status
       if (loaded.accounts && Array.isArray(loaded.accounts)) {
-        let changed = false;
         for (const acc of loaded.accounts) {
           if (acc.server !== 'FundedShift-Live') {
             acc.server = 'FundedShift-Live';
@@ -964,21 +1176,96 @@ export class DBEngine {
               changed = true;
             }
           }
-        }
-        if (changed) {
-          try {
-            fs.writeFileSync(DB_FILE, JSON.stringify(loaded, null, 2), 'utf8');
-          } catch (e) {
-            console.error('Failed to persist migrated database file:', e);
+
+          // Enforce news trading, weekend holding, 5 min trading days, and 80/20 profit split
+          if (acc.rules) {
+            const isInstant =
+              acc.type === 'instant_funding' ||
+              (acc.plan_name || '').toLowerCase().includes('instant funded');
+            if (isInstant && acc.rules.news_trading_allowed !== false) {
+              acc.rules.news_trading_allowed = false;
+              changed = true;
+            } else if (!isInstant && acc.rules.news_trading_allowed !== true) {
+              acc.rules.news_trading_allowed = true;
+              changed = true;
+            }
+
+            // Weekend holding policy: Instant Funding prohibited; One Step & Two Step allowed
+            if (isInstant && acc.rules.weekend_holding_allowed !== false) {
+              acc.rules.weekend_holding_allowed = false;
+              changed = true;
+            } else if (!isInstant && acc.rules.weekend_holding_allowed !== true) {
+              acc.rules.weekend_holding_allowed = true;
+              changed = true;
+            }
+
+            // Standardize 5 minimum trading days across all accounts
+            if (acc.rules.min_trading_days !== 5) {
+              acc.rules.min_trading_days = 5;
+              changed = true;
+            }
+
+            // Standardize 80/20 profit split across all accounts
+            if (acc.rules.profit_split_percent !== 80) {
+              acc.rules.profit_split_percent = 80;
+              changed = true;
+            }
           }
         }
       }
-      // Ensure symbols have raw institutional ECN spreads
-      if (loaded.symbols && Array.isArray(loaded.symbols)) {
-        for (const s of loaded.symbols) {
-          if (s.symbol === 'BTCUSD') s.spreadPips = 0.5;
-          if (s.symbol === 'ETHUSD') s.spreadPips = 0.1;
-          if (s.symbol === 'SOLUSD') s.spreadPips = 0.02;
+
+      // Migrate account plans trading rules
+      if (loaded.account_plans && Array.isArray(loaded.account_plans)) {
+        for (const plan of loaded.account_plans) {
+          if (plan.rules) {
+            const isInstant = plan.type === 'instant_funding';
+            if (isInstant && plan.rules.news_trading_allowed !== false) {
+              plan.rules.news_trading_allowed = false;
+              changed = true;
+            } else if (!isInstant && plan.rules.news_trading_allowed !== true) {
+              plan.rules.news_trading_allowed = true;
+              changed = true;
+            }
+
+            if (isInstant && plan.rules.weekend_holding_allowed !== false) {
+              plan.rules.weekend_holding_allowed = false;
+              changed = true;
+            } else if (!isInstant && plan.rules.weekend_holding_allowed !== true) {
+              plan.rules.weekend_holding_allowed = true;
+              changed = true;
+            }
+
+            if (plan.rules.min_trading_days !== 5) {
+              plan.rules.min_trading_days = 5;
+              changed = true;
+            }
+
+            if (plan.rules.profit_split_percent !== 80) {
+              plan.rules.profit_split_percent = 80;
+              changed = true;
+            }
+          }
+        }
+      }
+      // Ensure symbols catalog is complete and up to date with all Forex & Metals pairs
+      if (!loaded.symbols || !Array.isArray(loaded.symbols) || loaded.symbols.length === 0) {
+        loaded.symbols = [...DEFAULT_SYMBOLS];
+        changed = true;
+      } else {
+        const existingSymMap = new Map(loaded.symbols.map((s: SymbolConfig) => [s.symbol, s]));
+        for (const defSym of DEFAULT_SYMBOLS) {
+          if (!existingSymMap.has(defSym.symbol)) {
+            loaded.symbols.push(defSym);
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        try {
+          fs.writeFileSync(DB_FILE, JSON.stringify(loaded, null, 2), 'utf8');
+        } catch (e) {
+          console.error('Failed to persist migrated database file:', e);
         }
       }
       return loaded;

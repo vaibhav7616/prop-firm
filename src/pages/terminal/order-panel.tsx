@@ -61,12 +61,16 @@ export function OrderPanel({
   const freeMargin = Math.max(0, equity - usedMargin);
   const maxLotAllowed = account?.rules?.max_lot_size || (account?.account_size <= 10000 ? 10 : 50);
 
-  const isJpy = selectedSymbol.toUpperCase().endsWith('JPY');
-  const priceDecimals = isJpy ? 3 : 5;
-  const pipUnit = isJpy ? 0.01 : 0.0001;
+  const symUpper = selectedSymbol.toUpperCase();
+  const isJpy = symUpper.endsWith('JPY');
+  const isGold = symUpper === 'XAUUSD';
+  const isSilver = symUpper === 'XAGUSD';
+  const priceDecimals = isGold ? 2 : (isJpy || isSilver ? 3 : 5);
+  const pipUnit = isGold ? 0.01 : (isJpy ? 0.01 : 0.0001);
 
   // Calculate live institutional margin requirement
-  const currentPrice = Number(activeQuote?.price || (activeQuote ? (activeQuote.bid + activeQuote.ask) / 2 : 1.085)) || 1.085;
+  const defaultFallbackPrice = isGold ? 2724.50 : isSilver ? 31.850 : isJpy ? 158.960 : 1.085;
+  const currentPrice = Number(activeQuote?.price || (activeQuote ? (activeQuote.bid + activeQuote.ask) / 2 : defaultFallbackPrice)) || defaultFallbackPrice;
   const requiredMargin = calculateInstitutionalMargin({
     symbol: selectedSymbol,
     lotSize: lotSize || 1,
@@ -78,11 +82,17 @@ export function OrderPanel({
   const isMarketOpen = activeQuote.isMarketOpen !== false;
   const isTradingLocked = account?.status === 'BREACHED' || account?.status === 'FAILED' || account?.status === 'PASSED';
 
-  // Professional Forex Pip Value Calculation ($ per pip)
+  // Professional Forex & Metals Pip Value Calculation ($ per pip)
   const pipValue = useMemo(() => {
     const s = selectedSymbol.toUpperCase();
     let perLotUsd = 10;
-    if (isJpy) {
+    if (s === 'XAUUSD') {
+      // 100 oz contract: $0.10 move = $10 per standard lot
+      perLotUsd = 10;
+    } else if (s === 'XAGUSD') {
+      // 5,000 oz contract: $0.01 move = $50 per standard lot
+      perLotUsd = 50;
+    } else if (isJpy) {
       perLotUsd = currentPrice > 0 ? 1000 / currentPrice : 6.45;
     } else if (s.startsWith('USD') && !s.endsWith('USD')) {
       perLotUsd = currentPrice > 0 ? 10 / currentPrice : 10;
@@ -208,6 +218,7 @@ export function OrderPanel({
       onOrderExecuted();
     } else {
       toast.error(res.error || 'Failed to execute order.');
+      onOrderExecuted();
     }
   };
 

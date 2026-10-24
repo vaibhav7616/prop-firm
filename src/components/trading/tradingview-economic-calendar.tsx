@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Calendar, AlertTriangle, ShieldCheck, Clock, Globe, RefreshCw, ExternalLink, Zap } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Calendar, AlertTriangle, ShieldCheck, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { useTheme } from '@/context/theme-context';
 import { cn } from '@/lib/utils';
 
@@ -38,12 +38,11 @@ interface EconomicCalendarProps {
 
 export function TradingViewEconomicCalendar({
   className = '',
-  height = 600,
+  height = 650,
   selectedCurrency = 'ALL',
   showNewsBufferNotice = true,
 }: EconomicCalendarProps) {
   const { theme } = useTheme();
-  const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'tradingview' | 'high_impact'>('tradingview');
   const [currencyFilter, setCurrencyFilter] = useState<string>(selectedCurrency);
   const [events, setEvents] = useState<EconomicCalendarEvent[]>([]);
@@ -85,45 +84,19 @@ export function TradingViewEconomicCalendar({
     return () => clearInterval(interval);
   }, []);
 
-  // Embed official TradingView Economic Calendar Widget
-  useEffect(() => {
-    if (activeTab !== 'tradingview') return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Clear previous widget
-    container.innerHTML = '';
-
-    const widgetDiv = document.createElement('div');
-    widgetDiv.className = 'tradingview-widget-container__widget';
-    widgetDiv.style.width = '100%';
-    widgetDiv.style.height = '100%';
-    container.appendChild(widgetDiv);
-
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
-    script.async = true;
-
-    const widgetConfig = {
+  // Construct official TradingView iframe embed URL
+  const iframeSrc = useMemo(() => {
+    const config = {
       colorTheme: theme === 'dark' ? 'dark' : 'light',
       isTransparent: false,
       width: '100%',
       height: '100%',
       locale: 'en',
-      importanceFilter: '0,1', // High and medium impact events
+      importanceFilter: '0,1',
       currencyFilter: currencyFilter === 'ALL' ? 'USD,EUR,GBP,JPY,CAD,AUD,CHF' : currencyFilter,
     };
-
-    script.innerHTML = JSON.stringify(widgetConfig);
-    container.appendChild(script);
-
-    return () => {
-      if (container) {
-        container.innerHTML = '';
-      }
-    };
-  }, [theme, currencyFilter, activeTab]);
+    return `https://s.tradingview.com/embed-widget/events/?locale=en#${encodeURIComponent(JSON.stringify(config))}`;
+  }, [theme, currencyFilter]);
 
   // Filter high-impact events list
   const filteredHighImpact = events.filter((e) => {
@@ -160,7 +133,7 @@ export function TradingViewEconomicCalendar({
               type="button"
               onClick={() => setActiveTab('tradingview')}
               className={cn(
-                'px-3 py-1.5 rounded-md font-semibold transition-all',
+                'px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer',
                 activeTab === 'tradingview'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -172,7 +145,7 @@ export function TradingViewEconomicCalendar({
               type="button"
               onClick={() => setActiveTab('high_impact')}
               className={cn(
-                'px-3 py-1.5 rounded-md font-semibold transition-all',
+                'px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer',
                 activeTab === 'high_impact'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -186,7 +159,7 @@ export function TradingViewEconomicCalendar({
           <select
             value={currencyFilter}
             onChange={(e) => setCurrencyFilter(e.target.value)}
-            className="h-8 px-2.5 rounded-lg border border-border bg-card text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-500"
+            className="h-8 px-2.5 rounded-lg border border-border bg-card text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
             title="Filter by Currency"
           >
             <option value="ALL">All Currencies</option>
@@ -203,7 +176,7 @@ export function TradingViewEconomicCalendar({
             type="button"
             onClick={loadCalendarData}
             disabled={loading}
-            className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground transition-all"
+            className="p-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground transition-all cursor-pointer"
             title="Refresh News Feed"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
@@ -233,8 +206,8 @@ export function TradingViewEconomicCalendar({
               </span>
               <span className="text-slate-600 dark:text-slate-300">
                 {status.restricted
-                  ? status.reason
-                  : 'Standard 2-minute news buffer rule active. Opening and closing positions is safe right now.'}
+                  ? `${status.reason} (Instant Funding prohibited — triggers immediate breach)`
+                  : '1-Step & 2-Step news trading allowed. Instant Funding 2-minute buffer currently all clear.'}
               </span>
             </div>
           </div>
@@ -246,22 +219,27 @@ export function TradingViewEconomicCalendar({
               </span>
             )}
             <span className="text-muted-foreground">
-              Rule: 2 min before &amp; after High-Impact news
+              1-Step &amp; 2-Step: Allowed · Instant: Prohibited
             </span>
           </div>
         </div>
       )}
 
       {/* 3. Main Calendar Container */}
-      <div className="relative flex-1 bg-background" style={{ minHeight: height }}>
+      <div className="relative flex-1 bg-background" style={{ minHeight: height, height }}>
         {activeTab === 'tradingview' ? (
-          <div className="tradingview-widget-container h-full w-full" style={{ height }}>
-            <div ref={containerRef} className="h-full w-full" style={{ height }} />
+          <div className="h-full w-full relative" style={{ height }}>
+            <iframe
+              src={iframeSrc}
+              className="w-full h-full border-none"
+              style={{ height, minHeight: height }}
+              title="TradingView Economic Calendar"
+            />
           </div>
         ) : (
-          <div className="p-4 space-y-3 overflow-y-auto max-h-[600px]">
+          <div className="p-4 space-y-3 overflow-y-auto" style={{ height, maxHeight: height }}>
             {filteredHighImpact.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground text-xs">
+              <div className="text-center py-16 text-muted-foreground text-xs">
                 No high-impact economic news scheduled for the selected currency filter.
               </div>
             ) : (

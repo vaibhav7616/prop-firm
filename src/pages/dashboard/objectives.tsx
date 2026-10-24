@@ -201,15 +201,23 @@ export function DashboardObjectives() {
   const maxDrawdownPct = rawRules.max_drawdown ?? (rawRules as any).max_loss_limit_percent ?? 10;
   const dailyDrawdownPct = rawRules.daily_drawdown ?? (rawRules as any).daily_loss_limit_percent ?? 5;
   const profitSplitPct =
-    rawRules.profit_split ?? (rawRules as any).profit_split_percent ?? (isInstant ? 70 : 80);
+    rawRules.profit_split ?? (rawRules as any).profit_split_percent ?? 80;
   const leverageVal = rawRules.leverage ?? 100;
-  const consistencyPct =
-    rawRules.consistency ?? (rawRules as any).consistency_rule_percent ?? 50;
-  const minDays = rawRules.min_trading_days ?? 3;
-  const maxDays = rawRules.max_trading_days ?? 0;
-  const newsAllowed = rawRules.news_trading ?? (rawRules as any).news_trading_allowed ?? true;
+  const consistencyPct = 0;
+  const minDays = rawRules.min_trading_days ?? 5;
+  const maxDays = rawRules.max_trading_days || null;
+  const newsAllowed =
+    rawRules.news_trading !== undefined
+      ? Boolean(rawRules.news_trading)
+      : (rawRules as any).news_trading_allowed !== undefined
+      ? Boolean((rawRules as any).news_trading_allowed)
+      : (isInstant ? false : true);
   const weekendAllowed =
-    rawRules.weekend_holding ?? (rawRules as any).weekend_holding_allowed ?? true;
+    rawRules.weekend_holding !== undefined
+      ? Boolean(rawRules.weekend_holding)
+      : (rawRules as any).weekend_holding_allowed !== undefined
+      ? Boolean((rawRules as any).weekend_holding_allowed)
+      : (isInstant ? false : true);
   const scalingPlan = rawRules.scaling_plan ?? true;
 
   const profitTargetAmount = profitTargetPct > 0 ? (accountSize * profitTargetPct) / 100 : 0;
@@ -718,12 +726,12 @@ export function DashboardObjectives() {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <RuleItem label="Profit Split" value={`Up to ${profitSplitPct}%`} />
+                <RuleItem label="Profit Split" value={`80/20 (${profitSplitPct}%)`} />
+                <RuleItem label="Min Trading Days" value={`${minDays} Days`} />
                 <RuleItem label="Leverage" value={`1:${leverageVal}`} />
-                <RuleItem label="Consistency" value={`${consistencyPct}% max / trade`} />
-                <RuleItem label="News Trading" value={newsAllowed ? 'Allowed' : 'Restricted'} positive={newsAllowed} />
-                <RuleItem label="Weekend Holding" value={weekendAllowed ? 'Allowed' : 'Restricted'} positive={weekendAllowed} />
-                <RuleItem label="Scaling Plan" value={scalingPlan ? 'Eligible' : 'Standard'} positive={scalingPlan} />
+                <RuleItem label="Consistency" value="No Consistency Rule" positive={true} />
+                <RuleItem label="News Trading" value={newsAllowed ? 'Allowed' : 'Prohibited'} positive={newsAllowed} />
+                <RuleItem label="Weekend Holding" value={weekendAllowed ? 'Allowed' : 'Prohibited'} positive={weekendAllowed} />
               </div>
             </CardContent>
           </Card>

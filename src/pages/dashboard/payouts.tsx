@@ -212,7 +212,7 @@ export function DashboardPayouts() {
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-bold">Profit Split & Payout Portal</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Request profit payouts from your Funded Accounts. Profit split is 80/20 for Step 1 & Step 2 Evaluation Accounts, and 70/30 for Instant Funding Accounts.
+            Request profit payouts from your Funded Accounts. Profit split is standardized at 80/20 across all accounts (80% to trader, 20% to firm) with a 5 minimum trading days requirement.
           </p>
         </div>
         <Button onClick={loadData} variant="outline" className="border-border/60 hover:border-gold-400/50 text-xs gap-2">
@@ -513,7 +513,7 @@ export function DashboardPayouts() {
                     <div>
                       <h3 className="font-display text-lg font-bold text-foreground">Apply For Trader Profit Payout</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Account #{selectedAccount.account_number} · {selectedAccount.rules?.profit_split_percent || ((selectedAccount.challenge_type || '').toUpperCase().includes('INSTANT') ? 70 : 80)}% Profit Split
+                        Account #{selectedAccount.account_number} · 80/20 Profit Split ({selectedAccount.rules?.profit_split_percent || 80}% Trader Share)
                       </p>
                     </div>
                     <button
@@ -528,7 +528,7 @@ export function DashboardPayouts() {
                     {/* Profit Calculation Box */}
                     {(() => {
                       const netProf = selectedAccount.current_balance - selectedAccount.starting_balance;
-                      const traderSplitPct = selectedAccount.rules?.profit_split_percent || ((selectedAccount.challenge_type || '').toUpperCase().includes('INSTANT') ? 70 : 80);
+                      const traderSplitPct = selectedAccount.rules?.profit_split_percent || 80;
                       const traderAmt = netProf * (traderSplitPct / 100);
                       const firmAmt = netProf - traderAmt;
                       return (

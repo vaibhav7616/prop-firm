@@ -87,7 +87,8 @@ export function PricingPage() {
                         <p className="text-2xl font-display font-bold text-brand-600">{formatCurrency(c.price)}</p>
                       </div>
                       <div className="text-xs text-muted-foreground space-y-1 mb-4">
-                        <p>Split: up to {c.rules.profit_split}%</p>
+                        <p>Split: 80/20 ({c.rules.profit_split}%)</p>
+                        <p>Min Days: {c.rules.min_trading_days || 5} Days</p>
                         <p>Leverage: 1:{c.rules.leverage}</p>
                       </div>
                       <Link to={`/checkout?challenge=${c.id}`}>

@@ -1753,19 +1753,20 @@ app.post('/api/admin/accounts/issue-manual', requireAdmin, (req, res) => {
   const planId = matchedPlan ? matchedPlan.id : `plan-${challengeType}-${sizeNum >= 1000 ? `${sizeNum / 1000}k` : sizeNum}`;
   const defaultMaxLot = sizeNum <= 5000 ? 5 : sizeNum <= 10000 ? 10 : sizeNum <= 25000 ? 20 : sizeNum <= 50000 ? 35 : sizeNum <= 100000 ? 50 : 100;
 
+  const isInstantAccount = challengeType === 'instant_funding' || (type || '').toLowerCase().includes('instant');
   const rulesConfig = {
     profit_target_percent: isFunded ? 0 : isStep2 ? 5 : challengeType === 'one_step' ? 10 : 8,
     daily_loss_limit_percent: challengeType === 'one_step' ? 4 : 5,
     max_loss_limit_percent: challengeType === 'one_step' ? 8 : 10,
     drawdown_model: 'STATIC' as const,
-    min_trading_days: isFunded ? 0 : challengeType === 'one_step' ? 3 : 0,
+    min_trading_days: 5,
     max_trading_days: null,
     leverage: isFunded ? 50 : 100,
-    profit_split_percent: isFunded ? 80 : 90,
+    profit_split_percent: 80,
     max_lot_size: defaultMaxLot,
     max_open_positions: 15,
-    news_trading_allowed: true,
-    weekend_holding_allowed: !isFunded,
+    news_trading_allowed: isInstantAccount ? false : true,
+    weekend_holding_allowed: !isInstantAccount,
     ea_trading_allowed: true,
   };
 

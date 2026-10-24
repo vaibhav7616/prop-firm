@@ -26,7 +26,13 @@ const TIMEFRAMES = [
 ];
 
 // Institutional OANDA Forex mappings for TradingView
+// Institutional OANDA Forex & Metals mappings for TradingView
 const FOREX_TV_SYMBOLS: Record<string, string> = {
+  // Metals
+  XAUUSD: 'OANDA:XAUUSD',
+  XAGUSD: 'OANDA:XAGUSD',
+
+  // Majors
   EURUSD: 'OANDA:EURUSD',
   GBPUSD: 'OANDA:GBPUSD',
   USDJPY: 'OANDA:USDJPY',
@@ -34,23 +40,40 @@ const FOREX_TV_SYMBOLS: Record<string, string> = {
   USDCAD: 'OANDA:USDCAD',
   USDCHF: 'OANDA:USDCHF',
   NZDUSD: 'OANDA:NZDUSD',
+
+  // Crosses
   EURGBP: 'OANDA:EURGBP',
   EURJPY: 'OANDA:EURJPY',
   GBPJPY: 'OANDA:GBPJPY',
   EURAUD: 'OANDA:EURAUD',
   EURCAD: 'OANDA:EURCAD',
   EURCHF: 'OANDA:EURCHF',
+  EURNZD: 'OANDA:EURNZD',
   GBPAUD: 'OANDA:GBPAUD',
   GBPCAD: 'OANDA:GBPCAD',
   GBPCHF: 'OANDA:GBPCHF',
+  GBPNZD: 'OANDA:GBPNZD',
   AUDCAD: 'OANDA:AUDCAD',
+  AUDCHF: 'OANDA:AUDCHF',
   AUDJPY: 'OANDA:AUDJPY',
+  AUDNZD: 'OANDA:AUDNZD',
+  CADCHF: 'OANDA:CADCHF',
   CADJPY: 'OANDA:CADJPY',
   CHFJPY: 'OANDA:CHFJPY',
+  NZDCAD: 'OANDA:NZDCAD',
+  NZDCHF: 'OANDA:NZDCHF',
   NZDJPY: 'OANDA:NZDJPY',
+
+  // Exotics
+  USDMXN: 'OANDA:USDMXN',
+  USDZAR: 'OANDA:USDZAR',
+  USDSGD: 'OANDA:USDSGD',
+  USDTRY: 'OANDA:USDTRY',
 };
 
 const SYMBOL_NAMES: Record<string, string> = {
+  XAUUSD: 'Gold / US Dollar',
+  XAGUSD: 'Silver / US Dollar',
   EURUSD: 'Euro / US Dollar',
   GBPUSD: 'British Pound / US Dollar',
   USDJPY: 'US Dollar / Japanese Yen',
@@ -64,14 +87,25 @@ const SYMBOL_NAMES: Record<string, string> = {
   EURAUD: 'Euro / Australian Dollar',
   EURCAD: 'Euro / Canadian Dollar',
   EURCHF: 'Euro / Swiss Franc',
+  EURNZD: 'Euro / New Zealand Dollar',
   GBPAUD: 'British Pound / AUD',
   GBPCAD: 'British Pound / CAD',
   GBPCHF: 'British Pound / CHF',
+  GBPNZD: 'British Pound / NZD',
   AUDCAD: 'Australian Dollar / CAD',
+  AUDCHF: 'Australian Dollar / Swiss Franc',
   AUDJPY: 'Australian Dollar / Yen',
+  AUDNZD: 'Australian Dollar / NZD',
+  CADCHF: 'Canadian Dollar / Swiss Franc',
   CADJPY: 'Canadian Dollar / Yen',
   CHFJPY: 'Swiss Franc / Yen',
+  NZDCAD: 'New Zealand Dollar / CAD',
+  NZDCHF: 'New Zealand Dollar / Swiss Franc',
   NZDJPY: 'New Zealand Dollar / Yen',
+  USDMXN: 'US Dollar / Mexican Peso',
+  USDZAR: 'US Dollar / South African Rand',
+  USDSGD: 'US Dollar / Singapore Dollar',
+  USDTRY: 'US Dollar / Turkish Lira',
 };
 
 export function TradingViewChart({
@@ -143,7 +177,9 @@ export function TradingViewChart({
   }, [tvSymbol, currentInterval]);
 
   const isJpy = cleanSymbol.endsWith('JPY');
-  const pricePrecision = isJpy ? 3 : 5;
+  const isGold = cleanSymbol === 'XAUUSD';
+  const isSilver = cleanSymbol === 'XAGUSD';
+  const pricePrecision = isGold ? 2 : (isJpy || isSilver ? 3 : 5);
 
   return (
     <div

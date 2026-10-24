@@ -39,11 +39,11 @@ const PLATFORMS = ['FundedShift Web Terminal'];
 export function PayoutCalculator() {
   const [accountSize, setAccountSize] = useState<number>(100000);
   const [evalStep, setEvalStep] = useState<string>('two_step');
-  const [profitSplit, setProfitSplit] = useState<number>(85); // %
+  const [profitSplit, setProfitSplit] = useState<number>(80); // % standard 80/20 split pattern
   const monthlyReturn = 8; // % standard target evaluation gain
   const [selectedPlatform, setSelectedPlatform] = useState<string>('FundedShift Web Terminal');
   const [addons, setAddons] = useState<{ [key: string]: boolean }>({
-    split90: true,
+    split90: false,
     doubleLeverage: false,
     expressPayout: true,
   });

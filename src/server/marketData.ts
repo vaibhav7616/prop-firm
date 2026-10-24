@@ -13,6 +13,11 @@ export interface MarketDataProvider {
 }
 
 const TV_SYMBOL_MAP: Record<string, { symbol: string; precision: number; defaultSpreadPips: number }> = {
+  // Metals
+  'OANDA:XAUUSD': { symbol: 'XAUUSD', precision: 2, defaultSpreadPips: 1.2 },
+  'OANDA:XAGUSD': { symbol: 'XAGUSD', precision: 3, defaultSpreadPips: 1.8 },
+
+  // Majors
   'OANDA:EURUSD': { symbol: 'EURUSD', precision: 5, defaultSpreadPips: 0.2 },
   'OANDA:GBPUSD': { symbol: 'GBPUSD', precision: 5, defaultSpreadPips: 0.3 },
   'OANDA:USDJPY': { symbol: 'USDJPY', precision: 3, defaultSpreadPips: 0.3 },
@@ -20,20 +25,35 @@ const TV_SYMBOL_MAP: Record<string, { symbol: string; precision: number; default
   'OANDA:USDCAD': { symbol: 'USDCAD', precision: 5, defaultSpreadPips: 0.4 },
   'OANDA:USDCHF': { symbol: 'USDCHF', precision: 5, defaultSpreadPips: 0.4 },
   'OANDA:NZDUSD': { symbol: 'NZDUSD', precision: 5, defaultSpreadPips: 0.5 },
+
+  // Crosses
   'OANDA:EURGBP': { symbol: 'EURGBP', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:EURJPY': { symbol: 'EURJPY', precision: 3, defaultSpreadPips: 0.4 },
   'OANDA:GBPJPY': { symbol: 'GBPJPY', precision: 3, defaultSpreadPips: 0.5 },
   'OANDA:EURAUD': { symbol: 'EURAUD', precision: 5, defaultSpreadPips: 0.6 },
   'OANDA:EURCAD': { symbol: 'EURCAD', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:EURCHF': { symbol: 'EURCHF', precision: 5, defaultSpreadPips: 0.5 },
+  'OANDA:EURNZD': { symbol: 'EURNZD', precision: 5, defaultSpreadPips: 0.6 },
   'OANDA:GBPAUD': { symbol: 'GBPAUD', precision: 5, defaultSpreadPips: 0.7 },
   'OANDA:GBPCAD': { symbol: 'GBPCAD', precision: 5, defaultSpreadPips: 0.6 },
   'OANDA:GBPCHF': { symbol: 'GBPCHF', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:GBPNZD': { symbol: 'GBPNZD', precision: 5, defaultSpreadPips: 0.7 },
   'OANDA:AUDCAD': { symbol: 'AUDCAD', precision: 5, defaultSpreadPips: 0.5 },
+  'OANDA:AUDCHF': { symbol: 'AUDCHF', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:AUDJPY': { symbol: 'AUDJPY', precision: 3, defaultSpreadPips: 0.5 },
+  'OANDA:AUDNZD': { symbol: 'AUDNZD', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:CADCHF': { symbol: 'CADCHF', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:CADJPY': { symbol: 'CADJPY', precision: 3, defaultSpreadPips: 0.5 },
   'OANDA:CHFJPY': { symbol: 'CHFJPY', precision: 3, defaultSpreadPips: 0.5 },
+  'OANDA:NZDCAD': { symbol: 'NZDCAD', precision: 5, defaultSpreadPips: 0.6 },
+  'OANDA:NZDCHF': { symbol: 'NZDCHF', precision: 5, defaultSpreadPips: 0.5 },
   'OANDA:NZDJPY': { symbol: 'NZDJPY', precision: 3, defaultSpreadPips: 0.6 },
+
+  // Exotics
+  'OANDA:USDMXN': { symbol: 'USDMXN', precision: 4, defaultSpreadPips: 3.5 },
+  'OANDA:USDZAR': { symbol: 'USDZAR', precision: 4, defaultSpreadPips: 4.0 },
+  'OANDA:USDSGD': { symbol: 'USDSGD', precision: 4, defaultSpreadPips: 1.5 },
+  'OANDA:USDTRY': { symbol: 'USDTRY', precision: 4, defaultSpreadPips: 5.0 },
 };
 
 class RealtimeLiveMarketDataProvider implements MarketDataProvider {
@@ -310,6 +330,11 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
 
   private initBaseQuotes() {
     const basePrices: Record<string, { price: number; precision: number; spread: number }> = {
+      // Metals
+      XAUUSD: { price: 2724.50, precision: 2, spread: 0.25 },
+      XAGUSD: { price: 31.85, precision: 3, spread: 0.02 },
+
+      // Majors
       EURUSD: { price: 1.1673, precision: 5, spread: 0.00002 },
       GBPUSD: { price: 1.3629, precision: 5, spread: 0.00004 },
       USDJPY: { price: 158.96, precision: 3, spread: 0.003 },
@@ -317,20 +342,35 @@ class RealtimeLiveMarketDataProvider implements MarketDataProvider {
       USDCAD: { price: 1.3789, precision: 5, spread: 0.00005 },
       USDCHF: { price: 0.8005, precision: 5, spread: 0.00006 },
       NZDUSD: { price: 0.5940, precision: 5, spread: 0.00006 },
+
+      // Crosses
       EURGBP: { price: 0.8564, precision: 5, spread: 0.00006 },
       EURJPY: { price: 185.56, precision: 3, spread: 0.003 },
       GBPJPY: { price: 216.66, precision: 3, spread: 0.003 },
       EURAUD: { price: 1.6405, precision: 5, spread: 0.00006 },
       EURCAD: { price: 1.6095, precision: 5, spread: 0.00005 },
       EURCHF: { price: 0.9345, precision: 5, spread: 0.00005 },
+      EURNZD: { price: 1.8210, precision: 5, spread: 0.00007 },
       GBPAUD: { price: 1.9155, precision: 5, spread: 0.00007 },
       GBPCAD: { price: 1.8790, precision: 5, spread: 0.00006 },
       GBPCHF: { price: 1.0910, precision: 5, spread: 0.00006 },
+      GBPNZD: { price: 2.1265, precision: 5, spread: 0.00008 },
       AUDCAD: { price: 0.9810, precision: 5, spread: 0.00005 },
+      AUDCHF: { price: 0.5695, precision: 5, spread: 0.00005 },
       AUDJPY: { price: 113.10, precision: 3, spread: 0.005 },
+      AUDNZD: { price: 1.1030, precision: 5, spread: 0.00006 },
+      CADCHF: { price: 0.6385, precision: 5, spread: 0.00005 },
       CADJPY: { price: 115.28, precision: 3, spread: 0.005 },
       CHFJPY: { price: 198.58, precision: 3, spread: 0.005 },
+      NZDCAD: { price: 0.8250, precision: 5, spread: 0.00006 },
+      NZDCHF: { price: 0.5160, precision: 5, spread: 0.00005 },
       NZDJPY: { price: 94.42, precision: 3, spread: 0.006 },
+
+      // Exotics
+      USDMXN: { price: 19.8520, precision: 4, spread: 0.0035 },
+      USDZAR: { price: 17.6540, precision: 4, spread: 0.0040 },
+      USDSGD: { price: 1.3140, precision: 4, spread: 0.0002 },
+      USDTRY: { price: 34.2500, precision: 4, spread: 0.0050 },
     };
 
     const symbols = DBEngine.getDB().symbols;

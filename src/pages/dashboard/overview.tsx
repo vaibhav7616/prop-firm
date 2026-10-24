@@ -553,7 +553,7 @@ export function DashboardOverview() {
                       (totalProfit >= profitTargetAmount ? 1 : 0) +
                       (dailyLossUsed < dailyLossLimitAmount ? 1 : 0) +
                       (maxLossUsed < maxLossLimitAmount ? 1 : 0) +
-                      ((selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)) >= (selectedAccount.rules?.min_trading_days || 3) ? 1 : 0)
+                      ((selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)) >= (selectedAccount.rules?.min_trading_days || 5) ? 1 : 0)
                     } / 4 Passed
                   </span>
                 )}
@@ -629,6 +629,36 @@ export function DashboardOverview() {
                     />
                   </div>
                 </div>
+
+                {/* Objective 4: News Trading Policy Status */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <CalendarIcon className="h-3.5 w-3.5 text-brand-500" /> High-Impact News Trading
+                  </span>
+                  <span className={`font-bold font-mono px-2.5 py-0.5 rounded-md text-[11px] border ${selectedAccount.rules?.news_trading_allowed !== false ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'}`}>
+                    {selectedAccount.rules?.news_trading_allowed !== false ? 'Permitted (No Restriction)' : 'Strictly Prohibited (2-Min Buffer)'}
+                  </span>
+                </div>
+
+                {/* Objective 5: Weekend Holding Policy Status */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <CalendarIcon className="h-3.5 w-3.5 text-brand-500" /> Weekend Holding
+                  </span>
+                  <span className={`font-bold font-mono px-2.5 py-0.5 rounded-md text-[11px] border ${selectedAccount.rules?.weekend_holding_allowed !== false ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'}`}>
+                    {selectedAccount.rules?.weekend_holding_allowed !== false ? 'Permitted (Hold over weekend)' : 'Strictly Prohibited (Close before Friday close)'}
+                  </span>
+                </div>
+
+                {/* Objective 6: Consistency Rule Policy Status */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Consistency Rule
+                  </span>
+                  <span className="font-bold font-mono px-2.5 py-0.5 rounded-md text-[11px] border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                    No Consistency Rule (Full Freedom)
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -639,12 +669,12 @@ export function DashboardOverview() {
                   <CalendarIcon className="h-4 w-4 text-brand-500" /> Minimum Trading Days
                 </h3>
                 <span className="text-xs font-mono font-bold text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 px-2.5 py-0.5 rounded-md">
-                  {selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)} / 14 days
+                  {selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0)} / 5 days
                 </span>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 pt-2">
-                {Array.from({ length: 14 }).map((_, i) => {
+              <div className="grid grid-cols-5 gap-2 pt-2">
+                {Array.from({ length: 5 }).map((_, i) => {
                   const dayNum = i + 1;
                   const activeCount = selectedAccount.trading_days_count || (closedPositionsList.length > 0 ? 1 : 0);
                   const isActive = dayNum <= activeCount;

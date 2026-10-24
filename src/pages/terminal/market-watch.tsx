@@ -10,7 +10,12 @@ export interface MarketWatchProps {
   className?: string;
 }
 
-const SYMBOL_METADATA: Record<string, { name: string; category: 'MAJORS' | 'CROSSES' | 'MINORS'; pipDivisor: number }> = {
+const SYMBOL_METADATA: Record<string, { name: string; category: 'METALS' | 'MAJORS' | 'CROSSES' | 'MINORS'; pipDivisor: number }> = {
+  // METALS (Forex Spot Precious Metals)
+  XAUUSD: { name: 'Gold / US Dollar', category: 'METALS', pipDivisor: 0.1 },
+  XAGUSD: { name: 'Silver / US Dollar', category: 'METALS', pipDivisor: 0.01 },
+
+  // FOREX MAJORS
   EURUSD: { name: 'Euro / US Dollar', category: 'MAJORS', pipDivisor: 0.0001 },
   GBPUSD: { name: 'British Pound / US Dollar', category: 'MAJORS', pipDivisor: 0.0001 },
   USDJPY: { name: 'US Dollar / Japanese Yen', category: 'MAJORS', pipDivisor: 0.01 },
@@ -18,25 +23,45 @@ const SYMBOL_METADATA: Record<string, { name: string; category: 'MAJORS' | 'CROS
   USDCAD: { name: 'US Dollar / Canadian Dollar', category: 'MAJORS', pipDivisor: 0.0001 },
   USDCHF: { name: 'US Dollar / Swiss Franc', category: 'MAJORS', pipDivisor: 0.0001 },
   NZDUSD: { name: 'New Zealand Dollar / USD', category: 'MAJORS', pipDivisor: 0.0001 },
+
+  // FOREX CROSSES (EUR, GBP, AUD, NZD, CAD, CHF)
   EURGBP: { name: 'Euro / British Pound', category: 'CROSSES', pipDivisor: 0.0001 },
   EURJPY: { name: 'Euro / Japanese Yen', category: 'CROSSES', pipDivisor: 0.01 },
   GBPJPY: { name: 'British Pound / Yen', category: 'CROSSES', pipDivisor: 0.01 },
   EURAUD: { name: 'Euro / Australian Dollar', category: 'CROSSES', pipDivisor: 0.0001 },
   EURCAD: { name: 'Euro / Canadian Dollar', category: 'CROSSES', pipDivisor: 0.0001 },
   EURCHF: { name: 'Euro / Swiss Franc', category: 'CROSSES', pipDivisor: 0.0001 },
+  EURNZD: { name: 'Euro / New Zealand Dollar', category: 'CROSSES', pipDivisor: 0.0001 },
   GBPAUD: { name: 'British Pound / AUD', category: 'CROSSES', pipDivisor: 0.0001 },
   GBPCAD: { name: 'British Pound / CAD', category: 'CROSSES', pipDivisor: 0.0001 },
   GBPCHF: { name: 'British Pound / CHF', category: 'CROSSES', pipDivisor: 0.0001 },
-  AUDCAD: { name: 'Australian Dollar / CAD', category: 'MINORS', pipDivisor: 0.0001 },
-  AUDJPY: { name: 'Australian Dollar / Yen', category: 'MINORS', pipDivisor: 0.01 },
-  CADJPY: { name: 'Canadian Dollar / Yen', category: 'MINORS', pipDivisor: 0.01 },
-  CHFJPY: { name: 'Swiss Franc / Yen', category: 'MINORS', pipDivisor: 0.01 },
-  NZDJPY: { name: 'New Zealand Dollar / Yen', category: 'MINORS', pipDivisor: 0.01 },
+  GBPNZD: { name: 'British Pound / NZD', category: 'CROSSES', pipDivisor: 0.0001 },
+  AUDCAD: { name: 'Australian Dollar / CAD', category: 'CROSSES', pipDivisor: 0.0001 },
+  AUDCHF: { name: 'Australian Dollar / CHF', category: 'CROSSES', pipDivisor: 0.0001 },
+  AUDJPY: { name: 'Australian Dollar / Yen', category: 'CROSSES', pipDivisor: 0.01 },
+  AUDNZD: { name: 'Australian Dollar / NZD', category: 'CROSSES', pipDivisor: 0.0001 },
+  CADCHF: { name: 'Canadian Dollar / CHF', category: 'CROSSES', pipDivisor: 0.0001 },
+  CADJPY: { name: 'Canadian Dollar / Yen', category: 'CROSSES', pipDivisor: 0.01 },
+  CHFJPY: { name: 'Swiss Franc / Yen', category: 'CROSSES', pipDivisor: 0.01 },
+  NZDCAD: { name: 'New Zealand Dollar / CAD', category: 'CROSSES', pipDivisor: 0.0001 },
+  NZDCHF: { name: 'New Zealand Dollar / CHF', category: 'CROSSES', pipDivisor: 0.0001 },
+  NZDJPY: { name: 'New Zealand Dollar / Yen', category: 'CROSSES', pipDivisor: 0.01 },
+
+  // FOREX EXOTICS / LIQUID MINORS
+  USDMXN: { name: 'US Dollar / Mexican Peso', category: 'MINORS', pipDivisor: 0.001 },
+  USDZAR: { name: 'US Dollar / South African Rand', category: 'MINORS', pipDivisor: 0.001 },
+  USDSGD: { name: 'US Dollar / Singapore Dollar', category: 'MINORS', pipDivisor: 0.0001 },
+  USDTRY: { name: 'US Dollar / Turkish Lira', category: 'MINORS', pipDivisor: 0.001 },
 };
 
-type CategoryFilter = 'ALL' | 'MAJORS' | 'CROSSES' | 'MINORS';
+type CategoryFilter = 'ALL' | 'METALS' | 'MAJORS' | 'CROSSES' | 'MINORS';
 
 const DEFAULT_FOREX_QUOTES: MarketQuote[] = [
+  // Top Traded: Spot Gold
+  { symbol: 'XAUUSD', price: 2724.50, bid: 2724.35, ask: 2724.65, high: 2738.00, low: 2712.00, change24h: 0.65, spread: 0.3, isMarketOpen: true, timestamp: '' },
+  { symbol: 'XAGUSD', price: 31.850, bid: 31.835, ask: 31.865, high: 32.20, low: 31.40, change24h: 0.42, spread: 0.3, isMarketOpen: true, timestamp: '' },
+
+  // Majors
   { symbol: 'EURUSD', price: 1.16730, bid: 1.16720, ask: 1.16740, high: 1.1710, low: 1.1640, change24h: 0.18, spread: 0.2, isMarketOpen: true, timestamp: '' },
   { symbol: 'GBPUSD', price: 1.36290, bid: 1.36270, ask: 1.36310, high: 1.3680, low: 1.3590, change24h: 0.25, spread: 0.4, isMarketOpen: true, timestamp: '' },
   { symbol: 'USDJPY', price: 158.960, bid: 158.945, ask: 158.975, high: 159.40, low: 158.50, change24h: -0.12, spread: 0.3, isMarketOpen: true, timestamp: '' },
@@ -44,20 +69,35 @@ const DEFAULT_FOREX_QUOTES: MarketQuote[] = [
   { symbol: 'USDCAD', price: 1.37890, bid: 1.37870, ask: 1.37910, high: 1.3820, low: 1.3750, change24h: -0.08, spread: 0.4, isMarketOpen: true, timestamp: '' },
   { symbol: 'USDCHF', price: 0.80050, bid: 0.80030, ask: 0.80070, high: 0.8040, low: 0.7980, change24h: -0.15, spread: 0.4, isMarketOpen: true, timestamp: '' },
   { symbol: 'NZDUSD', price: 0.59400, bid: 0.59375, ask: 0.59425, high: 0.5980, low: 0.5910, change24h: 0.22, spread: 0.5, isMarketOpen: true, timestamp: '' },
+
+  // Crosses
   { symbol: 'EURGBP', price: 0.85640, bid: 0.85615, ask: 0.85665, high: 0.8590, low: 0.8540, change24h: -0.06, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'EURJPY', price: 185.560, bid: 185.540, ask: 185.580, high: 186.10, low: 185.10, change24h: 0.15, spread: 0.4, isMarketOpen: true, timestamp: '' },
   { symbol: 'GBPJPY', price: 216.660, bid: 216.635, ask: 216.685, high: 217.30, low: 216.00, change24h: 0.28, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'EURAUD', price: 1.64050, bid: 1.64020, ask: 1.64080, high: 1.6460, low: 1.6370, change24h: -0.14, spread: 0.6, isMarketOpen: true, timestamp: '' },
   { symbol: 'EURCAD', price: 1.60950, bid: 1.60925, ask: 1.60975, high: 1.6140, low: 1.6050, change24h: 0.09, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'EURCHF', price: 0.93450, bid: 0.93425, ask: 0.93475, high: 0.9380, low: 0.9310, change24h: 0.04, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'EURNZD', price: 1.82100, bid: 1.82060, ask: 1.82140, high: 1.8280, low: 1.8150, change24h: 0.12, spread: 0.8, isMarketOpen: true, timestamp: '' },
   { symbol: 'GBPAUD', price: 1.91550, bid: 1.91515, ask: 1.91585, high: 1.9220, low: 1.9100, change24h: 0.11, spread: 0.7, isMarketOpen: true, timestamp: '' },
   { symbol: 'GBPCAD', price: 1.87900, bid: 1.87870, ask: 1.87930, high: 1.8840, low: 1.8740, change24h: 0.18, spread: 0.6, isMarketOpen: true, timestamp: '' },
   { symbol: 'GBPCHF', price: 1.09100, bid: 1.09070, ask: 1.09130, high: 1.0960, low: 1.0870, change24h: 0.10, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'GBPNZD', price: 2.12650, bid: 2.12600, ask: 2.12700, high: 2.1340, low: 2.1190, change24h: 0.20, spread: 1.0, isMarketOpen: true, timestamp: '' },
   { symbol: 'AUDCAD', price: 0.98100, bid: 0.98075, ask: 0.98125, high: 0.9850, low: 0.9780, change24h: 0.05, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'AUDCHF', price: 0.56950, bid: 0.56925, ask: 0.56975, high: 0.5730, low: 0.5660, change24h: -0.05, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'AUDJPY', price: 113.100, bid: 113.075, ask: 113.125, high: 113.60, low: 112.70, change24h: 0.19, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'AUDNZD', price: 1.10300, bid: 1.10270, ask: 1.10330, high: 1.1070, low: 1.0990, change24h: 0.08, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'CADCHF', price: 0.63850, bid: 0.63825, ask: 0.63875, high: 0.6420, low: 0.6350, change24h: 0.02, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'CADJPY', price: 115.280, bid: 115.255, ask: 115.305, high: 115.80, low: 114.90, change24h: 0.21, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'CHFJPY', price: 198.580, bid: 198.555, ask: 198.605, high: 199.20, low: 198.10, change24h: 0.26, spread: 0.5, isMarketOpen: true, timestamp: '' },
+  { symbol: 'NZDCAD', price: 0.82500, bid: 0.82470, ask: 0.82530, high: 0.8290, low: 0.8210, change24h: 0.04, spread: 0.6, isMarketOpen: true, timestamp: '' },
+  { symbol: 'NZDCHF', price: 0.51600, bid: 0.51575, ask: 0.51625, high: 0.5190, low: 0.5130, change24h: -0.06, spread: 0.5, isMarketOpen: true, timestamp: '' },
   { symbol: 'NZDJPY', price: 94.420, bid: 94.390, ask: 94.450, high: 94.90, low: 94.00, change24h: 0.12, spread: 0.6, isMarketOpen: true, timestamp: '' },
+
+  // Liquid Exotics
+  { symbol: 'USDMXN', price: 19.8520, bid: 19.8490, ask: 19.8550, high: 19.980, low: 19.720, change24h: 0.35, spread: 6.0, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDZAR', price: 17.6540, bid: 17.6500, ask: 17.6580, high: 17.780, low: 17.520, change24h: 0.28, spread: 8.0, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDSGD', price: 1.31400, bid: 1.31385, ask: 1.31415, high: 1.3180, low: 1.3100, change24h: -0.05, spread: 3.0, isMarketOpen: true, timestamp: '' },
+  { symbol: 'USDTRY', price: 34.2500, bid: 34.2400, ask: 34.2600, high: 34.400, low: 34.100, change24h: 0.40, spread: 20.0, isMarketOpen: true, timestamp: '' },
 ];
 
 export function MarketWatch({
@@ -129,8 +169,15 @@ export function MarketWatch({
   }, [quotes, category, search]);
 
   const formatPrice = (symbol: string, price: number) => {
-    if (symbol.toUpperCase().endsWith('JPY')) {
+    const s = symbol.toUpperCase();
+    if (s === 'XAUUSD') {
+      return Number(price || 0).toFixed(2);
+    }
+    if (s.endsWith('JPY') || s === 'XAGUSD') {
       return Number(price || 0).toFixed(3);
+    }
+    if (['USDMXN', 'USDZAR', 'USDSGD', 'USDTRY'].includes(s)) {
+      return Number(price || 0).toFixed(4);
     }
     return Number(price || 0).toFixed(5);
   };
@@ -161,7 +208,7 @@ export function MarketWatch({
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search forex pairs (e.g. EUR, JPY)..."
+            placeholder="Search forex & metals (e.g. XAUUSD, Gold, EUR)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 focus:border-brand-500/70 focus:outline-none rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 transition-colors font-sans"
@@ -171,20 +218,29 @@ export function MarketWatch({
 
       {/* Forex Asset Class Filter Tabs */}
       <div className="flex border-b border-slate-800 bg-slate-950/30 overflow-x-auto scrollbar-none px-1.5 py-1.5 gap-1">
-        {(['ALL', 'MAJORS', 'CROSSES', 'MINORS'] as CategoryFilter[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setCategory(tab)}
-            className={cn(
-              'px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all whitespace-nowrap',
-              category === tab
-                ? 'bg-brand-500/20 text-brand-400 font-bold border border-brand-500/40 shadow-xs'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-            )}
-          >
-            {tab === 'ALL' ? 'ALL FOREX' : tab}
-          </button>
-        ))}
+        {(['ALL', 'METALS', 'MAJORS', 'CROSSES', 'MINORS'] as CategoryFilter[]).map((tab) => {
+          let label = tab as string;
+          if (tab === 'ALL') label = 'ALL';
+          else if (tab === 'METALS') label = 'METALS (GOLD)';
+          else if (tab === 'MAJORS') label = 'MAJORS';
+          else if (tab === 'CROSSES') label = 'CROSSES';
+          else if (tab === 'MINORS') label = 'EXOTICS';
+
+          return (
+            <button
+              key={tab}
+              onClick={() => setCategory(tab)}
+              className={cn(
+                'px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all whitespace-nowrap',
+                category === tab
+                  ? 'bg-brand-500/20 text-brand-400 font-bold border border-brand-500/40 shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Column Headers */}

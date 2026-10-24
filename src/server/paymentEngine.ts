@@ -138,14 +138,14 @@ export class CheckoutPaymentService implements PaymentProvider {
           daily_loss_limit_percent: challenge.rules?.daily_drawdown ?? 5,
           max_loss_limit_percent: challenge.rules?.max_drawdown ?? 10,
           drawdown_model: 'STATIC' as const,
-          min_trading_days: challenge.rules?.min_trading_days ?? 0,
+          min_trading_days: challenge.rules?.min_trading_days ?? 5,
           max_trading_days: null,
           leverage: challenge.rules?.leverage ?? 100,
-          profit_split_percent: challenge.rules?.profit_split ?? (isInstant ? 70 : 90),
+          profit_split_percent: challenge.rules?.profit_split ?? 80,
           max_lot_size: params.accountSize <= 5000 ? 5 : params.accountSize <= 10000 ? 10 : params.accountSize <= 25000 ? 20 : 50,
           max_open_positions: 15,
-          news_trading_allowed: challenge.rules?.news_trading ?? true,
-          weekend_holding_allowed: challenge.rules?.weekend_holding ?? !isInstant,
+          news_trading_allowed: challenge.rules?.news_trading !== undefined ? Boolean(challenge.rules.news_trading) : (isInstant ? false : true),
+          weekend_holding_allowed: challenge.rules?.weekend_holding !== undefined ? Boolean(challenge.rules.weekend_holding) : !isInstant,
           ea_trading_allowed: true,
         }
       : plan
