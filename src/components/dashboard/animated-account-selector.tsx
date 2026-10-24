@@ -28,7 +28,7 @@ export function getCleanPlanName(account: TradingAccount | undefined): string {
     return `${sizeStr} Funded Account`;
   }
 
-  if (account.plan_name && !account.plan_name.toLowerCase().includes('fundedshift')) {
+  if (typeof account.plan_name === 'string' && !account.plan_name.toLowerCase().includes('fundedshift')) {
     return account.plan_name;
   }
 

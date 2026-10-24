@@ -25,7 +25,7 @@ export function AdminOrders() {
   const [accountNumber, setAccountNumber] = useState('');
   const [password, setPassword] = useState('');
   const [investorPassword, setInvestorPassword] = useState('');
-  const [server, setServer] = useState('FundedShift-Live01');
+  const [server, setServer] = useState('FundedShift-Live');
   const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
@@ -203,7 +203,7 @@ export function AdminOrders() {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="server">Server *</Label>
-                  <Input id="server" value={server} onChange={(e) => setServer(e.target.value)} placeholder="e.g. FundedShift-Live01" />
+                  <Input id="server" value={server} onChange={(e) => setServer(e.target.value)} placeholder="e.g. FundedShift-Live" />
                 </div>
               </div>
             </div>
